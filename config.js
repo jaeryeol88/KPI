@@ -1,6 +1,6 @@
-// Supabase Dashboard → Project Settings → API 에서 확인
-// anon 또는 publishable key만 입력하세요. service_role / secret key는 절대 넣지 마세요.
+// Supabase public connection settings (not a secret key).
+// Never put a service_role key, secret key, or password in this public file.
 window.PLK_CONFIG = {
-  supabaseUrl: "https://YOUR_PROJECT.supabase.co",
-  supabaseAnonKey: "여기에_SUPABASE_PUBLISHABLE_KEY_또는_ANON_KEY"
+  supabaseUrl: "https://vtmusfznaafazpqmktnk.supabase.co",
+  supabaseAnonKey: "sb_publishable_uKU8DHGzuj8LAODnPO8HLQ_-JfdIkXf"
 };
