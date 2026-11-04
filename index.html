@@ -45,11 +45,12 @@
 <main class="main"><header class="top"><div><div class="eyebrow">PERFORMANCE OVERVIEW</div><h1 class="h1">행사 KPI 관리</h1><p class="sub">행사 투입 비용과 실적을 한곳에서 관리하세요.</p><div class="top-user" id="currentUser"></div></div><div class="btns"><a class="btn" href="./viewer.html" target="_blank" rel="noopener" style="text-decoration:none">↗ 공개 뷰어</a><button class="btn" id="exportCsv">↓ CSV 다운로드</button><button class="btn" id="backup">↓ 백업</button><button class="btn" id="restore">↑ 복원</button><button class="btn primary" id="add">＋ 행사 등록</button><button class="btn" id="logout">로그아웃</button></div></header>
 <div id="status" class="sync-status" role="status" aria-live="polite">온라인 데이터 연결 중…</div>
 <section id="adminRoles" hidden style="background:#fff;border:1px solid var(--line);padding:18px;border-radius:12px;margin-top:14px">
-  <h3 style="margin:0 0 8px">지사 관리자 권한 <small style="font-weight:400;color:var(--muted)">최고관리자 전용</small></h3>
-  <p style="color:var(--muted);font-size:12px">Supabase Authentication → Users에서 먼저 이메일 계정을 초대·생성한 후 아래에서 권한을 부여하세요. 지사 관리자는 지정 지사 행사만 조회하고 변경할 수 있습니다.</p>
+  <h3 style="margin:0 0 8px">관리자 권한 관리 <small style="font-weight:400;color:var(--muted)">최고관리자 전용</small></h3>
+  <p style="color:var(--muted);font-size:12px">Supabase Authentication → Users에서 먼저 이메일 계정을 초대·생성하세요. 공동 관리자는 모든 행사를 등록·수정·삭제할 수 있고, 지사 관리자는 담당 지사 행사만 관리합니다.</p>
   <form id="roleForm" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
     <input id="roleEmail" type="email" required placeholder="추가 관리자 이메일" autocomplete="off" style="padding:10px;border:1px solid var(--line);border-radius:8px;min-width:225px">
-    <select id="roleBranch" style="padding:10px;border:1px solid var(--line);border-radius:8px"><option>부산 1지사</option><option>부산 2지사</option><option>부산 3지사</option><option>부산 4지사</option><option>부산권역</option></select>
+    <select id="roleType" style="padding:10px;border:1px solid var(--line);border-radius:8px"><option value="shared">전체 공동 관리자</option><option value="branch">지사별 관리자</option></select>
+    <select id="roleBranch" hidden style="padding:10px;border:1px solid var(--line);border-radius:8px"><option>부산 1지사</option><option>부산 2지사</option><option>부산 3지사</option><option>부산 4지사</option><option>부산권역</option></select>
     <button class="btn primary" type="submit">관리자 권한 부여/변경</button>
   </form>
   <div id="roleList" style="margin-top:12px;font-size:13px;color:var(--muted)"></div>
@@ -98,7 +99,7 @@ const esc = s => String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>
 const status = (msg, error=false) => { el('status').textContent=msg; el('status').classList.toggle('error',error); };
 const errText = e => { console.error(e); return (e && e.message) || '알 수 없는 오류'; };
 const showAuth = message => { el('authScreen').hidden=false; el('kpiApp').hidden=true; el('authError').textContent=message || ''; };
-const showApp = user => { currentUser=user; el('currentUser').textContent=(access.role==='owner'?'최고관리자 · 전체 행사':access.branch+' · 지사 관리자')+' · '+user.email; el('authScreen').hidden=true; el('kpiApp').hidden=false; el('adminRoles').hidden=access.role!=='owner'; el('backup').hidden=access.role!=='owner'; el('restore').hidden=access.role!=='owner'; if(access.role==='branch'){el('branch').value=access.branch;el('branch').disabled=true;el('fBranch').value=access.branch;el('fBranch').disabled=true;}else{el('branch').disabled=false;el('fBranch').disabled=false;} };
+const showApp = user => { currentUser=user; el('currentUser').textContent=(access.role==='owner'?'최고관리자 · 전체 행사':access.role==='shared'?'공동 관리자 · 전체 행사':access.branch+' · 지사 관리자')+' · '+user.email; el('authScreen').hidden=true; el('kpiApp').hidden=false; el('adminRoles').hidden=access.role!=='owner'; el('backup').hidden=access.role!=='owner'; el('restore').hidden=access.role!=='owner'; if(access.role==='branch'){el('branch').value=access.branch;el('branch').disabled=true;el('fBranch').value=access.branch;el('fBranch').disabled=true;}else{el('branch').disabled=false;el('fBranch').disabled=false;} };
 const lock = flag => { loading=flag; ['add','backup','restore','logout'].forEach(id=>el(id).disabled=flag); };
 // 로그인 폼 이벤트를 먼저 연결한 뒤 초기 세션을 확인합니다.
 async function enter(user) {
@@ -113,33 +114,35 @@ async function enter(user) {
     }else{showAuth('관리자 권한 조회 실패: '+errText(error));return;}
   }else{
     access=data&&typeof data==='object'?data:{role:'none',branch:null};
-    if(!['owner','branch'].includes(access.role)){await db.auth.signOut();showAuth('관리 권한이 없는 계정입니다. 최고관리자에게 지사 권한 부여를 요청하세요.');return;}
+    if(!['owner','shared','branch'].includes(access.role)){await db.auth.signOut();showAuth('관리 권한이 없는 계정입니다. 최고관리자에게 관리자 권한 부여를 요청하세요.');return;}
   }
   showApp(user);await loadEvents();
   if(access.role==='owner') refreshRoleList();
 }
+el('roleType').onchange=()=>{el('roleBranch').hidden=el('roleType').value!=='branch';};
 async function refreshRoleList(){
   const list=el('roleList');
   if(access.role!=='owner')return;
-  const {data,error}=await db.rpc('kpi_list_branch_admins');
-  if(error){list.textContent='권한 관리 기능을 활성화하려면 Supabase에서 branch_admin_setup.sql을 실행하세요.';return;}
+  const {data,error}=await db.rpc('kpi_list_team_admins');
+  if(error){list.textContent='권한 관리 기능을 활성화하려면 Supabase에서 team_admin_setup.sql을 실행하세요.';return;}
   const entries=Array.isArray(data)?data:[];
-  list.innerHTML=entries.length?entries.map(x=>'<div style="display:flex;gap:9px;align-items:center;flex-wrap:wrap;padding:7px 0;border-bottom:1px solid var(--line)"><strong>'+esc(x.branch)+'</strong><span>'+esc(x.email)+'</span><button class="mini" data-revoke="'+esc(x.email)+'">권한 회수</button></div>').join(''):'등록된 지사 관리자가 없습니다.';
+  list.innerHTML=entries.length?entries.map(x=>'<div style="display:flex;gap:9px;align-items:center;flex-wrap:wrap;padding:7px 0;border-bottom:1px solid var(--line)"><strong>'+esc(x.role==='shared'?'전체 공동 관리자':x.branch+' · 지사 관리자')+'</strong><span>'+esc(x.email)+'</span><button class="mini" data-revoke="'+esc(x.email)+'">권한 회수</button></div>').join(''):'등록된 추가 관리자가 없습니다.';
 }
 el('roleForm').onsubmit=async e=>{
   e.preventDefault();if(access.role!=='owner'||loading)return;
-  const email=el('roleEmail').value.trim(),branch=el('roleBranch').value;
-  if(!confirm(email+' 계정에 '+branch+' 관리 권한을 부여할까요?'))return;
+  const email=el('roleEmail').value.trim(),role=el('roleType').value,branch=role==='branch'?el('roleBranch').value:null;
+  const label=role==='shared'?'전체 공동 관리자':branch+' 관리자';
+  if(!confirm(email+' 계정에 '+label+' 권한을 부여할까요?'))return;
   const button=e.target.querySelector('button[type="submit"]');button.disabled=true;
-  try{const {error}=await db.rpc('kpi_manage_branch_admin',{p_email:email,p_branch:branch});if(error)throw error;el('roleEmail').value='';await refreshRoleList();alert('지사 관리자 권한을 등록했습니다.');}
+  try{const {error}=await db.rpc('kpi_manage_team_admin',{p_email:email,p_role:role,p_branch:branch});if(error)throw error;el('roleEmail').value='';await refreshRoleList();alert(label+' 권한을 등록했습니다.');}
   catch(err){alert('권한 변경 실패: '+errText(err));}
   finally{button.disabled=false;}
 };
 el('roleList').onclick=async e=>{
   const button=e.target.closest('[data-revoke]');if(!button||access.role!=='owner')return;
-  if(!confirm(button.dataset.revoke+' 계정의 지사 관리자 권한을 회수할까요?'))return;
+  if(!confirm(button.dataset.revoke+' 계정의 관리자 권한을 회수할까요?'))return;
   button.disabled=true;
-  try{const {error}=await db.rpc('kpi_manage_branch_admin',{p_email:button.dataset.revoke,p_branch:null});if(error)throw error;await refreshRoleList();}
+  try{const {error}=await db.rpc('kpi_manage_team_admin',{p_email:button.dataset.revoke,p_role:'revoke',p_branch:null});if(error)throw error;await refreshRoleList();}
   catch(err){alert('권한 회수 실패: '+errText(err));button.disabled=false;}
 };
 async function loadEvents() {
