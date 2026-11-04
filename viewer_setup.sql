@@ -13,7 +13,8 @@ DECLARE
   user_count integer;
   only_user uuid;
 BEGIN
-  SELECT count(*), min(id) INTO user_count, only_user FROM auth.users;
+  SELECT count(*) INTO user_count FROM auth.users;
+  SELECT id INTO only_user FROM auth.users ORDER BY created_at LIMIT 1;
   IF user_count <> 1 THEN
     RAISE EXCEPTION '관리자 안전 확인 중단: Supabase Authentication 사용자가 정확히 1명이어야 합니다. 현재 %명. 관리자 UUID를 확인해 별도 설정이 필요합니다.', user_count;
   END IF;
