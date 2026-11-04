@@ -41,8 +41,33 @@
 <div class="section-top"><h2>행사별 상세 내역</h2><span class="count" id="count">0개 행사</span></div><div class="table-wrap"><table><thead><tr><th>행사명 / 장소</th><th>진행일</th><th>행사 유형</th><th>참가인원</th><th>비용</th><th>목표구좌</th><th>달성구좌</th><th>달성률</th><th>관리</th></tr></thead><tbody id="rows"></tbody></table></div><p class="foot">※ 전환율 = 달성구좌 ÷ 참가인원, 구좌당 비용 = 행사비용 ÷ 달성구좌. 동일 참가자의 중복 참석 여부는 구분하지 않습니다. 입력한 데이터는 온라인 DB에 저장되며 동일한 계정으로 여러 기기에서 확인할 수 있습니다.</p></main></div>
 <div class="overlay" id="overlay"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><div class="modal-head"><h2 id="modalTitle">행사 등록</h2><button class="close" id="close" aria-label="닫기">×</button></div><form id="form"><div class="fields"><div class="field full"><label for="fName">행사명 *</label><input id="fName" required maxlength="100" placeholder="예: 보라CC VIP 초청 행사"></div><div class="field"><label for="fDate">행사일 *</label><input type="date" id="fDate" required></div><div class="field"><label for="fType">행사 유형</label><select id="fType"><option>VIP 초청</option><option>골프대회</option><option>설명회</option><option>회원 행사</option><option>기타</option></select></div><div class="field full"><label for="fPlace">장소 / 골프장</label><input id="fPlace" maxlength="100" placeholder="예: 보라CC"></div><div class="field"><label for="fAttendees">참가 인원 (명) *</label><input type="number" id="fAttendees" min="0" step="1" required value="0"></div><div class="field"><label for="fCost">총 행사 비용 (원) *</label><input type="number" id="fCost" min="0" step="1" required value="0"></div><div class="field"><label for="fGoal">목표구좌 *</label><input type="number" id="fGoal" min="0" step="1" required value="0"></div><div class="field"><label for="fDone">달성구좌 *</label><input type="number" id="fDone" min="0" step="1" required value="0"></div><div class="field full"><label for="fMemo">메모 (선택)</label><input id="fMemo" maxlength="250" placeholder="주요 성과, 개선점, 행사 내용 등"></div></div><div class="modal-footer"><button type="button" id="cancel" class="btn">취소</button><button type="submit" class="btn primary">저장하기</button></div></form></div></div><input type="file" id="file" accept="application/json,.json" hidden>
 <script src="config.js"></script>
+<script>
+  // 모듈 로딩 실패 시에도 사용자에게 오류를 안내합니다.
+  document.getElementById('authError').textContent = '로그인 기능을 연결하는 중…';
+  setTimeout(() => {
+    const message = document.getElementById('authError');
+    if (message && message.textContent === '로그인 기능을 연결하는 중…') {
+      message.textContent = '로그인 프로그램 연결이 지연되고 있습니다. Ctrl+F5를 눌러 새로고침해 주세요.';
+    }
+  }, 12000);
+  window.addEventListener('error', event => {
+    if (event.target && event.target.tagName === 'SCRIPT') {
+      document.getElementById('authError').textContent = '필수 설정 파일을 불러오지 못했습니다. 새로고침해 주세요.';
+    }
+  }, true);
+</script>
 <script type="module">
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+let createClient;
+try {
+  ({ createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'));
+} catch (firstError) {
+  try {
+    ({ createClient } = await import('https://esm.sh/@supabase/supabase-js@2'));
+  } catch (secondError) {
+    document.getElementById('authError').textContent = '로그인 프로그램을 불러오지 못했습니다. 인터넷 연결을 확인하고 Ctrl+F5를 눌러주세요.';
+    throw secondError;
+  }
+}
 const el = id => document.getElementById(id);
 const cfg = window.PLK_CONFIG || {};
 const isConfigured = /^https:\/\/.+\.supabase\.co\/?$/.test(cfg.supabaseUrl || '') && !!cfg.supabaseAnonKey && !String(cfg.supabaseAnonKey).includes('여기에');
@@ -55,18 +80,7 @@ const errText = e => { console.error(e); return (e && e.message) || '알 수 없
 const showAuth = message => { el('authScreen').hidden=false; el('kpiApp').hidden=true; el('authError').textContent=message || ''; };
 const showApp = user => { currentUser=user; el('currentUser').textContent='로그인: '+user.email; el('authScreen').hidden=true; el('kpiApp').hidden=false; };
 const lock = flag => { loading=flag; ['add','backup','restore','logout'].forEach(id=>el(id).disabled=flag); };
-if (!isConfigured) showAuth('설정이 필요합니다. config.js에 Supabase URL과 공개키(anon/publishable key)를 입력하세요.');
-else {
-  db = createClient(cfg.supabaseUrl,cfg.supabaseAnonKey,{auth:{autoRefreshToken:true,persistSession:true,detectSessionInUrl:false}});
-  const {data:{session},error} = await db.auth.getSession();
-  if (error) showAuth('세션 확인 실패: '+errText(error));
-  else if (session?.user) await enter(session.user);
-  else showAuth('');
-  db.auth.onAuthStateChange((event,session)=>{
-    if (event==='SIGNED_OUT') {currentUser=null;items=[];showAuth('');}
-    // SIGNED_IN 초기 처리는 getSession / 로그인 폼에서 수행합니다.
-  });
-}
+// 로그인 폼 이벤트를 먼저 연결한 뒤 초기 세션을 확인합니다.
 async function enter(user) { showApp(user); await loadEvents(); }
 async function loadEvents() {
   if (!currentUser || !db) return;
@@ -90,7 +104,24 @@ function render(){years();const a=filtered(),sum=k=>a.reduce((z,x)=>z+Number(x[k
 function modal(x){editing=x?x.id:null;el('modalTitle').textContent=x?'행사 수정':'행사 등록';const fields={Name:'name',Date:'date',Type:'type',Place:'place',Attendees:'attendees',Cost:'cost',Goal:'goal',Done:'done',Memo:'memo'};Object.entries(fields).forEach(([field,key])=>el('f'+field).value=x?(x[key]??''):(['Attendees','Cost','Goal','Done'].includes(field)?0:field==='Date'?new Date().toLocaleDateString('sv-SE'):field==='Type'?'VIP 초청':''));el('overlay').classList.add('show');el('fName').focus();}
 function hide(){el('overlay').classList.remove('show');}
 el('add').onclick=()=>modal(null);el('close').onclick=hide;el('cancel').onclick=hide;el('overlay').onclick=e=>{if(e.target===el('overlay'))hide();};document.addEventListener('keydown',e=>{if(e.key==='Escape')hide();});
-el('loginForm').onsubmit=async e=>{e.preventDefault();if(!db)return;const btn=el('loginButton');btn.disabled=true;el('authError').textContent='로그인 확인 중…';try{const {data,error}=await db.auth.signInWithPassword({email:el('loginEmail').value.trim(),password:el('loginPassword').value});if(error)throw error;el('loginPassword').value='';el('authError').textContent='';await enter(data.user);}catch(e){el('authError').textContent='로그인 실패: '+errText(e);}finally{btn.disabled=false;}};
+el('loginForm').onsubmit=async e=>{e.preventDefault();if(!db){el('authError').textContent='로그인 연결을 확인 중입니다. 잠시 후 다시 시도하거나 Ctrl+F5를 눌러주세요.';return;}const btn=el('loginButton');btn.disabled=true;el('authError').textContent='로그인 확인 중…';try{const {data,error}=await db.auth.signInWithPassword({email:el('loginEmail').value.trim(),password:el('loginPassword').value});if(error)throw error;el('loginPassword').value='';el('authError').textContent='';await enter(data.user);}catch(e){el('authError').textContent='로그인 실패: '+errText(e);}finally{btn.disabled=false;}};
+if (!isConfigured) {
+  showAuth('설정이 필요합니다. config.js에 Supabase URL과 공개키를 입력하세요.');
+} else {
+  try {
+    db = createClient(cfg.supabaseUrl,cfg.supabaseAnonKey,{auth:{autoRefreshToken:true,persistSession:true,detectSessionInUrl:false}});
+    db.auth.onAuthStateChange((event,session)=>{
+      if (event==='SIGNED_OUT') {currentUser=null;items=[];showAuth('');}
+    });
+    db.auth.getSession().then(async ({data,error})=>{
+      if (error) { showAuth('세션 확인 실패: '+errText(error)); return; }
+      if (data?.session?.user && !currentUser) await enter(data.session.user);
+      else if (!currentUser) showAuth('');
+    }).catch(error=>showAuth('연결 확인 오류: '+errText(error)));
+  } catch (error) {
+    showAuth('로그인 설정 오류: '+errText(error));
+  }
+}
 el('logout').onclick=async()=>{if(db){const {error}=await db.auth.signOut();if(error){status('로그아웃 실패: '+errText(error),true);}else{currentUser=null;items=[];showAuth('로그아웃했습니다.');}}};
 el('form').onsubmit=async e=>{e.preventDefault();if(!db||!currentUser||loading)return;const data={id:editing||('e'+crypto.randomUUID()),name:el('fName').value.trim(),date:el('fDate').value,type:el('fType').value,place:el('fPlace').value.trim(),attendees:Number(el('fAttendees').value),cost:Number(el('fCost').value),goal:Number(el('fGoal').value),done:Number(el('fDone').value),memo:el('fMemo').value.trim()};if(!data.name||!/^\d{4}-\d{2}-\d{2}$/.test(data.date)||!['attendees','cost','goal','done'].every(k=>Number.isSafeInteger(data[k])&&data[k]>=0)){alert('필수 입력값을 확인해 주세요.');return;}const btn=e.target.querySelector('[type="submit"]');btn.disabled=true;btn.textContent='저장 중…';try{const {error}=await db.from('kpi_events').upsert({id:data.id,user_id:currentUser.id,event_data:data},{onConflict:'user_id,id'});if(error)throw error;if(editing)items=items.map(x=>x.id===editing?data:x);else items.push(data);hide();render();status('온라인 저장 완료 · 총 '+fmt(items.length)+'건');}catch(err){alert('온라인 저장 실패: '+errText(err));status('저장 실패: '+errText(err),true);}finally{btn.disabled=false;btn.textContent='저장하기';}};
 el('rows').onclick=async e=>{const b=e.target.closest('button');if(!b||loading)return;const id=b.dataset.edit||b.dataset.delete,x=items.find(i=>i.id===id);if(!x)return;if(b.dataset.edit){modal(x);return;}if(!confirm('이 행사를 온라인 DB에서 삭제하시겠습니까?'))return;b.disabled=true;try{const {error}=await db.from('kpi_events').delete().eq('user_id',currentUser.id).eq('id',id);if(error)throw error;items=items.filter(i=>i.id!==id);render();status('온라인 삭제 완료');}catch(err){alert('삭제 실패: '+errText(err));}finally{b.disabled=false;}};
