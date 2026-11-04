@@ -44,6 +44,16 @@
 <div class="app" id="kpiApp" hidden><aside class="sidebar"><div class="brand">PLK <span style="color:#71afff">KPI</span><small>EVENT PERFORMANCE</small></div><div class="nav-item">▦ &nbsp; 행사 성과 대시보드</div><div class="aside-note">회사 행사 실적을 한눈에.<br>로그인 후 행사 데이터를 온라인에 안전하게 저장합니다.</div></aside>
 <main class="main"><header class="top"><div><div class="eyebrow">PERFORMANCE OVERVIEW</div><h1 class="h1">행사 KPI 관리</h1><p class="sub">행사 투입 비용과 실적을 한곳에서 관리하세요.</p><div class="top-user" id="currentUser"></div></div><div class="btns"><a class="btn" href="./viewer.html" target="_blank" rel="noopener" style="text-decoration:none">↗ 공개 뷰어</a><button class="btn" id="exportCsv">↓ CSV 다운로드</button><button class="btn" id="backup">↓ 백업</button><button class="btn" id="restore">↑ 복원</button><button class="btn primary" id="add">＋ 행사 등록</button><button class="btn" id="logout">로그아웃</button></div></header>
 <div id="status" class="sync-status" role="status" aria-live="polite">온라인 데이터 연결 중…</div>
+<section id="adminRoles" hidden style="background:#fff;border:1px solid var(--line);padding:18px;border-radius:12px;margin-top:14px">
+  <h3 style="margin:0 0 8px">지사 관리자 권한 <small style="font-weight:400;color:var(--muted)">최고관리자 전용</small></h3>
+  <p style="color:var(--muted);font-size:12px">Supabase Authentication → Users에서 먼저 이메일 계정을 초대·생성한 후 아래에서 권한을 부여하세요. 지사 관리자는 지정 지사 행사만 조회하고 변경할 수 있습니다.</p>
+  <form id="roleForm" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+    <input id="roleEmail" type="email" required placeholder="추가 관리자 이메일" autocomplete="off" style="padding:10px;border:1px solid var(--line);border-radius:8px;min-width:225px">
+    <select id="roleBranch" style="padding:10px;border:1px solid var(--line);border-radius:8px"><option>부산 1지사</option><option>부산 2지사</option><option>부산 3지사</option><option>부산 4지사</option><option>부산권역</option></select>
+    <button class="btn primary" type="submit">관리자 권한 부여/변경</button>
+  </form>
+  <div id="roleList" style="margin-top:12px;font-size:13px;color:var(--muted)"></div>
+</section>
 <section class="filters"><select id="branch" aria-label="담당 지사 또는 권역"><option value="all">전체 지사·권역</option><option value="부산 1지사">부산 1지사</option><option value="부산 2지사">부산 2지사</option><option value="부산 3지사">부산 3지사</option><option value="부산 4지사">부산 4지사</option><option value="부산권역">부산권역</option><option value="unassigned">미지정 (기존 행사)</option></select><select id="year" aria-label="연도 선택"></select><select id="month" aria-label="월 선택"><option value="all">전체 월</option></select><select id="type" aria-label="행사 구분"><option value="all">전체 행사 유형</option><option>VIP 초청</option><option>골프대회</option><option>설명회</option><option>회원 행사</option><option>기타</option></select><input id="search" placeholder="행사명 / 골프장 검색" aria-label="행사 검색"></section>
 <section class="metrics"><div class="metric"><div class="label">총 진행 행사</div><div class="value" id="mEvents">0건</div><div class="detail">선택 기간 행사 수</div></div><div class="metric"><div class="label">총 참가 인원</div><div class="value" id="mAttendees">0명</div><div class="detail" id="mAttendeesSub">PLK 회원 0명 · 비회원 0명</div><div class="detail" id="mSignupSub" style="margin-top:5px">입회 전환율 —</div></div><div class="metric"><div class="label">총 행사 비용</div><div class="value" id="mCost">0원</div><div class="detail" id="mCostSub">대관 · 식음 · 시상품 · 기타</div></div><div class="metric"><div class="label">목표구좌 달성률</div><div class="value accent" id="mRate">—</div><div class="detail" id="mRateSub">달성 0 / 목표 0구좌</div><div class="detail" id="mProductSub" style="margin-top:5px">법인 0 · 개인 0구좌</div></div><div class="metric"><div class="label">총 가입구좌 매출</div><div class="value success" id="mRevenue">—</div><div class="detail" id="mRevenueSub">법인/개인 매출액</div></div><div class="metric"><div class="label">행사 수입</div><div class="value accent" id="mEventIncome">0원</div><div class="detail" id="mEventIncomeSub">참가비·후원금 등 가입매출 제외</div></div><div class="metric"><div class="label">총수입 − 행사비용</div><div class="value" id="mProfit">—</div><div class="detail" id="mProfitSub">단순 차액 · 순이익 아님</div></div></section>
 <section class="panels"><article class="panel"><h2>행사별 목표 대비 실적</h2><p>최근 행사 최대 6건 · 구좌 기준</p><div class="chart" id="chart"></div><div class="chart-labels" id="chartLabels"></div><div class="legend"><span><i class="dot" style="background:#b8cce9"></i>목표구좌</span><span><i class="dot" style="background:#145dc5"></i>달성구좌</span></div></article><article class="panel"><h2>핵심 성과 지표</h2><p>선택한 행사들의 합계 기준</p><div class="insight"><span>총 목표구좌</span><strong id="sGoal">0구좌</strong></div><div class="insight"><span>총 달성구좌</span><strong class="success" id="sDone">0구좌</strong></div><div class="insight"><span>법인 가입구좌</span><strong id="sCorporate">0구좌</strong></div><div class="insight"><span>개인 가입구좌</span><strong id="sIndividual">0구좌</strong></div><div class="insight"><span>대관료</span><strong id="sVenue">0원</strong></div><div class="insight"><span>식음료비</span><strong id="sFood">0원</strong></div><div class="insight"><span>시상품비</span><strong id="sPrize">0원</strong></div><div class="insight"><span>기타비용</span><strong id="sOther">0원</strong></div><div class="insight"><span>행사 수입 합계</span><strong id="sEventIncome">0원</strong></div><div class="insight"><span>법인 가입 매출</span><strong id="sCorporateRevenue">—</strong></div><div class="insight"><span>개인 가입 매출</span><strong id="sIndividualRevenue">—</strong></div><div class="insight"><span>달성구좌당 비용</span><strong id="sCpa">—</strong></div><div class="insight"><span>목표구좌 대비 달성률</span><strong id="sConv">—</strong></div><div class="insight"><span>참가인원 대비 입회 전환율</span><strong id="sSignupConv">—</strong></div><div class="insight"><span>환산 입회 건수</span><strong id="sSignupCount">—</strong></div><div class="insight"><span>1인당 행사 비용</span><strong id="sPerson">—</strong></div></article></section>
@@ -81,27 +91,68 @@ const el = id => document.getElementById(id);
 const cfg = window.PLK_CONFIG || {};
 const isConfigured = /^https:\/\/.+\.supabase\.co\/?$/.test(cfg.supabaseUrl || '') && !!cfg.supabaseAnonKey && !String(cfg.supabaseAnonKey).includes('여기에');
 let db = null, currentUser = null, items = [], editing = null, loading = false;
+let access={role:'none',branch:null}, eventOwners={};
 const fmt = n => Number(n || 0).toLocaleString('ko-KR');
 const won = n => fmt(Math.round(n)) + '원';
 const esc = s => String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const status = (msg, error=false) => { el('status').textContent=msg; el('status').classList.toggle('error',error); };
 const errText = e => { console.error(e); return (e && e.message) || '알 수 없는 오류'; };
 const showAuth = message => { el('authScreen').hidden=false; el('kpiApp').hidden=true; el('authError').textContent=message || ''; };
-const showApp = user => { currentUser=user; el('currentUser').textContent='로그인: '+user.email; el('authScreen').hidden=true; el('kpiApp').hidden=false; };
+const showApp = user => { currentUser=user; el('currentUser').textContent=(access.role==='owner'?'최고관리자 · 전체 행사':access.branch+' · 지사 관리자')+' · '+user.email; el('authScreen').hidden=true; el('kpiApp').hidden=false; el('adminRoles').hidden=access.role!=='owner'; el('backup').hidden=access.role!=='owner'; el('restore').hidden=access.role!=='owner'; if(access.role==='branch'){el('branch').value=access.branch;el('branch').disabled=true;el('fBranch').value=access.branch;el('fBranch').disabled=true;}else{el('branch').disabled=false;el('fBranch').disabled=false;} };
 const lock = flag => { loading=flag; ['add','backup','restore','logout'].forEach(id=>el(id).disabled=flag); };
 // 로그인 폼 이벤트를 먼저 연결한 뒤 초기 세션을 확인합니다.
-async function enter(user) { showApp(user); await loadEvents(); }
+async function enter(user) {
+  if (!db) return;
+  const {data,error}=await db.rpc('kpi_my_access');
+  if(error){
+    // 이전 단일 최고관리자 정책과의 호환: 새 권한 SQL 적용 전에도 기존 소유자 로그인 유지
+    if(error.code==='PGRST202'||error.code==='42883'){
+      const old=await db.rpc('kpi_is_admin');
+      if(old.error||!old.data){await db.auth.signOut();showAuth('관리자 권한을 확인할 수 없습니다. Supabase branch_admin_setup.sql 적용 여부를 확인하세요.');return;}
+      access={role:'owner',branch:null};
+    }else{showAuth('관리자 권한 조회 실패: '+errText(error));return;}
+  }else{
+    access=data&&typeof data==='object'?data:{role:'none',branch:null};
+    if(!['owner','branch'].includes(access.role)){await db.auth.signOut();showAuth('관리 권한이 없는 계정입니다. 최고관리자에게 지사 권한 부여를 요청하세요.');return;}
+  }
+  showApp(user);await loadEvents();
+  if(access.role==='owner') refreshRoleList();
+}
+async function refreshRoleList(){
+  const list=el('roleList');
+  if(access.role!=='owner')return;
+  const {data,error}=await db.rpc('kpi_list_branch_admins');
+  if(error){list.textContent='권한 관리 기능을 활성화하려면 Supabase에서 branch_admin_setup.sql을 실행하세요.';return;}
+  const entries=Array.isArray(data)?data:[];
+  list.innerHTML=entries.length?entries.map(x=>'<div style="display:flex;gap:9px;align-items:center;flex-wrap:wrap;padding:7px 0;border-bottom:1px solid var(--line)"><strong>'+esc(x.branch)+'</strong><span>'+esc(x.email)+'</span><button class="mini" data-revoke="'+esc(x.email)+'">권한 회수</button></div>').join(''):'등록된 지사 관리자가 없습니다.';
+}
+el('roleForm').onsubmit=async e=>{
+  e.preventDefault();if(access.role!=='owner'||loading)return;
+  const email=el('roleEmail').value.trim(),branch=el('roleBranch').value;
+  if(!confirm(email+' 계정에 '+branch+' 관리 권한을 부여할까요?'))return;
+  const button=e.target.querySelector('button[type="submit"]');button.disabled=true;
+  try{const {error}=await db.rpc('kpi_manage_branch_admin',{p_email:email,p_branch:branch});if(error)throw error;el('roleEmail').value='';await refreshRoleList();alert('지사 관리자 권한을 등록했습니다.');}
+  catch(err){alert('권한 변경 실패: '+errText(err));}
+  finally{button.disabled=false;}
+};
+el('roleList').onclick=async e=>{
+  const button=e.target.closest('[data-revoke]');if(!button||access.role!=='owner')return;
+  if(!confirm(button.dataset.revoke+' 계정의 지사 관리자 권한을 회수할까요?'))return;
+  button.disabled=true;
+  try{const {error}=await db.rpc('kpi_manage_branch_admin',{p_email:button.dataset.revoke,p_branch:null});if(error)throw error;await refreshRoleList();}
+  catch(err){alert('권한 회수 실패: '+errText(err));button.disabled=false;}
+};
 async function loadEvents() {
   if (!currentUser || !db) return;
   lock(true);status('온라인 데이터 불러오는 중…');
   try {
     let rows=[],from=0;
     while (true) {
-      const {data,error}=await db.from('kpi_events').select('id,event_data').eq('user_id',currentUser.id).range(from,from+999);
+      const {data,error}=await db.from('kpi_events').select('id,user_id,event_data').range(from,from+999);
       if (error) throw error;
       rows.push(...(data||[])); if ((data||[]).length<1000) break; from+=1000;
     }
-    items=rows.map(r=>({...r.event_data,id:r.id})); render();status('온라인 저장 연결됨 · 총 '+fmt(items.length)+'건');
+    eventOwners=Object.fromEntries(rows.map(r=>[r.id,r.user_id]));items=rows.map(r=>({...r.event_data,id:r.id})); render();status('온라인 저장 연결됨 · 총 '+fmt(items.length)+'건');
   } catch(e) {items=[];render();status('데이터를 불러오지 못했습니다: '+errText(e),true);}
   finally{lock(false);}
 }
@@ -166,7 +217,7 @@ el('fRevenueTotal').textContent='가입매출: '+(revs===null?'미입력':won(re
 ['fMembers','fNonMembers','fCorporate','fIndividual','fVenueCost','fFoodCost','fPrizeCost','fOtherCost','fPromoPoints','fHeadOffice','fCorporateRevenue','fIndividualRevenue','fEventIncome'].forEach(id=>el(id).addEventListener('input',updateTotals));
 function modal(x){editing=x?x.id:null;el('modalTitle').textContent=x?'행사 수정':'행사 등록';
 const fields={Name:'name',Date:'date',Type:'type',Place:'place',Goal:'goal',Memo:'memo'};
-el('fBranch').value=x?(x.branch||''):'';
+el('fBranch').value=access.role==='branch'?access.branch:(x?(x.branch||''):'');
 Object.entries(fields).forEach(([field,key])=>el('f'+field).value=x?(x[key]??''):(field==='Goal'?0:field==='Date'?new Date().toLocaleDateString('sv-SE'):field==='Type'?'VIP 초청':''));
 el('fPromoPoints').value=x?(known(x.promoPoints)?x.promoPoints:''):0;
 el('fHeadOffice').value=x?(known(x.headOfficeSupport)?x.headOfficeSupport:''):0;
@@ -185,7 +236,7 @@ if (!isConfigured) {
   try {
     db = createClient(cfg.supabaseUrl,cfg.supabaseAnonKey,{auth:{autoRefreshToken:true,persistSession:true,detectSessionInUrl:false}});
     db.auth.onAuthStateChange((event,session)=>{
-      if (event==='SIGNED_OUT') {currentUser=null;items=[];showAuth('');}
+      if (event==='SIGNED_OUT') {currentUser=null;items=[];eventOwners={};access={role:'none',branch:null};showAuth('');}
     });
     db.auth.getSession().then(async ({data,error})=>{
       if (error) { showAuth('세션 확인 실패: '+errText(error)); return; }
@@ -226,10 +277,20 @@ if(fundingParts.total!==null&&fundingParts.total!==costParts.total)throw Error('
 if(!old&&costParts.total>0&&fundingParts.total===null)throw Error('행사비용 집행 재원을 입력해 주세요.');
 }catch(err){alert(err.message);return;}
 const data={id:editing||('e'+crypto.randomUUID()),name:el('fName').value.trim(),branch:el('fBranch').value,date:el('fDate').value,type:el('fType').value,place:el('fPlace').value.trim(),attendees:participants.total,members:participants.a,nonMembers:participants.b,cost:costParts.total,venueCost:costParts.values[0],foodCost:costParts.values[1],prizeCost:costParts.values[2],otherCost:costParts.values[3],promoPoints:fundingParts.values[0],headOfficeSupport:fundingParts.values[1],corporateRevenue:sales.values[0],individualRevenue:sales.values[1],eventIncome:el('fEventIncome').value.trim()===''?null:Number(el('fEventIncome').value),goal:Number(el('fGoal').value),done:products.total,corporate:products.a,individual:products.b,memo:el('fMemo').value.trim()};
+if(access.role==='branch'&&data.branch!==access.branch){alert('담당 지사 이외의 행사는 저장할 수 없습니다.');return;}
 if(!data.name||!data.branch||!data.date||!['attendees','cost','goal','done'].every(k=>Number.isSafeInteger(data[k])&&data[k]>=0)||(data.eventIncome!==null&&!known(data.eventIncome))){alert('필수 입력값을 확인해 주세요.');return;}
 const btn=e.target.querySelector('[type="submit"]');btn.disabled=true;btn.textContent='저장 중…';
-try{const {error}=await db.from('kpi_events').upsert({id:data.id,user_id:currentUser.id,event_data:data},{onConflict:'user_id,id'});if(error)throw error;
-if(editing)items=items.map(x=>x.id===editing?data:x);else items.push(data);hide();render();status('온라인 저장 완료 · 총 '+fmt(items.length)+'건');
+try{
+let error;
+if(editing){
+  const result=await db.from('kpi_events').update({event_data:data}).eq('id',data.id).eq('user_id',eventOwners[data.id]||currentUser.id).select('id');
+  error=result.error;
+  if(!error&&(!result.data||result.data.length!==1))throw Error('수정 권한이 없거나 해당 행사를 찾지 못했습니다.');
+}else{
+  const result=await db.from('kpi_events').insert({id:data.id,user_id:currentUser.id,event_data:data});error=result.error;
+}
+if(error)throw error;
+if(editing)items=items.map(x=>x.id===editing?data:x);else{items.push(data);eventOwners[data.id]=currentUser.id;}hide();render();status('온라인 저장 완료 · 총 '+fmt(items.length)+'건');
 }catch(err){alert('온라인 저장 실패: '+errText(err));status('저장 실패: '+errText(err),true);}
 finally{btn.disabled=false;btn.textContent='저장하기';}};
 
@@ -277,13 +338,13 @@ el('detailClose').onclick=closeEventDetail;
 el('detailCloseBottom').onclick=closeEventDetail;
 el('detailOverlay').onclick=e=>{if(e.target===el('detailOverlay'))closeEventDetail();};
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&el('detailOverlay').classList.contains('show'))closeEventDetail();});
-el('rows').onclick=async e=>{const b=e.target.closest('button');if(!b||loading)return;const id=b.dataset.view||b.dataset.edit||b.dataset.delete,x=items.find(i=>i.id===id);if(!x)return;if(b.dataset.view){showEventDetail(x);return;}if(b.dataset.edit){modal(x);return;}if(!confirm('이 행사를 온라인 DB에서 삭제하시겠습니까?'))return;b.disabled=true;try{const {error}=await db.from('kpi_events').delete().eq('user_id',currentUser.id).eq('id',id);if(error)throw error;items=items.filter(i=>i.id!==id);render();status('온라인 삭제 완료');}catch(err){alert('삭제 실패: '+errText(err));}finally{b.disabled=false;}};
+el('rows').onclick=async e=>{const b=e.target.closest('button');if(!b||loading)return;const id=b.dataset.view||b.dataset.edit||b.dataset.delete,x=items.find(i=>i.id===id);if(!x)return;if(b.dataset.view){showEventDetail(x);return;}if(b.dataset.edit){modal(x);return;}if(!confirm('이 행사를 온라인 DB에서 삭제하시겠습니까?'))return;b.disabled=true;try{const {error}=await db.from('kpi_events').delete().eq('user_id',eventOwners[id]||currentUser.id).eq('id',id);if(error)throw error;items=items.filter(i=>i.id!==id);delete eventOwners[id];render();status('온라인 삭제 완료');}catch(err){alert('삭제 실패: '+errText(err));}finally{b.disabled=false;}};
 ['branch','year','month','type','search'].forEach(id=>el(id).addEventListener(id==='search'?'input':'change',render));
 function dl(name,content,type){const blob=new Blob([content],{type}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}
 el('exportCsv').onclick=()=>{const headers=['행사명','담당 지사/권역','진행일','행사유형','장소','참가인원 합계','PLK회원 인원','비회원 인원','행사비용(원)','판촉물 포인트(원)','본사 지원(원)','대관료(원)','식음료비(원)','시상품비(원)','기타비용(원)','법인매출(원)','개인매출(원)','총가입매출(원)','행사수입(원)','총수입(원)','수입-행사비 차액(원)','목표구좌','달성구좌 합계','법인구좌','개인구좌','달성률(%)','구좌당비용(원)','메모'];
 const lines=filtered().map(x=>[x.name,x.branch||'미지정',x.date,x.type,x.place,x.attendees,known(x.members)?x.members:'미분류',known(x.nonMembers)?x.nonMembers:'미분류',x.cost,...fundingFields.map(k=>known(x[k])?x[k]:'미분류'),...costFields.map(k=>known(x[k])?x[k]:'미분류'),...revenueFields.map(k=>known(x[k])?x[k]:'미입력'),complete(x,revenueFields)?x.corporateRevenue+x.individualRevenue:'미입력',known(x.eventIncome)?x.eventIncome:'미입력',complete(x,revenueFields)?x.corporateRevenue+x.individualRevenue+(known(x.eventIncome)?x.eventIncome:0):'미입력',complete(x,revenueFields)?x.corporateRevenue+x.individualRevenue+(known(x.eventIncome)?x.eventIncome:0)-x.cost:'미입력',x.goal,x.done,known(x.corporate)?x.corporate:'미분류',known(x.individual)?x.individual:'미분류',x.goal?Math.round(x.done/x.goal*1000)/10:'',x.done?Math.round(x.cost/x.done):'',x.memo]);const csv='\ufeff'+[headers,...lines].map(row=>row.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(',')).join('\r\n');dl('PLK_행사_KPI_'+new Date().toISOString().slice(0,10)+'.csv',csv,'text/csv;charset=utf-8');};
 el('backup').onclick=()=>dl('PLK_KPI_백업_'+new Date().toISOString().slice(0,10)+'.json',JSON.stringify({app:'PLK KPI',version:2,items},null,2),'application/json');
 el('restore').onclick=()=>el('file').click();
-el('file').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const j=JSON.parse(await f.text()),data=Array.isArray(j)?j:j.items;if(!Array.isArray(data)||!data.every(x=>x&&typeof x.id==='string'&&typeof x.date==='string'&&typeof x.name==='string'&&['attendees','cost','goal','done'].every(k=>Number.isSafeInteger(x[k])&&x[k]>=0))||new Set(data.map(x=>x.id)).size!==data.length)throw Error('형식 오류');if(!confirm('현재 온라인 데이터가 백업 파일 내용으로 교체됩니다. 계속할까요?'))return;lock(true);status('온라인 데이터 복원 중…');const oldIds=new Set(items.map(x=>x.id)),newIds=new Set(data.map(x=>x.id));for(let i=0;i<data.length;i+=100){const rows=data.slice(i,i+100).map(x=>({id:x.id,user_id:currentUser.id,event_data:x}));const {error}=await db.from('kpi_events').upsert(rows,{onConflict:'user_id,id'});if(error)throw error;}const removed=[...oldIds].filter(id=>!newIds.has(id));for(let i=0;i<removed.length;i+=100){const {error}=await db.from('kpi_events').delete().eq('user_id',currentUser.id).in('id',removed.slice(i,i+100));if(error)throw error;}await loadEvents();alert('온라인 복원이 완료되었습니다.');}catch(err){status('복원 실패: '+errText(err),true);alert('복원 실패: '+errText(err)+'\n일부 변경이 적용되었을 수 있으므로 새로고침 후 확인하세요.');}finally{lock(false);e.target.value='';}};
+el('file').onchange=async e=>{const f=e.target.files[0];if(!f)return;if(access.role!=='owner'){alert('데이터 복원은 최고관리자만 가능합니다.');e.target.value='';return;}try{const j=JSON.parse(await f.text()),data=Array.isArray(j)?j:j.items;if(!Array.isArray(data)||!data.every(x=>x&&typeof x.id==='string'&&typeof x.date==='string'&&typeof x.name==='string'&&['attendees','cost','goal','done'].every(k=>Number.isSafeInteger(x[k])&&x[k]>=0))||new Set(data.map(x=>x.id)).size!==data.length)throw Error('형식 오류');if(!confirm('현재 온라인 데이터가 백업 파일 내용으로 교체됩니다. 계속할까요?'))return;lock(true);status('온라인 데이터 복원 중…');const oldIds=new Set(items.map(x=>x.id)),newIds=new Set(data.map(x=>x.id));for(let i=0;i<data.length;i+=100){const rows=data.slice(i,i+100).map(x=>({id:x.id,user_id:currentUser.id,event_data:x}));const {error}=await db.from('kpi_events').upsert(rows,{onConflict:'user_id,id'});if(error)throw error;}const removed=[...oldIds].filter(id=>!newIds.has(id));for(let i=0;i<removed.length;i+=100){const {error}=await db.from('kpi_events').delete().eq('user_id',currentUser.id).in('id',removed.slice(i,i+100));if(error)throw error;}await loadEvents();alert('온라인 복원이 완료되었습니다.');}catch(err){status('복원 실패: '+errText(err),true);alert('복원 실패: '+errText(err)+'\n일부 변경이 적용되었을 수 있으므로 새로고침 후 확인하세요.');}finally{lock(false);e.target.value='';}};
 el('year').value=String(new Date().getFullYear());render();
 </script></body></html>
