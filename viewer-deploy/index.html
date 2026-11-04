@@ -44,6 +44,7 @@ const known = v => Number.isSafeInteger(v) && v>=0;
 const classified = (a,b) => known(a) && known(b);
 const costFields=['venueCost','foodCost','prizeCost','otherCost'];
 const revenueFields=['corporateRevenue','individualRevenue'];
+const fundingFields=['promoPoints','headOfficeSupport'];
 const complete=(x,fields)=>fields.every(k=>known(x[k]));
 const sumKnown=(rows,key)=>rows.reduce((z,x)=>z+(known(x[key])?x[key]:0),0);
 const profitText=n=>(n<0?'-':'')+won(Math.abs(n));
@@ -67,7 +68,8 @@ const legacyCost=a.reduce((z,x)=>z+(complete(x,costFields)?0:Number(x.cost||0)),
 const corpRevenue=sumKnown(a,'corporateRevenue'),indRevenue=sumKnown(a,'individualRevenue'),hasMissingRevenue=a.some(x=>!complete(x,revenueFields));
 const revenue=corpRevenue+indRevenue,eventIncome=sumKnown(a,'eventIncome'),missingEventIncome=a.filter(x=>!known(x.eventIncome)).length,profit=revenue+eventIncome-cost;
 el('mCost').textContent=won(cost);
-el('mCostSub').textContent='대관 '+won(venue)+' · 식음 '+won(food)+' · 시상 '+won(prize)+' · 기타 '+won(other)+(legacyCost?' · 미분류 '+won(legacyCost):'');
+const points=sumKnown(a,'promoPoints'),hq=sumKnown(a,'headOfficeSupport');const unallocated=a.reduce((z,x)=>z+(complete(x,fundingFields)?0:Number(x.cost||0)),0);
+el('mCostSub').textContent='판촉물 포인트 '+won(points)+' · 본사 지원 '+won(hq)+(unallocated?' · 재원 미분류 '+won(unallocated):'');
 el('mRevenue').textContent=hasMissingRevenue?'—':won(revenue);
 el('mRevenueSub').textContent='법인 '+won(corpRevenue)+' · 개인 '+won(indRevenue)+(hasMissingRevenue?' · 미입력 행사 있음':'');el('mEventIncome').textContent=won(eventIncome);el('mEventIncomeSub').textContent='가입매출 제외'+(missingEventIncome?' · 기존 '+fmt(missingEventIncome)+'건 미입력':'');el('sEventIncome').textContent=won(eventIncome);
 el('mProfit').textContent=hasMissingRevenue?'—':profitText(profit);
@@ -90,6 +92,7 @@ const line=(label,value)=>'<div class="detail-row"><span>'+label+'</span><strong
 const none='미입력';
 const attendeeInfo=classified(x.members,x.nonMembers)?'PLK회원 '+fmt(x.members)+'명 / 비회원 '+fmt(x.nonMembers)+'명':'회원·비회원 구분 미입력';
 const seatInfo=classified(x.corporate,x.individual)?'법인 '+fmt(x.corporate)+'구좌 / 개인 '+fmt(x.individual)+'구좌':'가입상품 구분 미입력';
+const fundingInfo=complete(x,fundingFields)?line('판촉물 포인트',won(x.promoPoints))+line('본사 지원',won(x.headOfficeSupport)):line('집행 재원','미분류 (기존 기록)');
 const expenseInfo=complete(x,costFields)?line('대관료',won(x.venueCost))+line('식음료비',won(x.foodCost))+line('시상품비',won(x.prizeCost))+line('기타비용',won(x.otherCost)):line('세부 비용','기존 행사 · 세부 구분 미입력');
 el('detailTitle').textContent=x.name;
 el('detailContent').innerHTML=
@@ -107,6 +110,7 @@ item('가입구좌 매출',revenueKnown?won(subscriptionRevenue):none,revenueKno
 item('총수입 − 행사비용',profit===null?'계산 보류':profitText(profit),'상품원가 등 미반영 · 실제 순이익 아님')+
 item('달성구좌당 비용',x.done?won(x.cost/x.done):'—')+
 '</div>'+
+'<div class="detail-section-title">행사비용 집행 재원</div>'+fundingInfo+
 '<div class="detail-section-title">행사 비용 내역</div>'+expenseInfo+line('총 행사비용',won(x.cost))+
 '<div class="detail-section-title">매출 및 행사 수입</div>'+
 line('법인 가입 매출',revenueKnown?won(x.corporateRevenue):none)+
