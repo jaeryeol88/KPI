@@ -89,6 +89,7 @@ AS $payload$
     'date',raw->'date','type',raw->'type','place',raw->'place',
     'attendees',raw->'attendees','members',raw->'members',
     'nonMembers',raw->'nonMembers','cost',raw->'cost',
+    'promoPoints',raw->'promoPoints','headOfficeSupport',raw->'headOfficeSupport',
     'venueCost',raw->'venueCost','foodCost',raw->'foodCost',
     'prizeCost',raw->'prizeCost','otherCost',raw->'otherCost',
     'eventIncome',raw->'eventIncome','goal',raw->'goal',
