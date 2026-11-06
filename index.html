@@ -99,7 +99,22 @@ const esc = s => String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>
 const status = (msg, error=false) => { el('status').textContent=msg; el('status').classList.toggle('error',error); };
 const errText = e => { console.error(e); return (e && e.message) || '알 수 없는 오류'; };
 const showAuth = message => { el('authScreen').hidden=false; el('kpiApp').hidden=true; el('authError').textContent=message || ''; };
-const showApp = user => { currentUser=user; el('currentUser').textContent=(access.role==='owner'?'최고관리자 · 전체 행사':access.role==='shared'?'공동 관리자 · 전체 행사':access.branch+' · 지사 관리자')+' · '+user.email; el('authScreen').hidden=true; el('kpiApp').hidden=false; el('adminRoles').hidden=access.role!=='owner'; el('backup').hidden=access.role!=='owner'; el('restore').hidden=access.role!=='owner'; if(access.role==='branch'){el('branch').value=access.branch;el('branch').disabled=true;el('fBranch').value=access.branch;el('fBranch').disabled=true;}else{el('branch').disabled=false;el('fBranch').disabled=false;} };
+const showApp = user => {
+  currentUser=user;
+  const branchOnly=access.role==='branch';
+  el('currentUser').textContent=(access.role==='owner'?'최고관리자 · 전체 행사':access.role==='shared'?'공동 관리자 · 전체 행사':access.branch+' · 지사 관리자 (본인 지사만)')+' · '+user.email;
+  el('authScreen').hidden=true; el('kpiApp').hidden=false;
+  el('adminRoles').hidden=access.role!=='owner';
+  el('backup').hidden=access.role!=='owner';
+  el('restore').hidden=access.role!=='owner';
+  const branchFilter=el('branch'), branchEditor=el('fBranch');
+  Array.from(branchFilter.options).forEach(option=>{option.hidden=branchOnly&&option.value!==access.branch;});
+  Array.from(branchEditor.options).forEach(option=>{option.hidden=branchOnly&&option.value!==access.branch;});
+  branchFilter.value=branchOnly?access.branch:'all';
+  branchFilter.disabled=branchOnly;
+  branchEditor.value=branchOnly?access.branch:'';
+  branchEditor.disabled=branchOnly;
+};
 const lock = flag => { loading=flag; ['add','backup','restore','logout'].forEach(id=>el(id).disabled=flag); };
 // 로그인 폼 이벤트를 먼저 연결한 뒤 초기 세션을 확인합니다.
 async function enter(user) {
@@ -114,7 +129,8 @@ async function enter(user) {
     }else{showAuth('관리자 권한 조회 실패: '+errText(error));return;}
   }else{
     access=data&&typeof data==='object'?data:{role:'none',branch:null};
-    if(!['owner','shared','branch'].includes(access.role)){await db.auth.signOut();showAuth('관리 권한이 없는 계정입니다. 최고관리자에게 관리자 권한 부여를 요청하세요.');return;}
+    const validBranches=['부산 1지사','부산 2지사','부산 3지사','부산 4지사','부산권역'];
+    if(!['owner','shared','branch'].includes(access.role)||(access.role==='branch'&&!validBranches.includes(access.branch))){await db.auth.signOut();showAuth('관리 권한이 없는 계정입니다. 최고관리자에게 관리자 권한 부여를 요청하세요.');return;}
   }
   showApp(user);await loadEvents();
   if(access.role==='owner') refreshRoleList();
@@ -155,13 +171,19 @@ async function loadEvents() {
       if (error) throw error;
       rows.push(...(data||[])); if ((data||[]).length<1000) break; from+=1000;
     }
-    eventOwners=Object.fromEntries(rows.map(r=>[r.id,r.user_id]));items=rows.map(r=>({...r.event_data,id:r.id})); render();status('온라인 저장 연결됨 · 총 '+fmt(items.length)+'건');
+    // 서버 RLS가 1차로 제한하고, 화면에서도 담당 지사 이외의 기록을 다시 제외합니다.
+    const visibleRows=access.role==='branch'?rows.filter(r=>r.event_data?.branch===access.branch):rows;
+    eventOwners=Object.fromEntries(visibleRows.map(r=>[r.id,r.user_id]));
+    items=visibleRows.map(r=>({...r.event_data,id:r.id}));
+    if(access.role==='branch')el('branch').value=access.branch;
+    render();
+    status('온라인 저장 연결됨 · '+(access.role==='branch'?access.branch+' 전용 · ':'')+'총 '+fmt(items.length)+'건');
   } catch(e) {items=[];render();status('데이터를 불러오지 못했습니다: '+errText(e),true);}
   finally{lock(false);}
 }
 const years=()=>{const select=el('year'),prev=select.value||String(new Date().getFullYear());const ys=[...new Set([String(new Date().getFullYear()),...items.map(x=>String(x.date||'').slice(0,4))])].sort().reverse();select.innerHTML='<option value="all">전체 연도</option>'+ys.map(y=>`<option value="${y}">${y}년</option>`).join('');select.value=[...ys,'all'].includes(prev)?prev:'all';};
 for(let m=1;m<=12;m++)el('month').insertAdjacentHTML('beforeend',`<option value="${String(m).padStart(2,'0')}">${m}월</option>`);
-function filtered(){const branch=el('branch').value,y=el('year').value,m=el('month').value,t=el('type').value,q=el('search').value.trim().toLowerCase();return items.filter(x=>(branch==='all'||(branch==='unassigned'?!x.branch:x.branch===branch))&&(y==='all'||x.date.startsWith(y))&&(m==='all'||x.date.slice(5,7)===m)&&(t==='all'||x.type===t)&&(!q||(x.name+' '+(x.place||'')).toLowerCase().includes(q))).sort((a,b)=>b.date.localeCompare(a.date));}
+function filtered(){const branch=access.role==='branch'?access.branch:el('branch').value,y=el('year').value,m=el('month').value,t=el('type').value,q=el('search').value.trim().toLowerCase();return items.filter(x=>(access.role!=='branch'||x.branch===access.branch)&&(branch==='all'||(branch==='unassigned'?!x.branch:x.branch===branch))&&(y==='all'||x.date.startsWith(y))&&(m==='all'||x.date.slice(5,7)===m)&&(t==='all'||x.type===t)&&(!q||(x.name+' '+(x.place||'')).toLowerCase().includes(q))).sort((a,b)=>b.date.localeCompare(a.date));}
 function rate(goal,done){return goal>0?(done/goal*100).toFixed(1)+'%':'—';}
 const known = v => Number.isSafeInteger(v) && v>=0;
 const classified = (a,b) => known(a) && known(b);
@@ -246,7 +268,9 @@ el('fCostTotal').textContent='총 행사비용: '+(costs===null?'기존 금액 �
 el('fRevenueTotal').textContent='가입매출: '+(revs===null?'미입력':won(revs))+' · 행사 수입: '+(eventIncome===null?'미입력':won(eventIncome))+' · 수입−행사비: '+(revs===null||costs===null||eventIncome===null?'—':profitText(revs+eventIncome-costs));
 }
 ['fMembers','fNonMembers','fCorporate','fIndividual','fVenueCost','fFoodCost','fPrizeCost','fOtherCost','fPromoPoints','fHeadOffice','fCorporateRevenue','fIndividualRevenue','fEventIncome'].forEach(id=>el(id).addEventListener('input',updateTotals));
-function modal(x){editing=x?x.id:null;el('modalTitle').textContent=x?'행사 수정':'행사 등록';
+function modal(x){
+if(access.role==='branch'&&x&&x.branch!==access.branch){alert('본인 지사 행사만 수정할 수 있습니다.');return;}
+editing=x?x.id:null;el('modalTitle').textContent=x?'행사 수정':'행사 등록';
 const fields={Name:'name',Date:'date',Type:'type',Place:'place',Goal:'goal',Memo:'memo'};
 el('fBranch').value=access.role==='branch'?access.branch:(x?(x.branch||''):'');
 Object.entries(fields).forEach(([field,key])=>el('f'+field).value=x?(x[key]??''):(field==='Goal'?0:field==='Date'?new Date().toLocaleDateString('sv-SE'):field==='Type'?'VIP 초청':''));
@@ -369,7 +393,7 @@ el('detailClose').onclick=closeEventDetail;
 el('detailCloseBottom').onclick=closeEventDetail;
 el('detailOverlay').onclick=e=>{if(e.target===el('detailOverlay'))closeEventDetail();};
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&el('detailOverlay').classList.contains('show'))closeEventDetail();});
-el('rows').onclick=async e=>{const b=e.target.closest('button');if(!b||loading)return;const id=b.dataset.view||b.dataset.edit||b.dataset.delete,x=items.find(i=>i.id===id);if(!x)return;if(b.dataset.view){showEventDetail(x);return;}if(b.dataset.edit){modal(x);return;}if(!confirm('이 행사를 온라인 DB에서 삭제하시겠습니까?'))return;b.disabled=true;try{const {error}=await db.from('kpi_events').delete().eq('user_id',eventOwners[id]||currentUser.id).eq('id',id);if(error)throw error;items=items.filter(i=>i.id!==id);delete eventOwners[id];render();status('온라인 삭제 완료');}catch(err){alert('삭제 실패: '+errText(err));}finally{b.disabled=false;}};
+el('rows').onclick=async e=>{const b=e.target.closest('button');if(!b||loading)return;const id=b.dataset.view||b.dataset.edit||b.dataset.delete,x=items.find(i=>i.id===id);if(!x||(access.role==='branch'&&x.branch!==access.branch))return;if(b.dataset.view){showEventDetail(x);return;}if(b.dataset.edit){modal(x);return;}if(!confirm('이 행사를 온라인 DB에서 삭제하시겠습니까?'))return;b.disabled=true;try{const {error}=await db.from('kpi_events').delete().eq('user_id',eventOwners[id]||currentUser.id).eq('id',id);if(error)throw error;items=items.filter(i=>i.id!==id);delete eventOwners[id];render();status('온라인 삭제 완료');}catch(err){alert('삭제 실패: '+errText(err));}finally{b.disabled=false;}};
 ['branch','year','month','type','search'].forEach(id=>el(id).addEventListener(id==='search'?'input':'change',render));
 function dl(name,content,type){const blob=new Blob([content],{type}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}
 el('exportCsv').onclick=()=>{const headers=['행사명','담당 지사/권역','진행일','행사유형','장소','참가인원 합계','PLK회원 인원','비회원 인원','행사비용(원)','판촉물 포인트(원)','본사 지원(원)','대관료(원)','식음료비(원)','시상품비(원)','기타비용(원)','법인매출(원)','개인매출(원)','총가입매출(원)','행사수입(원)','총수입(원)','수입-행사비 차액(원)','목표구좌','달성구좌 합계','법인구좌','개인구좌','달성률(%)','구좌당비용(원)','메모'];
