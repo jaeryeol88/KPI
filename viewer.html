@@ -31,14 +31,26 @@ a.btn{display:inline-flex;align-items:center}
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 const el=id=>document.getElementById(id);
 const cfg=window.PLK_CONFIG||{};
+const branchLinks=Object.freeze({busan1:'부산 1지사',busan2:'부산 2지사',busan3:'부산 3지사',busan4:'부산 4지사',busanarea:'부산권역'});
+const branchCode=new URLSearchParams(location.search).get('branch');
+const assignedBranch=Object.hasOwn(branchLinks,branchCode)?branchLinks[branchCode]:null;
 const fmt=n=>Number(n||0).toLocaleString('ko-KR');
 const won=n=>fmt(Math.round(n))+'원';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const status=(msg,error=false)=>{el('status').textContent=msg;el('status').classList.toggle('error',error);};
 let items=[];
+if(assignedBranch){
+  document.querySelector('.h1').textContent=assignedBranch+' 행사 KPI';
+  document.querySelector('.sub').textContent=assignedBranch+' 전용 · 로그인 없이 조회';
+  const branchSelect=el('branch');
+  branchSelect.value=assignedBranch;
+  branchSelect.disabled=true;
+  for(const opt of branchSelect.options) opt.hidden=opt.value!==assignedBranch;
+  el('currentUser').textContent=assignedBranch+' 행사만 표시 · 읽기 전용';
+}
 const years=()=>{const select=el('year'),prev=select.value||String(new Date().getFullYear());const ys=[...new Set([String(new Date().getFullYear()),...items.map(x=>String(x.date||'').slice(0,4))])].sort().reverse();select.innerHTML='<option value="all">전체 연도</option>'+ys.map(y=>`<option value="${y}">${y}년</option>`).join('');select.value=[...ys,'all'].includes(prev)?prev:'all';};
 for(let m=1;m<=12;m++)el('month').insertAdjacentHTML('beforeend',`<option value="${String(m).padStart(2,'0')}">${m}월</option>`);
-function filtered(){const branch=el('branch').value,y=el('year').value,m=el('month').value,t=el('type').value,q=el('search').value.trim().toLowerCase();return items.filter(x=>(branch==='all'||(branch==='unassigned'?!x.branch:x.branch===branch))&&(y==='all'||x.date.startsWith(y))&&(m==='all'||x.date.slice(5,7)===m)&&(t==='all'||x.type===t)&&(!q||(x.name+' '+(x.place||'')).toLowerCase().includes(q))).sort((a,b)=>b.date.localeCompare(a.date));}
+function filtered(){const branch=assignedBranch||el('branch').value,y=el('year').value,m=el('month').value,t=el('type').value,q=el('search').value.trim().toLowerCase();return items.filter(x=>(!assignedBranch||x.branch===assignedBranch)&&(branch==='all'||(branch==='unassigned'?!x.branch:x.branch===branch))&&(y==='all'||x.date.startsWith(y))&&(m==='all'||x.date.slice(5,7)===m)&&(t==='all'||x.type===t)&&(!q||(x.name+' '+(x.place||'')).toLowerCase().includes(q))).sort((a,b)=>b.date.localeCompare(a.date));}
 function rate(goal,done){return goal>0?(done/goal*100).toFixed(1)+'%':'—';}
 const known = v => Number.isSafeInteger(v) && v>=0;
 const classified = (a,b) => known(a) && known(b);
@@ -175,9 +187,9 @@ async function loadPublic(){
       rows.push(...(data||[]));
       if((data||[]).length<1000)break;
     }
-    items=rows.map(r=>({...r.event_data,id:r.id}));
+    items=rows.map(r=>({...r.event_data,id:r.id})).filter(x=>!assignedBranch||x.branch===assignedBranch);
     render();
-    status('공개 KPI 데이터 조회 완료 · '+fmt(items.length)+'건 · 읽기 전용');
+    status((assignedBranch?assignedBranch+' 전용 · ':'')+'공개 KPI 데이터 조회 완료 · '+fmt(items.length)+'건 · 읽기 전용');
   }catch(error){
     status('공개 데이터 설정이 완료되지 않았거나 조회에 실패했습니다. 관리자에게 Supabase viewer_setup.sql 실행 여부를 확인해 주세요. ('+(error?.message||'연결 오류')+')',true);
   }
