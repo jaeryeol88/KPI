@@ -564,8 +564,10 @@ const n1=Number(a),n2=Number(b);
 if(!Number.isSafeInteger(n1)||n1<0||!Number.isSafeInteger(n2)||n2<0||!Number.isSafeInteger(n1+n2))throw Error('구분 수량은 0 이상의 정수로 입력해 주세요.');
 return {total:n1+n2,a:n1,b:n2};
 };
-let participants,products,costParts,sales,fundingParts;
+let participants,products,costParts,sales,fundingParts,signupEntries;
 try {
+signupEntries=readSignupEntries(true);
+refreshSignupEntryTotals();
 const old=editing?items.find(x=>x.id===editing):null;
 participants=getPair('fMembers','fNonMembers',old?.attendees??0,old?.members??null,old?.nonMembers??null);
 products=getPair('fCorporate','fIndividual',old?.done??0,old?.corporate??null,old?.individual??null);
@@ -583,21 +585,11 @@ fundingParts=parseGroup(['fPromoPoints','fHeadOffice'],null,[old?.promoPoints??n
 if(fundingParts.total!==null&&fundingParts.total!==costParts.total)throw Error('판촉물 포인트와 본사 지원 합계가 총 행사비용과 일치해야 합니다.');
 if(!old&&costParts.total>0&&fundingParts.total===null)throw Error('행사비용 집행 재원을 입력해 주세요.');
 }catch(err){alert(err.message);return;}
-let productSeatCounts={};
-try{
- for(const [group,total] of [['Corporate',products.a],['Individual',products.b]]){
-  const chosen=getSelectedProducts(group);
-  if(chosen.length===1&&Number.isSafeInteger(total))productSeatCounts[chosen[0]]=total;
-  if(chosen.length>1){
-   const inputs=[...el('f'+group+'SeatAllocation').querySelectorAll('[data-product-seat]')];
-   if(inputs.some(input=>input.value.trim()===''))throw Error((group==='Corporate'?'법인':'개인')+' 상품별 구좌 수를 모두 입력해 주세요.');
-   let seatSum=0;
-   for(const input of inputs){const n=Number(input.value);if(!Number.isSafeInteger(n)||n<0)throw Error('상품별 구좌 수를 0 이상의 정수로 입력해 주세요.');productSeatCounts[input.dataset.productSeat]=n;seatSum+=n;}
-   if(seatSum!==total)throw Error((group==='Corporate'?'법인':'개인')+' 상품별 구좌 합계가 전체 '+total+'구좌와 일치해야 합니다.');
-  }
- }
-}catch(err){alert(err.message);return;}
-const data={id:editing||('e'+crypto.randomUUID()),name:el('fName').value.trim(),branch:el('fBranch').value,division:el('fBranch').value==='부산권역'?'':el('fDivision').value,date:el('fDate').value,type:el('fType').value,place:el('fPlace').value.trim(),attendees:participants.total,members:participants.a,nonMembers:participants.b,cost:costParts.total,venueCost:costParts.values[0],foodCost:costParts.values[1],prizeCost:costParts.values[2],otherCost:costParts.values[3],promoPoints:fundingParts.values[0],headOfficeSupport:fundingParts.values[1],corporateRevenue:sales.values[0],individualRevenue:sales.values[1],eventIncome:el('fEventIncome').value.trim()===''?null:Number(el('fEventIncome').value),goal:Number(el('fGoal').value),done:products.total,corporate:products.a,individual:products.b,annualFee:el('fAnnualFee').value.trim()===''?null:Number(el('fAnnualFee').value),corporateProducts:[...document.querySelectorAll('input[name="corporateProduct"]:checked')].map(input=>input.value),individualProducts:[...document.querySelectorAll('input[name="individualProduct"]:checked')].map(input=>input.value),productSeatCounts,memo:el('fMemo').value.trim()};
+const productSeatCounts={};
+for(const row of signupEntries){if(row.product!=='미분류')productSeatCounts[row.product]=(productSeatCounts[row.product]||0)+row.seats;}
+const corporateProducts=[...new Set(signupEntries.filter(row=>row.group==='corporate'&&row.product!=='미분류').map(row=>row.product))];
+const individualProducts=[...new Set(signupEntries.filter(row=>row.group==='individual'&&row.product!=='미분류').map(row=>row.product))];
+const data={id:editing||('e'+crypto.randomUUID()),name:el('fName').value.trim(),branch:el('fBranch').value,division:el('fBranch').value==='부산권역'?'':el('fDivision').value,date:el('fDate').value,type:el('fType').value,place:el('fPlace').value.trim(),attendees:participants.total,members:participants.a,nonMembers:participants.b,cost:costParts.total,venueCost:costParts.values[0],foodCost:costParts.values[1],prizeCost:costParts.values[2],otherCost:costParts.values[3],promoPoints:fundingParts.values[0],headOfficeSupport:fundingParts.values[1],corporateRevenue:sales.values[0],individualRevenue:sales.values[1],eventIncome:el('fEventIncome').value.trim()===''?null:Number(el('fEventIncome').value),goal:Number(el('fGoal').value),done:products.total,corporate:products.a,individual:products.b,annualFee:el('fAnnualFee').value.trim()===''?null:Number(el('fAnnualFee').value),corporateProducts,individualProducts,productSeatCounts,signupEntries,memo:el('fMemo').value.trim()};
 if(data.division&&!divisionBranches.includes(data.division)){alert('본부를 다시 선택해 주세요.');return;}
 if(access.role==='branch'&&data.branch!==access.branch){alert('담당 지사 이외의 행사는 저장할 수 없습니다.');return;}
 if(!data.name||!data.branch||!data.date||!['attendees','cost','goal','done'].every(k=>Number.isSafeInteger(data[k])&&data[k]>=0)||(data.eventIncome!==null&&!known(data.eventIncome))||(data.annualFee!==null&&!known(data.annualFee))){alert('필수 입력값을 확인해 주세요.');return;}
