@@ -1,4 +1,4 @@
--- PLK KPI 연회비·가입상품·상품별 구좌 배분 공개 뷰어 연동
+-- PLK KPI 복수 가입건 및 상품별 구좌·매출·연회비 공개 뷰어 연동
 -- Supabase SQL Editor에서 1회 실행. 기존 데이터를 삭제하지 않고 공개 필드 및 기존 공개 기록을 갱신합니다.
 BEGIN;
 CREATE OR REPLACE FUNCTION public.kpi_public_payload(raw jsonb)
@@ -21,6 +21,7 @@ AS $payload$
     'corporateProducts',raw->'corporateProducts',
     'individualProducts',raw->'individualProducts',
     'productSeatCounts',raw->'productSeatCounts',
+    'signupEntries',raw->'signupEntries',
     'memo',raw->'memo'
   );
 $payload$;
