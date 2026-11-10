@@ -573,11 +573,11 @@ const n1=Number(a),n2=Number(b);
 if(!Number.isSafeInteger(n1)||n1<0||!Number.isSafeInteger(n2)||n2<0||!Number.isSafeInteger(n1+n2))throw Error('구분 수량은 0 이상의 정수로 입력해 주세요.');
 return {total:n1+n2,a:n1,b:n2};
 };
-let participants,products,costParts,sales,fundingParts,signupEntries;
+let participants,products,costParts,sales,fundingParts,signupEntries,old;
 try {
 signupEntries=readSignupEntries(true);
 refreshSignupEntryTotals();
-const old=editing?items.find(x=>x.id===editing):null;
+old=editing?items.find(x=>x.id===editing):null;
 participants=getPair('fMembers','fNonMembers',old?.attendees??0,old?.members??null,old?.nonMembers??null);
 products=getPair('fCorporate','fIndividual',old?.done??0,old?.corporate??null,old?.individual??null);
 const parseGroup=(ids,prevTotal,prevValues,label)=>{
@@ -594,11 +594,13 @@ fundingParts=parseGroup(['fPromoPoints','fHeadOffice'],null,[old?.promoPoints??n
 if(fundingParts.total!==null&&fundingParts.total!==costParts.total)throw Error('판촉물 포인트와 본사 지원 합계가 총 행사비용과 일치해야 합니다.');
 if(!old&&costParts.total>0&&fundingParts.total===null)throw Error('행사비용 집행 재원을 입력해 주세요.');
 }catch(err){alert(err.message);return;}
+const legacyKeep=old&&!signupEntries.length&&!Array.isArray(old.signupEntries)&&oldSignupEntries(old).length===0;
+if(legacyKeep){products={total:old.done??0,a:old.corporate??null,b:old.individual??null};sales={values:[old.corporateRevenue??null,old.individualRevenue??null]};}
 const productSeatCounts={};
 for(const row of signupEntries){if(row.product!=='미분류')productSeatCounts[row.product]=(productSeatCounts[row.product]||0)+row.seats;}
 const corporateProducts=[...new Set(signupEntries.filter(row=>row.group==='corporate'&&row.product!=='미분류').map(row=>row.product))];
 const individualProducts=[...new Set(signupEntries.filter(row=>row.group==='individual'&&row.product!=='미분류').map(row=>row.product))];
-const data={id:editing||('e'+crypto.randomUUID()),name:el('fName').value.trim(),branch:el('fBranch').value,division:el('fBranch').value==='부산권역'?'':el('fDivision').value,date:el('fDate').value,type:el('fType').value,place:el('fPlace').value.trim(),attendees:participants.total,members:participants.a,nonMembers:participants.b,cost:costParts.total,venueCost:costParts.values[0],foodCost:costParts.values[1],prizeCost:costParts.values[2],otherCost:costParts.values[3],promoPoints:fundingParts.values[0],headOfficeSupport:fundingParts.values[1],corporateRevenue:sales.values[0],individualRevenue:sales.values[1],eventIncome:el('fEventIncome').value.trim()===''?null:Number(el('fEventIncome').value),goal:Number(el('fGoal').value),done:products.total,corporate:products.a,individual:products.b,annualFee:el('fAnnualFee').value.trim()===''?null:Number(el('fAnnualFee').value),corporateProducts,individualProducts,productSeatCounts,signupEntries,memo:el('fMemo').value.trim()};
+const data={id:editing||('e'+crypto.randomUUID()),name:el('fName').value.trim(),branch:el('fBranch').value,division:el('fBranch').value==='부산권역'?'':el('fDivision').value,date:el('fDate').value,type:el('fType').value,place:el('fPlace').value.trim(),attendees:participants.total,members:participants.a,nonMembers:participants.b,cost:costParts.total,venueCost:costParts.values[0],foodCost:costParts.values[1],prizeCost:costParts.values[2],otherCost:costParts.values[3],promoPoints:fundingParts.values[0],headOfficeSupport:fundingParts.values[1],corporateRevenue:sales.values[0],individualRevenue:sales.values[1],eventIncome:el('fEventIncome').value.trim()===''?null:Number(el('fEventIncome').value),goal:Number(el('fGoal').value),done:products.total,corporate:products.a,individual:products.b,annualFee:legacyKeep?(old.annualFee??null):(el('fAnnualFee').value.trim()===''?null:Number(el('fAnnualFee').value)),corporateProducts:legacyKeep?(old.corporateProducts||[]):corporateProducts,individualProducts:legacyKeep?(old.individualProducts||[]):individualProducts,productSeatCounts:legacyKeep?(old.productSeatCounts||{}):productSeatCounts,signupEntries:legacyKeep?null:signupEntries,memo:el('fMemo').value.trim()};
 if(data.division&&!divisionBranches.includes(data.division)){alert('본부를 다시 선택해 주세요.');return;}
 if(access.role==='branch'&&data.branch!==access.branch){alert('담당 지사 이외의 행사는 저장할 수 없습니다.');return;}
 if(!data.name||!data.branch||!data.date||!['attendees','cost','goal','done'].every(k=>Number.isSafeInteger(data[k])&&data[k]>=0)||(data.eventIncome!==null&&!known(data.eventIncome))||(data.annualFee!==null&&!known(data.annualFee))){alert('필수 입력값을 확인해 주세요.');return;}
