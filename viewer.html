@@ -226,6 +226,7 @@ const item=(label,value,sub)=>'<div class="detail-kpi"><div class="name">'+label
 const line=(label,value)=>'<div class="detail-row"><span>'+label+'</span><strong>'+value+'</strong></div>';
 const none='미입력';
 const attendeeInfo=classified(x.members,x.nonMembers)?'PLK회원 '+fmt(x.members)+'명 / 비회원 '+fmt(x.nonMembers)+'명':'회원·비회원 구분 미입력';
+const productsText=value=>Array.isArray(value)&&value.length?value.map(esc).join(', '):'미선택';
 const seatInfo=classified(x.corporate,x.individual)?'법인 '+fmt(x.corporate)+'구좌 / 개인 '+fmt(x.individual)+'구좌':'가입상품 구분 미입력';
 const fundingInfo=complete(x,fundingFields)?line('판촉물 포인트',won(x.promoPoints))+line('본사 지원',won(x.headOfficeSupport)):line('집행 재원','미분류 (기존 기록)');
 const expenseInfo=complete(x,costFields)?line('대관료',won(x.venueCost))+line('식음료비',won(x.foodCost))+line('시상품비',won(x.prizeCost))+line('기타비용',won(x.otherCost)):line('세부 비용','기존 행사 · 세부 구분 미입력');
@@ -250,6 +251,10 @@ item('달성구좌당 비용',x.done?won(x.cost/x.done):'—')+
 '<div class="detail-section-title">매출 및 행사 수입</div>'+
 line('법인 가입 매출',revenueKnown?won(x.corporateRevenue):none)+
 line('개인 가입 매출',revenueKnown?won(x.individualRevenue):none)+
+line('연회비 금액',known(x.annualFee)?won(x.annualFee):none)+
+'<div class="detail-section-title">가입상품 선택</div>'+
+line('법인 가입상품',productsText(x.corporateProducts))+
+line('개인 가입상품',productsText(x.individualProducts))+
 line('행사 수입',incomeKnown?won(income):none)+
 line('총수입',revenueKnown&&incomeKnown?won(subscriptionRevenue+income):'계산 보류')+
 (x.memo?'<div class="detail-section-title">행사 메모</div><p>'+esc(x.memo)+'</p>':'')+
