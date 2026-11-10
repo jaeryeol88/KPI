@@ -133,7 +133,7 @@ function setupMultiFilters(){
 }
 setupMultiFilters();
 
-function filtered(){const q=el('search').value.trim().toLowerCase();return items.filter(x=>(!assignedBranch||x.branch===assignedBranch)&&multiMatch('branch',x.branch||'unassigned')&&multiMatch('division',x.division||'unassigned')&&multiMatch('year',String(x.date||'').slice(0,4))&&multiMatch('month',String(x.date||'').slice(5,7))&&multiMatch('type',x.type)&&(!q||(x.name+' '+(x.place||'')).toLowerCase().includes(q))).sort((a,b)=>b.date.localeCompare(a.date));}
+function filtered(){const q=el('search').value.trim().toLowerCase();return items.filter(x=>multiMatch('branch',x.branch||'unassigned')&&multiMatch('division',x.division||'unassigned')&&multiMatch('year',String(x.date||'').slice(0,4))&&multiMatch('month',String(x.date||'').slice(5,7))&&multiMatch('type',x.type)&&(!q||(x.name+' '+(x.place||'')).toLowerCase().includes(q))).sort((a,b)=>b.date.localeCompare(a.date));}
 function rate(goal,done){return goal>0?(done/goal*100).toFixed(1)+'%':'—';}
 const known = v => Number.isSafeInteger(v) && v>=0;
 const classified = (a,b) => known(a) && known(b);
