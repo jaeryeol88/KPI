@@ -396,8 +396,8 @@ async function loadMonthlyTargets(){
 }
 async function monthlySaveGoal(event){
  event.preventDefault();
- if(!db||!['owner','shared'].includes(access.role))return;
- const b=el('goalInputBranch').value,y=Number(el('goalInputYear').value);
+ if(typeof db==='undefined'||!db||typeof access==='undefined'||!['owner','shared'].includes(access.role))return;
+ const b=el('goalInputBranch').value,y=Number(el('goalInputYear').value),division=el('goalInputDivision').value;
  if(!monthlyAllowedBranches().includes(b)||!Number.isInteger(y)||y<2020||y>2100){alert('연도와 지사를 확인하세요.');return;}
  const entries=[...el('monthlyBulkGrid').querySelectorAll('input[data-goal-month]')];
  const rows=[];
