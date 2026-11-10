@@ -42,29 +42,29 @@ a.btn{display:inline-flex;align-items:center}
 .month-goal-editor button{background:var(--blue);color:#fff;border:0;border-radius:8px;padding:9px 16px;font-weight:750}
 .month-status{font-size:12px;color:var(--muted)}
 @media(max-width:720px){.month-cards{grid-template-columns:1fr}.month-goals{padding:16px}}
-</style></head><body><div class="app" id="kpiApp"><aside class="sidebar"><div class="brand">PLK <span style="color:#71afff">KPI</span><small>EVENT PERFORMANCE</small></div><div class="nav-item">▦ &nbsp; 행사 성과 대시보드</div><div class="aside-note">회사 행사 실적을 한눈에.<br>관리자가 등록한 행사의 공개 성과를 조회합니다.</div></aside>
+.month-target-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin:12px 0}.month-target-grid label{display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--muted);font-weight:700}.month-target-grid input{width:100%;min-width:0;padding:9px;border:1px solid var(--line);border-radius:8px;color:var(--text)}@media(max-width:720px){.month-target-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}</style></head><body><div class="app" id="kpiApp"><aside class="sidebar"><div class="brand">PLK <span style="color:#71afff">KPI</span><small>EVENT PERFORMANCE</small></div><div class="nav-item">▦ &nbsp; 행사 성과 대시보드</div><div class="aside-note">회사 행사 실적을 한눈에.<br>관리자가 등록한 행사의 공개 성과를 조회합니다.</div></aside>
 <main class="main"><header class="top"><div><div class="eyebrow">PERFORMANCE OVERVIEW</div><h1 class="h1">KPI · 실적관리</h1><p class="sub">행사 투입 비용과 실적을 한곳에서 관리하세요.</p><div class="top-user">읽기 전용 · 로그인 불필요 · 행사 데이터는 누구나 열람 가능</div></div></header>
 <div id="status" class="sync-status" role="status" aria-live="polite">온라인 데이터 연결 중…</div>
 <section class="filters"><select id="branch" aria-label="지사선택"><option value="all">지사선택</option><option value="부산 1지사">부산 1지사</option><option value="부산 2지사">부산 2지사</option><option value="부산 3지사">부산 3지사</option><option value="부산 4지사">부산 4지사</option><option value="부산권역">부산권역</option></select><select id="division" aria-label="본부선택"><option value="all">본부선택</option><option value="1본부">1본부</option><option value="2본부">2본부</option><option value="3본부">3본부</option><option value="지사장">지사장</option><option value="기타">기타</option></select><select id="year" aria-label="연도 선택"></select><select id="month" aria-label="월 선택"><option value="all">전체 월</option></select><select id="type" aria-label="행사 구분"><option value="all">유형</option><option>PLK 골프대회</option><option>부산권역 행사</option><option>지사 행사</option><option>기타</option><option>실적등록</option></select><input id="search" placeholder="제목/이름 / 골프장 검색" aria-label="행사 검색"></section><div id="activeFilters" class="active-filters" aria-live="polite">기간: 전체 연도 · 전체 월</div>
 <section class="metrics"><div class="metric"><div class="label">총 진행 건수</div><div class="value" id="mEvents">0건</div><div class="detail">선택 기간 등록 건수</div></div><div class="metric event-attendance-only" hidden><div class="label">총 참가 인원</div><div class="value" id="mAttendees">0명</div><div class="detail" id="mAttendeesSub">PLK 회원 0명 · 비회원 0명</div><div class="detail" id="mSignupSub" style="margin-top:5px">입회 전환율 —</div></div><div class="metric"><div class="label">총 행사 비용</div><div class="value" id="mCost">0원</div><div class="detail" id="mCostSub">대관 · 식음 · 시상품 · 기타</div></div><div class="metric"><div class="label">목표구좌 달성률</div><div class="value accent" id="mRate">—</div><div class="detail" id="mRateSub">달성 0 / 목표 0구좌</div><div class="detail" id="mProductSub" style="margin-top:5px">법인 0 · 개인 0구좌</div></div><div class="metric"><div class="label">총 가입구좌 매출</div><div class="value success" id="mRevenue">—</div><div class="detail" id="mRevenueSub">법인/개인 매출액</div></div><div class="metric"><div class="label">행사 수입</div><div class="value accent" id="mEventIncome">0원</div><div class="detail" id="mEventIncomeSub">참가비·후원금 등 가입매출 제외</div></div><div class="metric"><div class="label">총수입 − 행사비용</div><div class="value" id="mProfit">—</div><div class="detail" id="mProfitSub">단순 차액 · 순이익 아님</div></div><div class="metric"><div class="label">연회비 매출</div><div class="value accent" id="mAnnualFee">0원</div><div class="detail" id="mAnnualFeeSub">등록된 연회비 실적 합계</div></div><div class="metric"><div class="label">총 달성구좌</div><div class="value success" id="mAchievedSeats">0구좌</div><div class="detail" id="mAchievedSeatsSub">법인 0구좌 · 개인 0구좌</div></div><div class="metric"><div class="label">상품별 가입 실적</div><div class="metric-products" id="mProductStats" aria-live="polite">선택 기간 상품별 실적 집계</div></div></section><section class="month-goals" id="monthlyGoalPanel" aria-label="월별 및 연간 구좌목표 달성률">
 <h2>월별 · 연간 구좌목표 달성률</h2>
-<p>월 목표는 지사별로 한 번만 등록합니다. 부산권역 전체 조회는 부산 1~4지사와 부산권역 실적을 각각 한 번씩 합산합니다. 행사 유형 필터와 무관하게 등록된 실적을 집계합니다.</p>
-<div class="month-controls"><label>연도 <select id="monthlyYear"></select></label><label>지사 <select id="monthlyBranch"></select></label><label>기준 월 <select id="monthlyMonth"></select></label></div>
+<p>월 목표는 회사에서 배정하며 행사·실적 등록과 별개로 관리됩니다. 부산권역 전체 조회는 부산 1~4지사와 부산권역 실적을 각각 한 번씩 합산합니다. 행사 유형 필터와 무관하게 등록된 실적을 집계합니다.</p>
+<div class="month-controls"><label>연도 <select id="monthlyYear"></select></label><label>지사 <select id="monthlyBranch"></select></label><label>본부 <select id="monthlyDivision"></select></label><label>기준 월 <select id="monthlyMonth"></select></label></div>
 <div class="month-cards">
 <div class="month-card"><span>선택 월 달성률</span><strong id="monthlyRate">—</strong><small id="monthlySummary">목표 미입력</small></div>
 <div class="month-card"><span>선택 연도 누적 달성률</span><strong id="annualRate">—</strong><small id="annualSummary">목표 미입력</small></div>
 </div>
 <div class="month-scroll"><table><thead><tr><th>월</th><th>목표구좌</th><th>달성구좌</th><th>달성률</th></tr></thead><tbody id="monthlyRows"></tbody></table></div>
 <div class="month-scroll"><table><thead><tr><th>지사별 연간 현황</th><th>목표구좌</th><th>달성구좌</th><th>달성률</th></tr></thead><tbody id="monthlyBranchRows"></tbody></table></div>
+<div class="month-scroll" id="monthlyDivisionSection"><table><thead><tr><th>본부별 연간 현황</th><th>목표구좌</th><th>달성구좌</th><th>달성률</th></tr></thead><tbody id="monthlyDivisionRows"></tbody></table></div>
 <p class="month-status" id="monthlyStatus">월 목표 데이터 확인 중…</p>
-<details class="month-goal-editor" id="monthlyEditor" hidden><summary>월별 목표구좌 등록 · 수정</summary>
-<form id="monthlyGoalForm" class="month-controls">
-<label>목표 연도 <input id="goalInputYear" type="number" min="2020" max="2100" required></label>
-<label>지사 <select id="goalInputBranch" required></select></label>
-<label>월 <select id="goalInputMonth" required></select></label>
-<label>목표구좌 <input id="goalInputSeats" type="number" min="0" max="1000000" step="1" required placeholder="예: 10"></label>
-<button type="submit">목표 저장</button>
-</form><p>저장한 목표는 다른 관리자와 모든 읽기 전용 뷰어에 동일하게 반영됩니다. 기존 목표를 바꾸려면 동일한 연도·지사·월로 다시 저장하세요.</p>
+<details class="month-goal-editor" id="monthlyEditor" hidden><summary>회사 배정 월 목표구좌 사전 등록 · 수정</summary>
+<form id="monthlyGoalForm">
+<div class="month-controls"><label>배정 연도 <input id="goalInputYear" type="number" min="2020" max="2100" required></label><label>배정 지사 <select id="goalInputBranch" required></select></label><label>목표 구분 <select id="goalInputDivision"><option value="all">지사 전체 목표</option><option value="1본부">1본부</option><option value="2본부">2본부</option><option value="3본부">3본부</option><option value="지사장">지사장</option><option value="기타">기타</option></select></label></div>
+<p>회사에서 지사·본부별로 배정한 월 목표를 1~12월에 미리 입력하세요. 지사 전체 목표와 본부별 목표는 별도로 관리하며 중복 합산하지 않습니다. 입력란을 비워 두면 기존 목표가 유지되고, 0을 입력하면 목표 0구좌로 저장됩니다. 행사·실적 등록과는 별개의 회사 목표 관리입니다.</p>
+<div class="month-target-grid" id="monthlyBulkGrid"></div>
+<div class="month-controls"><button type="submit">입력한 월 목표 일괄 저장</button></div>
+</form>
 </details></section>
 <section class="panels"><article class="panel"><h2>핵심 성과 지표</h2><p>선택한 행사들의 합계 기준</p><div class="insight"><span>총 목표구좌</span><strong id="sGoal">0구좌</strong></div><div class="insight"><span>총 달성구좌</span><strong class="success" id="sDone">0구좌</strong></div><details class="kpi-expand"><summary class="insight"><span>법인 가입구좌 <small class="expand-hint">상품별 건수·구좌 보기</small></span><strong id="sCorporate">0구좌</strong></summary><div class="kpi-expand-body" id="sCorporateProducts"></div></details><details class="kpi-expand"><summary class="insight"><span>개인 가입구좌 <small class="expand-hint">상품별 건수·구좌 보기</small></span><strong id="sIndividual">0구좌</strong></summary><div class="kpi-expand-body" id="sIndividualProducts"></div></details><div class="insight"><span>대관료</span><strong id="sVenue">0원</strong></div><div class="insight"><span>식음료비</span><strong id="sFood">0원</strong></div><div class="insight"><span>시상품비</span><strong id="sPrize">0원</strong></div><div class="insight"><span>기타비용</span><strong id="sOther">0원</strong></div><div class="insight"><span>행사 수입 합계</span><strong id="sEventIncome">0원</strong></div><div class="insight"><span>연회비 실적 합계</span><strong id="sAnnualFee">0원</strong></div><div class="insight"><span>법인 가입 매출</span><strong id="sCorporateRevenue">—</strong></div><div class="insight"><span>개인 가입 매출</span><strong id="sIndividualRevenue">—</strong></div><div class="insight"><span>달성구좌당 비용</span><strong id="sCpa">—</strong></div><div class="insight"><span>목표구좌 대비 달성률</span><strong id="sConv">—</strong></div><div class="insight event-attendance-only" hidden><span>참가인원 대비 입회 전환율</span><strong id="sSignupConv">—</strong></div><div class="insight"><span>환산 입회 건수</span><strong id="sSignupCount">—</strong></div><div class="insight event-attendance-only" hidden><span>1인당 행사 비용</span><strong id="sPerson">—</strong></div></article></section>
 <div class="section-top"><h2>등록 내역</h2><span class="count" id="count">0건</span></div><div class="table-wrap"><table><thead><tr><th>제목/이름</th><th>담당 지사/권역 · 본부</th><th>진행일</th><th>행사 유형</th><th class="event-attendance-only" hidden>참가인원 (회원/비회원)</th><th>행사비용 (4개 항목)</th><th>행사 수입</th><th>가입매출</th><th>연회비 매출</th><th>손익비</th><th>목표구좌</th><th>달성구좌 (법인/개인)</th><th>달성률</th><th class="event-attendance-only" hidden>입회 전환율</th></tr></thead><tbody id="rows"></tbody></table></div><p class="foot">※ 목표구좌 대비 달성률 = 달성구좌 ÷ 목표구좌 × 100. 법인 4구좌 미만 잔여분은 1건으로 계산하지 않습니다. 구좌당 비용 = 행사비용 ÷ 달성구좌. 수입−행사비 차액 = 가입매출 + 행사 수입 + 연회비 실적 − 행사비용이며 상품원가·수수료·환불·세금 등을 반영한 실제 순이익이 아닙니다. 과거 행사의 회원/비회원 및 법인/개인 미분류 값은 원래 합계로 보존됩니다. 동일 참가자의 중복 참석 여부는 구분하지 않습니다. 등록된 데이터는 관리자가 변경할 수 있으며, 이 화면에서는 조회만 가능합니다. 공개 링크를 받은 누구나 전체 매출·비용·메모까지 확인할 수 있습니다.</p></main></div><div class="overlay" id="detailOverlay" role="presentation"><div class="modal detail-modal" role="dialog" aria-modal="true" aria-labelledby="detailTitle"><div class="modal-head"><h2 id="detailTitle">행사 KPI 상세</h2><button type="button" class="close" id="detailClose" aria-label="상세 화면 닫기">×</button></div><div id="detailContent"></div><div class="modal-footer"><button type="button" class="btn" id="detailCloseBottom">닫기</button></div></div></div><script src="./config.js"></script>
@@ -250,7 +250,7 @@ function showAttendanceMetrics(){
  return selected.size>0&&[...selected].every(type=>attendanceEventTypes.has(type));
 }
 const monthlyBranches=['부산 1지사','부산 2지사','부산 3지사','부산 4지사','부산권역'];
-let monthlyTargets=[],monthlyReady=false;
+let monthlyTargets=[],monthlyDivisionTargets=[],monthlyReady=false;const monthlyDivisions=['1본부','2본부','3본부','지사장','기타'];
 const monthlyGoalKey=(b,y,m)=>b+'|'+y+'|'+m;
 function monthlyAllowedBranches(){
  const fixed=restrictedBranch();
@@ -263,11 +263,12 @@ function monthlySetup(){
  month.innerHTML=Array.from({length:12},(_,i)=>'<option value="'+(i+1)+'">'+(i+1)+'월</option>').join('');
  month.value=String(now.getMonth()+1);
  branch.addEventListener('change',renderMonthlyGoals);
+ el('monthlyDivision').addEventListener('change',renderMonthlyGoals);
  year.addEventListener('change',renderMonthlyGoals);
  month.addEventListener('change',renderMonthlyGoals);
- const inputMonth=el('goalInputMonth'),inputYear=el('goalInputYear'),inputBranch=el('goalInputBranch');
- inputMonth.innerHTML=month.innerHTML; inputMonth.value=month.value; inputYear.value=year.value;
- [inputYear,inputMonth,inputBranch].forEach(x=>x.addEventListener('change',monthlyFillEditor));
+ const inputYear=el('goalInputYear'),inputBranch=el('goalInputBranch');
+ inputYear.value=year.value;
+ [inputYear,inputBranch,el('goalInputDivision')].forEach(x=>x.addEventListener('change',monthlyFillEditor));
  el('monthlyGoalForm').addEventListener('submit',monthlySaveGoal);
  monthlySyncBranches();
 }
@@ -276,8 +277,11 @@ function monthlySyncBranches(){
  const branch=el('monthlyBranch'),old=branch.value;
  branch.innerHTML=(allowed.length>1?'<option value="all">부산권역 전체 합계</option>':'')+allowed.map(b=>'<option value="'+b+'">'+b+'</option>').join('');
  branch.value=allowed.includes(old)?old:(allowed.length===1?allowed[0]:'all');
+ const divSel=el('monthlyDivision'),divOld=divSel.value;
+ divSel.innerHTML='<option value="all">지사 전체 목표</option>'+monthlyDivisions.map(d=>'<option value="'+d+'">'+d+'</option>').join('');
+ divSel.value=monthlyDivisions.includes(divOld)?divOld:'all';
  const editor=el('monthlyEditor');
- editor.hidden=typeof access==='undefined'||!['owner','shared','branch'].includes(access.role);
+ editor.hidden=typeof access==='undefined'||!['owner','shared'].includes(access.role);
  const edit=el('goalInputBranch'),current=edit.value;
  edit.innerHTML=allowed.map(b=>'<option value="'+b+'">'+b+'</option>').join('');
  edit.value=allowed.includes(current)?current:allowed[0];
@@ -286,20 +290,26 @@ function monthlySyncBranches(){
 }
 function monthlyYearOptions(){
  const select=el('monthlyYear'),keep=select.value||String(new Date().getFullYear());
- const vals=[new Date().getFullYear(),Number(keep),...items.map(e=>Number(String(e.date||'').slice(0,4))),...monthlyTargets.map(t=>Number(t.goal_year))];
+ const vals=[new Date().getFullYear(),Number(keep),...items.map(e=>Number(String(e.date||'').slice(0,4))),...monthlyTargets.map(t=>Number(t.goal_year)),...monthlyDivisionTargets.map(t=>Number(t.goal_year))];
  const years=[...new Set(vals.filter(n=>Number.isInteger(n)&&n>=2020&&n<=2100))].sort((a,b)=>b-a);
  const html=years.map(y=>'<option value="'+y+'">'+y+'년</option>').join('');
  if(select.innerHTML!==html)select.innerHTML=html;
  select.value=String(years.includes(Number(keep))?keep:years[0]);
 }
-function monthlyTarget(b,y,m){const row=monthlyTargets.find(t=>t.branch===b&&Number(t.goal_year)===y&&Number(t.goal_month)===m);return row?Number(row.target_seats):null;}
-function monthlyActual(b,y,m){return items.reduce((sum,e)=>e.branch===b&&String(e.date||'').slice(0,4)===String(y)&&(m===null||Number(String(e.date||'').slice(5,7))===m)?sum+(Number.isSafeInteger(e.done)&&e.done>=0?e.done:0):sum,0);}
-function monthlyRollup(branches,y,months){
+function monthlyTarget(b,y,m,division='all'){
+ const records=division==='all'?monthlyTargets:monthlyDivisionTargets;
+ const row=records.find(t=>t.branch===b&&(division==='all'||t.division===division)&&Number(t.goal_year)===y&&Number(t.goal_month)===m);
+ return row?Number(row.target_seats):null;
+}
+function monthlyActual(b,y,m,division='all'){
+ return items.reduce((sum,e)=>e.branch===b&&(division==='all'||normalizeDivision(e.division)===division)&&String(e.date||'').slice(0,4)===String(y)&&(m===null||Number(String(e.date||'').slice(5,7))===m)?sum+(Number.isSafeInteger(e.done)&&e.done>=0?e.done:0):sum,0);
+}
+function monthlyRollup(branches,y,months,division='all'){
  let goal=0,done=0,missing=0;
  for(const b of branches)for(const m of months){
-   const target=monthlyTarget(b,y,m);
+   const target=monthlyTarget(b,y,m,division);
    if(target===null)missing++;else goal+=target;
-   done+=monthlyActual(b,y,m);
+   done+=monthlyActual(b,y,m,division);
  }
  return {goal,done,missing,rate:missing||goal===0?'—':(done/goal*100).toFixed(1)+'%'};
 }
@@ -308,26 +318,33 @@ function monthlyCaption(data){
 }
 function renderMonthlyGoals(){
  monthlySyncBranches();monthlyYearOptions();
- const y=Number(el('monthlyYear').value),m=Number(el('monthlyMonth').value),b=el('monthlyBranch').value;
+ const y=Number(el('monthlyYear').value),m=Number(el('monthlyMonth').value),b=el('monthlyBranch').value,division=el('monthlyDivision').value;
  const branches=b==='all'?monthlyAllowedBranches():[b];
  const months=Array.from({length:12},(_,i)=>i+1);
- const current=monthlyRollup(branches,y,[m]),annual=monthlyRollup(branches,y,months);
+ const current=monthlyRollup(branches,y,[m],division),annual=monthlyRollup(branches,y,months,division);
  el('monthlyRate').textContent=current.rate;el('monthlySummary').textContent=monthlyCaption(current);
  el('annualRate').textContent=annual.rate;el('annualSummary').textContent=monthlyCaption(annual)+' (1~12월 목표 대비)';
  el('monthlyRows').innerHTML=months.map(mm=>{
-  const t=monthlyRollup(branches,y,[mm]);
+  const t=monthlyRollup(branches,y,[mm],division);
   return '<tr><td>'+mm+'월</td><td>'+t.goal+'구좌'+(t.missing?' (미입력)':'')+'</td><td>'+t.done+'구좌</td><td>'+t.rate+'</td></tr>';
  }).join('');
  el('monthlyBranchRows').innerHTML=branches.map(br=>{
-  const t=monthlyRollup([br],y,months);
+  const t=monthlyRollup([br],y,months,division);
   return '<tr><td>'+br+'</td><td>'+t.goal+'구좌'+(t.missing?' (미입력 '+t.missing+')':'')+'</td><td>'+t.done+'구좌</td><td>'+t.rate+'</td></tr>';
  }).join('')+(branches.length>1?'<tr><th>권역 합계</th><th>'+annual.goal+'구좌</th><th>'+annual.done+'구좌</th><th>'+annual.rate+'</th></tr>':'');
+ el('monthlyDivisionRows').innerHTML=monthlyDivisions.map(d=>{
+  const t=monthlyRollup(branches,y,months,d);
+  return '<tr><td>'+d+'</td><td>'+t.goal+'구좌'+(t.missing?' (미입력 '+t.missing+')':'')+'</td><td>'+t.done+'구좌</td><td>'+t.rate+'</td></tr>';
+ }).join('');
+ el('monthlyDivisionSection').hidden=division!=='all';
  monthlyFillEditor();
 }
 function monthlyFillEditor(){
- const b=el('goalInputBranch').value,y=Number(el('goalInputYear').value),m=Number(el('goalInputMonth').value);
- const t=monthlyTarget(b,y,m);
- el('goalInputSeats').value=t===null?'':String(t);
+ const b=el('goalInputBranch').value,y=Number(el('goalInputYear').value),division=el('goalInputDivision').value;
+ el('monthlyBulkGrid').innerHTML=Array.from({length:12},(_,i)=>{
+  const m=i+1,t=monthlyTarget(b,y,m,division);
+  return '<label>'+m+'월 목표구좌<input data-goal-month="'+m+'" type="number" min="0" max="1000000" step="1" value="'+(t===null?'':t)+'" placeholder="미배정"></label>';
+ }).join('');
 }
 async function loadMonthlyTargets(){
  try{
@@ -339,7 +356,17 @@ async function loadMonthlyTargets(){
    all.push(...(data||[]));if((data||[]).length<1000)break;
   }
   monthlyTargets=all;monthlyReady=true;
-  el('monthlyStatus').textContent='월 목표 온라인 저장 연결됨 · '+all.length+'개 설정값';
+  let divisionMessage='';
+  try {
+   const divisions=[];
+   for(let from=0;;from+=1000){
+    const {data,error}=await client.from('kpi_monthly_division_targets').select('branch,division,goal_year,goal_month,target_seats').range(from,from+999);
+    if(error)throw error;
+    divisions.push(...(data||[]));if((data||[]).length<1000)break;
+   }
+   monthlyDivisionTargets=divisions;
+  }catch(e){monthlyDivisionTargets=[];divisionMessage=' · 본부별 목표 DB 설정 필요';}
+  el('monthlyStatus').textContent='월 목표 온라인 저장 연결됨 · 지사 '+all.length+'개 · 본부 '+monthlyDivisionTargets.length+'개'+divisionMessage;
  }catch(error){
   monthlyReady=false;
   el('monthlyStatus').textContent='월 목표 DB 연결 필요: Supabase SQL Editor에서 monthly_targets_setup.sql을 한 번 실행하세요. ('+(error.message||'연결 실패')+')';
@@ -348,16 +375,28 @@ async function loadMonthlyTargets(){
 }
 async function monthlySaveGoal(event){
  event.preventDefault();
- if(typeof db==='undefined'||!db||typeof access==='undefined'||!['owner','shared','branch'].includes(access.role))return;
- const b=el('goalInputBranch').value,y=Number(el('goalInputYear').value),m=Number(el('goalInputMonth').value),n=Number(el('goalInputSeats').value);
- if(!monthlyAllowedBranches().includes(b)||!Number.isInteger(y)||y<2020||y>2100||!Number.isInteger(m)||m<1||m>12||!Number.isSafeInteger(n)||n<0||n>1000000){alert('목표 입력값을 확인하세요.');return;}
+ if(!db||!['owner','shared'].includes(access.role))return;
+ const b=el('goalInputBranch').value,y=Number(el('goalInputYear').value);
+ if(!monthlyAllowedBranches().includes(b)||!Number.isInteger(y)||y<2020||y>2100){alert('연도와 지사를 확인하세요.');return;}
+ const entries=[...el('monthlyBulkGrid').querySelectorAll('input[data-goal-month]')];
+ const rows=[];
+ for(const input of entries){
+  const value=input.value.trim();
+  if(value==='')continue; // 빈칸은 기존에 등록된 목표를 수정하지 않음.
+  const n=Number(value),m=Number(input.dataset.goalMonth);
+  if(!Number.isSafeInteger(n)||n<0||n>1000000){alert(m+'월 목표구좌를 확인하세요.');input.focus();return;}
+  rows.push({branch:b,goal_year:y,goal_month:m,target_seats:n,updated_at:new Date().toISOString()});
+ }
+ if(!rows.length){alert('등록할 월 목표구좌를 하나 이상 입력해 주세요.');return;}
  const button=el('monthlyGoalForm').querySelector('button[type="submit"]');button.disabled=true;
  try{
-  const {error}=await db.from('kpi_monthly_targets').upsert({branch:b,goal_year:y,goal_month:m,target_seats:n,updated_at:new Date().toISOString()},{onConflict:'branch,goal_year,goal_month'});
+  const isDivision=division!=='all';
+  const payload=isDivision?rows.map(row=>({...row,division})):rows;
+  const {error}=await db.from(isDivision?'kpi_monthly_division_targets':'kpi_monthly_targets').upsert(payload,{onConflict:isDivision?'branch,division,goal_year,goal_month':'branch,goal_year,goal_month'});
   if(error)throw error;
   await loadMonthlyTargets();
-  el('monthlyYear').value=String(y);el('monthlyBranch').value=monthlyAllowedBranches().length===1?b:b;el('monthlyMonth').value=String(m);renderMonthlyGoals();
-  el('monthlyStatus').textContent=b+' · '+y+'년 '+m+'월 목표 '+n+'구좌 저장 완료';
+  el('monthlyYear').value=String(y);el('monthlyBranch').value=b;el('monthlyDivision').value=division;renderMonthlyGoals();
+  el('monthlyStatus').textContent=b+' · '+(division==='all'?'지사 전체':division)+' · '+y+'년 회사 배정 목표 '+rows.length+'개월 저장 완료';
  }catch(error){el('monthlyStatus').textContent='목표 저장 실패: '+(error.message||'알 수 없는 오류');alert('목표 저장 실패: '+(error.message||'알 수 없는 오류'));}
  finally{button.disabled=false;}
 }
