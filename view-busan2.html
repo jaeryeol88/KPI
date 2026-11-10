@@ -157,7 +157,7 @@ const profitText=n=>(n<0?'-':'')+won(Math.abs(n));
 const signupCount=x=>classified(x.corporate,x.individual)?Math.floor(x.corporate/4)+x.individual:null;
 const signupRate=x=>x.attendees>0&&signupCount(x)!==null?(signupCount(x)/x.attendees*100).toFixed(1)+'%':'—';
 const signupNote=x=>classified(x.corporate,x.individual)&&x.corporate%4?'법인 잔여 '+fmt(x.corporate%4)+'구좌 미환산':'법인 4구좌=1건 · 개인 1구좌=1건';
-const productGroups={corporate:{names:['법인라이프 30','법인라이프 50','기타 (반환,소멸)'],selection:'corporateProducts',seats:'corporate'},individual:{names:['개인라이프 30','개인라이프 50','기타 (1+1 등)'],selection:'individualProducts',seats:'individual'}};
+const productGroups={corporate:{names:['법인라이프 30','법인라이프 50','법인 업그레이드','기타 (반환,소멸)'],selection:'corporateProducts',seats:'corporate'},individual:{names:['개인라이프 30','개인라이프 50','개인 업그레이드','기타 (1+1 등)'],selection:'individualProducts',seats:'individual'}};
 function productCardSummary(rows){
  const blocks=[];
  for(const group of ['corporate','individual']){
@@ -273,6 +273,14 @@ const line=(label,value)=>'<div class="detail-row"><span>'+label+'</span><strong
 const none='미입력';
 const attendeeInfo=classified(x.members,x.nonMembers)?'PLK회원 '+fmt(x.members)+'명 / 비회원 '+fmt(x.nonMembers)+'명':'회원·비회원 구분 미입력';
 const productsText=value=>Array.isArray(value)&&value.length?value.map(esc).join(', '):'미선택';
+const signupPaymentDetails=Array.isArray(x.signupEntries)&&x.signupEntries.length?
+ '<div class="detail-section-title">가입 건별 납부 내역</div>'+
+ x.signupEntries.map((r,i)=>{
+   if(!r||!['corporate','individual'].includes(r.group))return '';
+   const payment=r.paymentType==='installment'?'분납'+(Number.isSafeInteger(r.installmentMonths)&&r.installmentMonths>0?' · '+fmt(r.installmentMonths)+'개월':' · 개월 수 미입력'):r.paymentType==='full'?'완납':'납부 방식 미지정';
+   const label=(i+1)+'건 · '+(r.group==='corporate'?'법인':'개인')+' '+(r.product||'상품 미지정');
+   return line(esc(label),esc(payment)+' · '+fmt(r.seats||0)+'구좌 · 매출 '+(known(r.revenue)?won(r.revenue):'미입력')+' · 연회비 '+(known(r.annualFee)?won(r.annualFee):'미입력'));
+ }).join(''):'';
 const seatInfo=classified(x.corporate,x.individual)?'법인 '+fmt(x.corporate)+'구좌 / 개인 '+fmt(x.individual)+'구좌':'가입상품 구분 미입력';
 const fundingInfo=complete(x,fundingFields)?line('판촉물 포인트',won(x.promoPoints))+line('본사 지원',won(x.headOfficeSupport)):line('집행 재원','미분류 (기존 기록)');
 const expenseInfo=complete(x,costFields)?line('대관료',won(x.venueCost))+line('식음료비',won(x.foodCost))+line('시상품비',won(x.prizeCost))+line('기타비용',won(x.otherCost)):line('세부 비용','기존 행사 · 세부 구분 미입력');
@@ -301,6 +309,7 @@ line('연회비 금액',known(x.annualFee)?won(x.annualFee):none)+
 '<div class="detail-section-title">가입상품 선택</div>'+
 line('법인 가입상품',productsText(x.corporateProducts))+
 line('개인 가입상품',productsText(x.individualProducts))+
+signupPaymentDetails+
 line('행사 수입',incomeKnown?won(income):none)+
 line('총수입',revenueKnown&&incomeKnown?won(subscriptionRevenue+income):'계산 보류')+
 (x.memo?'<div class="detail-section-title">행사 메모</div><p>'+esc(x.memo)+'</p>':'')+
