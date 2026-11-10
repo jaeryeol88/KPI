@@ -395,6 +395,102 @@ for(const group of ['Corporate','Individual']){
  });
 }
 ['fMembers','fNonMembers','fCorporate','fIndividual','fVenueCost','fFoodCost','fPrizeCost','fOtherCost','fPromoPoints','fHeadOffice','fCorporateRevenue','fIndividualRevenue','fEventIncome'].forEach(id=>el(id).addEventListener('input',updateTotals));
+const signupProductChoices=[
+ ['','상품 선택'],
+ ['corporate|법인라이프 30','법인라이프 30 · 법인'],
+ ['corporate|법인라이프 50','법인라이프 50 · 법인'],
+ ['corporate|기타 (반환,소멸)','법인 기타 (반환,소멸)'],
+ ['individual|개인라이프 30','개인라이프 30 · 개인'],
+ ['individual|개인라이프 50','개인라이프 50 · 개인'],
+ ['individual|기타 (1+1 등)','개인 기타 (1+1 등)'],
+ ['corporate|미분류','법인 상품 미분류 (기존 기록)'],
+ ['individual|미분류','개인 상품 미분류 (기존 기록)']
+];
+function signupEntryHTML(row={}){
+ const option=row.group&&row.product?row.group+'|'+row.product:'';
+ const options=signupProductChoices.map(([value,label])=>'<option value="'+esc(value)+'"'+(option===value?' selected':'')+'>'+esc(label)+'</option>').join('');
+ const numberValue=(key)=>row[key]===null||row[key]===undefined?'':String(row[key]);
+ return '<div class="entry-row"><div class="entry-row-header"><strong class="entry-number">가입 건</strong><button type="button" class="entry-remove">삭제</button></div>'+
+ '<div class="entry-row-fields"><label>가입상품<select class="entry-product">'+options+'</select></label>'+
+ '<label>가입구좌<input class="entry-seats" type="number" min="0" step="1" placeholder="구좌" value="'+esc(numberValue('seats'))+'"></label>'+
+ '<label>구좌 매출액 (원)<input class="entry-revenue" type="number" min="0" step="1" placeholder="매출액" value="'+esc(numberValue('revenue'))+'"></label>'+
+ '<label>연회비 금액 (원)<input class="entry-fee" type="number" min="0" step="1" placeholder="연회비" value="'+esc(numberValue('annualFee'))+'"></label></div>'+
+ '<div class="entry-calculator"><span>매출액 조정</span><select class="entry-calc-mode"><option value="-">− 할인</option><option value="+">+ 할증</option></select><input class="entry-percent" type="number" min="0" max="100" step="0.1" value="5" aria-label="할인 할증 비율"> % <input class="entry-adjust" type="number" step="1" value="0" aria-label="추가 금액 조정"><span>원 조정</span><button type="button" class="entry-apply">적용</button></div></div>';
+}
+function appendSignupEntry(row={}){
+ const list=el('signupEntryRows');list.insertAdjacentHTML('beforeend',signupEntryHTML(row));
+ refreshSignupEntryTotals();
+}
+function blankEntryRow(row){return !row.product&&row.seats===''&&row.revenue===''&&row.annualFee==='';}
+function readSignupEntries(strict=false){
+ const entries=[];
+ for(const [idx,element] of [...el('signupEntryRows').querySelectorAll('.entry-row')].entries()){
+  const value=element.querySelector('.entry-product').value;
+  const [group,product]=value?value.split('|'):['',''];
+  const raw={group,product,seats:element.querySelector('.entry-seats').value.trim(),revenue:element.querySelector('.entry-revenue').value.trim(),annualFee:element.querySelector('.entry-fee').value.trim()};
+  if(blankEntryRow(raw))continue;
+  if(!group){if(strict)throw Error((idx+1)+'번째 가입 건의 상품을 선택해 주세요.');continue;}
+  if(strict&&[raw.seats,raw.revenue,raw.annualFee].some(x=>x===''))throw Error((idx+1)+'번째 가입 건의 구좌·매출액·연회비를 모두 입력해 주세요. 연회비가 없다면 0을 입력하세요.');
+  if([raw.seats,raw.revenue,raw.annualFee].some(x=>x===''))continue;
+  const seats=Number(raw.seats),revenue=Number(raw.revenue),annualFee=Number(raw.annualFee);
+  if(![seats,revenue,annualFee].every(n=>Number.isSafeInteger(n)&&n>=0)){if(strict)throw Error((idx+1)+'번째 가입 건의 금액과 구좌는 0 이상의 정수로 입력해 주세요.');continue;}
+  entries.push({group,product,seats,revenue,annualFee});
+ }
+ return entries;
+}
+function signupEntrySummary(entries){
+ return entries.reduce((acc,x)=>{acc[x.group]+=x.seats;acc[x.group+'Revenue']+=x.revenue;acc.annualFee+=x.annualFee;return acc;},{corporate:0,individual:0,corporateRevenue:0,individualRevenue:0,annualFee:0});
+}
+function refreshSignupEntryTotals(){
+ const rows=[...el('signupEntryRows').querySelectorAll('.entry-row')];
+ rows.forEach((element,i)=>{element.querySelector('.entry-number').textContent='가입 '+(i+1)+'건';});
+ const entries=readSignupEntries(),sum=signupEntrySummary(entries);
+ el('signupEntryTotals').textContent='등록 '+entries.length+'건 · 법인 '+fmt(sum.corporate)+'구좌 / 개인 '+fmt(sum.individual)+'구좌 · 매출 '+won(sum.corporateRevenue+sum.individualRevenue)+' · 연회비 '+won(sum.annualFee);
+ el('fCorporate').value=sum.corporate;el('fIndividual').value=sum.individual;
+ el('fCorporateRevenue').value=sum.corporateRevenue;el('fIndividualRevenue').value=sum.individualRevenue;el('fAnnualFee').value=sum.annualFee;
+ updateTotals();
+}
+function oldSignupEntries(x){
+ if(!x)return [];
+ if(Array.isArray(x.signupEntries))return x.signupEntries.filter(r=>r&&['corporate','individual'].includes(r.group)).map(r=>({...r}));
+ const result=[];
+ for(const [group,key,revenueKey,selection] of [['corporate','corporate','corporateRevenue','corporateProducts'],['individual','individual','individualRevenue','individualProducts']]){
+  const seats=known(x[key])?x[key]:0;
+  const revenue=known(x[revenueKey])?x[revenueKey]:0;
+  const products=Array.isArray(x[selection])?[...new Set(x[selection])]:[];
+  const detail=x.productSeatCounts||{};
+  if(!seats&&!revenue&&!products.length)continue;
+  if(products.length>1){
+   products.forEach((product,i)=>result.push({group,product,seats:known(detail[product])?detail[product]:(i===0?Math.max(0,seats-products.slice(1).reduce((n,p)=>n+(known(detail[p])?detail[p]:0),0)):0),revenue:i===0?revenue:0,annualFee:0}));
+  }else result.push({group,product:products[0]||'미분류',seats,revenue,annualFee:0});
+ }
+ if(result.length&&known(x.annualFee))result[0].annualFee=x.annualFee;
+ return result;
+}
+const entryContainer=el('signupEntryRows');
+el('addSignupEntry').addEventListener('click',()=>appendSignupEntry());
+entryContainer.addEventListener('click',e=>{
+ const row=e.target.closest('.entry-row');if(!row)return;
+ if(e.target.closest('.entry-remove')){row.remove();refreshSignupEntryTotals();return;}
+ if(e.target.closest('.entry-apply')){
+  const amountInput=row.querySelector('.entry-revenue'),percent=Number(row.querySelector('.entry-percent').value),adjust=Number(row.querySelector('.entry-adjust').value);
+  if(amountInput.value.trim()===''||!Number.isFinite(percent)||percent<0||percent>100||!Number.isSafeInteger(adjust)){alert('매출액과 계산 비율 및 조정액을 확인해 주세요.');return;}
+  const factor=row.querySelector('.entry-calc-mode').value==='-'?-1:1;
+  const next=Math.round(Number(amountInput.value)*(1+factor*percent/100))+adjust;
+  if(!Number.isSafeInteger(next)||next<0){alert('계산 결과가 유효하지 않습니다.');return;}
+  amountInput.value=next;refreshSignupEntryTotals();
+ }
+});
+entryContainer.addEventListener('change',e=>{
+ const select=e.target.closest('.entry-product');if(!select)return;
+ const row=select.closest('.entry-row'),[group,product]=select.value?select.value.split('|'):['',''];
+ if(!group){refreshSignupEntryTotals();return;}
+ row.querySelector('.entry-seats').value=group==='corporate'?4:1;
+ row.querySelector('.entry-revenue').value=productPrices[product]??'';
+ if(row.querySelector('.entry-fee').value==='')row.querySelector('.entry-fee').value=0;
+ refreshSignupEntryTotals();
+});
+entryContainer.addEventListener('input',e=>{if(e.target.matches('.entry-seats,.entry-revenue,.entry-fee'))refreshSignupEntryTotals();});
 function refreshDivisionForm(saved=''){
  const branch=el('fBranch').value,sel=el('fDivision');
  const region=branch==='부산권역';
@@ -434,7 +530,10 @@ renderSeatAllocation('Corporate',x?.productSeatCounts||{});
 renderSeatAllocation('Individual',x?.productSeatCounts||{});
 el('fLegacyNote').textContent=x && (!classified(x.members,x.nonMembers)||!classified(x.corporate,x.individual)||!complete(x,costFields)||!complete(x,revenueFields)||!known(x.eventIncome))
 ?'기존 기록의 총비용·참가인원·구좌 합계는 유지됩니다. 미분류 비용·매출·행사 수입은 임의로 채우지 않았습니다. 해당 항목을 입력해 주세요.':'회원/비회원, 법인/개인 수량을 입력하면 합계가 자동 계산됩니다.';
-updateTotals();el('overlay').classList.add('show');el('fName').focus();}
+el('signupEntryRows').innerHTML='';
+const initial=oldSignupEntries(x);
+(initial.length?initial:[{}]).forEach(appendSignupEntry);
+refreshSignupEntryTotals();el('overlay').classList.add('show');el('fName').focus();}
 function hide(){el('overlay').classList.remove('show');}
 el('add').onclick=()=>modal(null);el('close').onclick=hide;el('cancel').onclick=hide;el('overlay').onclick=e=>{if(e.target===el('overlay'))hide();};document.addEventListener('keydown',e=>{if(e.key==='Escape')hide();});
 el('loginForm').onsubmit=async e=>{e.preventDefault();if(!db){el('authError').textContent='로그인 연결을 확인 중입니다. 잠시 후 다시 시도하거나 Ctrl+F5를 눌러주세요.';return;}const btn=el('loginButton');btn.disabled=true;el('authError').textContent='로그인 확인 중…';try{const {data,error}=await db.auth.signInWithPassword({email:el('loginEmail').value.trim(),password:el('loginPassword').value});if(error)throw error;el('loginPassword').value='';el('authError').textContent='';await enter(data.user);}catch(e){el('authError').textContent='로그인 실패: '+errText(e);}finally{btn.disabled=false;}};
