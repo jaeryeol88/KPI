@@ -200,10 +200,18 @@ function normalizeDivision(value){
  return legacy?legacy[1]:v;
 }
 function updateDivisionFilter(){
- const branch=!!restrictedBranch()||multiValues.branch.size>0;
+ const restricted=restrictedBranch();
+ const selected=multiValues.branch;
+ const regionOnly=restricted==='부산권역'||(!restricted&&selected.size===1&&selected.has('부산권역'));
+ const hasDistrict=restricted?restricted!=='부산권역':([...selected].some(b=>b!=='부산권역'));
  const outer=document.getElementById('multi-division');
- if(outer){outer.classList.toggle('multi-disabled',!branch);if(!branch)outer.open=false;}
- if(!branch)multiValues.division.clear();
+ if(outer){
+   outer.hidden=regionOnly;
+   outer.style.display=regionOnly?'none':'';
+   outer.classList.toggle('multi-disabled',!hasDistrict);
+   if(!hasDistrict)outer.open=false;
+ }
+ if(!hasDistrict)multiValues.division.clear();
 }
 const restrictedBranch=()=>typeof assignedBranch!=='undefined'&&assignedBranch?assignedBranch:(typeof access!=='undefined'&&access.role==='branch'?access.branch:null);
 function multiMatch(id,value){
@@ -357,6 +365,10 @@ el('fRevenueTotal').textContent='가입매출: '+(revs===null?'미입력':won(re
 ['fMembers','fNonMembers','fCorporate','fIndividual','fVenueCost','fFoodCost','fPrizeCost','fOtherCost','fPromoPoints','fHeadOffice','fCorporateRevenue','fIndividualRevenue','fEventIncome'].forEach(id=>el(id).addEventListener('input',updateTotals));
 function refreshDivisionForm(saved=''){
  const branch=el('fBranch').value,sel=el('fDivision');
+ const region=branch==='부산권역';
+ const field=sel.closest('.field');
+ if(field)field.style.display=region?'none':'';
+ if(region){sel.value='';sel.disabled=true;return;}
  sel.innerHTML='<option value="">'+(branch?'본부선택 (미지정)':'지사를 먼저 선택하세요')+'</option>';
  for(const name of (branch?divisionBranches:[])){const o=document.createElement('option');o.value=name;o.textContent=name;sel.append(o);}
  const current=normalizeDivision(saved);
@@ -432,7 +444,7 @@ fundingParts=parseGroup(['fPromoPoints','fHeadOffice'],null,[old?.promoPoints??n
 if(fundingParts.total!==null&&fundingParts.total!==costParts.total)throw Error('판촉물 포인트와 본사 지원 합계가 총 행사비용과 일치해야 합니다.');
 if(!old&&costParts.total>0&&fundingParts.total===null)throw Error('행사비용 집행 재원을 입력해 주세요.');
 }catch(err){alert(err.message);return;}
-const data={id:editing||('e'+crypto.randomUUID()),name:el('fName').value.trim(),branch:el('fBranch').value,division:el('fDivision').value,date:el('fDate').value,type:el('fType').value,place:el('fPlace').value.trim(),attendees:participants.total,members:participants.a,nonMembers:participants.b,cost:costParts.total,venueCost:costParts.values[0],foodCost:costParts.values[1],prizeCost:costParts.values[2],otherCost:costParts.values[3],promoPoints:fundingParts.values[0],headOfficeSupport:fundingParts.values[1],corporateRevenue:sales.values[0],individualRevenue:sales.values[1],eventIncome:el('fEventIncome').value.trim()===''?null:Number(el('fEventIncome').value),goal:Number(el('fGoal').value),done:products.total,corporate:products.a,individual:products.b,memo:el('fMemo').value.trim()};
+const data={id:editing||('e'+crypto.randomUUID()),name:el('fName').value.trim(),branch:el('fBranch').value,division:el('fBranch').value==='부산권역'?'':el('fDivision').value,date:el('fDate').value,type:el('fType').value,place:el('fPlace').value.trim(),attendees:participants.total,members:participants.a,nonMembers:participants.b,cost:costParts.total,venueCost:costParts.values[0],foodCost:costParts.values[1],prizeCost:costParts.values[2],otherCost:costParts.values[3],promoPoints:fundingParts.values[0],headOfficeSupport:fundingParts.values[1],corporateRevenue:sales.values[0],individualRevenue:sales.values[1],eventIncome:el('fEventIncome').value.trim()===''?null:Number(el('fEventIncome').value),goal:Number(el('fGoal').value),done:products.total,corporate:products.a,individual:products.b,memo:el('fMemo').value.trim()};
 if(data.division&&!divisionBranches.includes(data.division)){alert('본부를 다시 선택해 주세요.');return;}
 if(access.role==='branch'&&data.branch!==access.branch){alert('담당 지사 이외의 행사는 저장할 수 없습니다.');return;}
 if(!data.name||!data.branch||!data.date||!['attendees','cost','goal','done'].every(k=>Number.isSafeInteger(data[k])&&data[k]>=0)||(data.eventIncome!==null&&!known(data.eventIncome))){alert('필수 입력값을 확인해 주세요.');return;}
