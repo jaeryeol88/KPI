@@ -303,8 +303,8 @@ function monthlyTarget(b,y,m,division='all'){
  const mainDivisions=['1본부','2본부','3본부'];
  const values=mainDivisions.map(d=>monthlyDivisionTargets.find(t=>t.branch===b&&t.division===d&&Number(t.goal_year)===y&&Number(t.goal_month)===m));
  if(values.some(Boolean)){
-  // 하나라도 미배정이면 불완전한 목표를 기준으로 달성률을 계산하지 않습니다.
-  return values.every(Boolean)?values.reduce((sum,t)=>sum+Number(t.target_seats),0):null;
+  // 입력된 1·2·3본부 목표만 합산하고 미입력 본부는 제외합니다.
+  return values.reduce((sum,t)=>sum+(t?Number(t.target_seats):0),0);
  }
  // 본부별 목표가 아직 없는 기존 연도에는 이전 지사 목표 기록을 표시합니다.
  const old=monthlyTargets.find(t=>t.branch===b&&Number(t.goal_year)===y&&Number(t.goal_month)===m);
@@ -320,10 +320,10 @@ function monthlyRollup(branches,y,months,division='all'){
    if(target===null)missing++;else goal+=target;
    done+=monthlyActual(b,y,m,division);
  }
- return {goal,done,missing,rate:missing||goal===0?'—':(done/goal*100).toFixed(1)+'%'};
+ return {goal,done,missing,rate:goal===0?'—':(done/goal*100).toFixed(1)+'%'};
 }
 function monthlyCaption(data){
- return '목표 '+data.goal.toLocaleString('ko-KR')+'구좌'+(data.missing?' (미입력 '+data.missing+'개)':'')+' · 달성 '+data.done.toLocaleString('ko-KR')+'구좌';
+ return '목표 '+data.goal.toLocaleString('ko-KR')+'구좌 · 달성 '+data.done.toLocaleString('ko-KR')+'구좌';
 }
 function renderMonthlyGoals(){
  monthlySyncBranches();monthlyYearOptions();
@@ -334,22 +334,22 @@ function renderMonthlyGoals(){
  el('monthlyRate').textContent=current.rate;el('monthlySummary').textContent=monthlyCaption(current);
  // 관리자·공개 뷰어의 기존 KPI 카드도 같은 회사 배정 목표를 사용합니다.
  el('mRate').textContent=current.rate;
- el('mRateSub').textContent=current.missing?'회사 목표 미입력 '+current.missing+'개 · 달성 '+fmt(current.done)+'구좌':'달성 '+fmt(current.done)+' / 회사 목표 '+fmt(current.goal)+'구좌';
+ el('mRateSub').textContent='달성 '+fmt(current.done)+' / 회사 목표 '+fmt(current.goal)+'구좌';
  el('mProductSub').textContent=(b==='all'?'부산권역 전체':b)+' · '+y+'년 '+m+'월'+(division==='all'?'':' · '+division);
- el('sGoal').textContent=current.missing?'미배정':fmt(current.goal)+'구좌';
+ el('sGoal').textContent=fmt(current.goal)+'구좌';
  el('sConv').textContent=current.rate;
  el('annualRate').textContent=annual.rate;el('annualSummary').textContent=monthlyCaption(annual)+' (1~12월 목표 대비)';
  el('monthlyRows').innerHTML=months.map(mm=>{
   const t=monthlyRollup(branches,y,[mm],division);
-  return '<tr><td>'+mm+'월</td><td>'+t.goal+'구좌'+(t.missing?' (미입력)':'')+'</td><td>'+t.done+'구좌</td><td>'+t.rate+'</td></tr>';
+  return '<tr><td>'+mm+'월</td><td>'+t.goal+'구좌'+'</td><td>'+t.done+'구좌</td><td>'+t.rate+'</td></tr>';
  }).join('');
  el('monthlyBranchRows').innerHTML=branches.map(br=>{
   const t=monthlyRollup([br],y,months,division);
-  return '<tr><td>'+br+'</td><td>'+t.goal+'구좌'+(t.missing?' (미입력 '+t.missing+')':'')+'</td><td>'+t.done+'구좌</td><td>'+t.rate+'</td></tr>';
+  return '<tr><td>'+br+'</td><td>'+t.goal+'구좌'+'</td><td>'+t.done+'구좌</td><td>'+t.rate+'</td></tr>';
  }).join('')+(branches.length>1?'<tr><th>권역 합계</th><th>'+annual.goal+'구좌</th><th>'+annual.done+'구좌</th><th>'+annual.rate+'</th></tr>':'');
  el('monthlyDivisionRows').innerHTML=monthlyDivisions.map(d=>{
   const t=monthlyRollup(branches,y,months,d);
-  return '<tr><td>'+d+'</td><td>'+t.goal+'구좌'+(t.missing?' (미입력 '+t.missing+')':'')+'</td><td>'+t.done+'구좌</td><td>'+t.rate+'</td></tr>';
+  return '<tr><td>'+d+'</td><td>'+t.goal+'구좌'+'</td><td>'+t.done+'구좌</td><td>'+t.rate+'</td></tr>';
  }).join('');
  el('monthlyDivisionSection').hidden=division!=='all';
  monthlyFillEditor();
