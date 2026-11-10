@@ -35,6 +35,7 @@ const fmt=n=>Number(n||0).toLocaleString('ko-KR');
 const won=n=>fmt(Math.round(n))+'원';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const status=(msg,error=false)=>{el('status').textContent=msg;el('status').classList.toggle('error',error);};
+const assignedBranch=null; // 독립형 전체 뷰어는 특정 지사로 제한하지 않습니다.
 let items=[];
 const years=()=>{const select=el('year'),prev=select.value||'all';const ys=[...new Set([String(new Date().getFullYear()),...items.map(x=>String(x.date||'').slice(0,4))])].sort().reverse();const valid=new Set(ys);for(const v of [...multiValues.year])if(!valid.has(v))multiValues.year.delete(v);const html='<option value="all">전체 연도</option>'+ys.map(y=>`<option value="${y}">${y}년</option>`).join('');if(select.innerHTML!==html)select.innerHTML=html;select.value=[...ys,'all'].includes(prev)?prev:'all';};
 for(let m=1;m<=12;m++)el('month').insertAdjacentHTML('beforeend',`<option value="${String(m).padStart(2,'0')}">${m}월</option>`);
