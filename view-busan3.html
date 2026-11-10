@@ -20,7 +20,7 @@
 .detail-section-title{font-size:15px;font-weight:800;margin:20px 0 7px}
 @media(max-width:720px){.detail-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.detail-kpi{padding:12px}.detail-kpi .num{font-size:19px}}
 a.btn{display:inline-flex;align-items:center}
-.metric-products{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:18px;row-gap:5px;margin-top:13px}.metric-products .product-group-title{font-size:12px;font-weight:800;color:#2a4b78;margin:5px 0}.metric-products .product-stat{display:flex;justify-content:space-between;gap:8px;font-size:11px;color:var(--muted);padding:4px 0;border-bottom:1px solid var(--line)}.metric-products .product-stat strong{font-size:11px;color:var(--text);white-space:nowrap}.metric-products .product-note{grid-column:1/-1;font-size:11px;color:var(--muted);margin-top:7px}@media(max-width:570px){.metric-products{grid-template-columns:1fr}}</style></head><body><div class="app" id="kpiApp"><aside class="sidebar"><div class="brand">PLK <span style="color:#71afff">KPI</span><small>EVENT PERFORMANCE</small></div><div class="nav-item">▦ &nbsp; 행사 성과 대시보드</div><div class="aside-note">회사 행사 실적을 한눈에.<br>관리자가 등록한 행사의 공개 성과를 조회합니다.</div></aside>
+.metric-products{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:18px;row-gap:5px;margin-top:13px}.metric-products .product-group-title{font-size:12px;font-weight:800;color:#2a4b78;margin:5px 0}.metric-products .product-stat{display:flex;justify-content:space-between;gap:8px;font-size:11px;color:var(--muted);padding:4px 0;border-bottom:1px solid var(--line)}.metric-products .product-stat strong{font-size:11px;color:var(--text);white-space:nowrap}.metric-products .product-note{grid-column:1/-1;font-size:11px;color:var(--muted);margin-top:7px}@media(max-width:570px){.metric-products{grid-template-columns:1fr}}.detail-modal{max-width:970px}.detail-entry-card{background:#f8fbff;border:1px solid #dbe5f4;border-radius:12px;padding:15px;margin:12px 0}.detail-entry-head{display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid #e3eaf4;padding-bottom:10px;margin-bottom:12px}.detail-entry-head strong{color:#0b3c83}.detail-entry-head span{font-size:12px;color:#566d8b;overflow-wrap:anywhere;text-align:right}.detail-entry-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.detail-entry-grid>div{min-width:0}.detail-entry-grid span{display:block;font-size:11px;color:#6a7d95;margin-bottom:5px}.detail-entry-grid strong{font-size:13px;color:#172840;overflow-wrap:anywhere}.detail-no-entries{border:1px solid #e3eaf4;border-radius:10px;padding:13px;background:#fafcff;color:#63748f;font-size:12px;line-height:1.6}.detail-memo{white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;line-height:1.65}.detail-row span{color:#60748e}.detail-section-title{margin-top:26px}@media(max-width:640px){.detail-entry-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.detail-row{flex-wrap:wrap}.detail-row strong{text-align:left}}</style></head><body><div class="app" id="kpiApp"><aside class="sidebar"><div class="brand">PLK <span style="color:#71afff">KPI</span><small>EVENT PERFORMANCE</small></div><div class="nav-item">▦ &nbsp; 행사 성과 대시보드</div><div class="aside-note">회사 행사 실적을 한눈에.<br>관리자가 등록한 행사의 공개 성과를 조회합니다.</div></aside>
 <main class="main"><header class="top"><div><div class="eyebrow">PERFORMANCE OVERVIEW</div><h1 class="h1">KPI · 실적관리</h1><p class="sub">행사 투입 비용과 실적을 한곳에서 관리하세요.</p><div class="top-user">읽기 전용 · 로그인 불필요 · 행사 데이터는 누구나 열람 가능</div></div><div class="btns"><a class="btn" href="./" style="text-decoration:none">관리자 로그인</a></div></header>
 <div id="status" class="sync-status" role="status" aria-live="polite">온라인 데이터 연결 중…</div>
 <section class="filters"><select id="branch" aria-label="지사선택"><option value="all">지사선택</option><option value="부산 1지사">부산 1지사</option><option value="부산 2지사">부산 2지사</option><option value="부산 3지사">부산 3지사</option><option value="부산 4지사">부산 4지사</option><option value="부산권역">부산권역</option></select><select id="division" aria-label="본부선택"><option value="all">본부선택</option><option value="1본부">1본부</option><option value="2본부">2본부</option><option value="3본부">3본부</option><option value="지사장">지사장</option><option value="기타">기타</option></select><select id="year" aria-label="연도 선택"></select><select id="month" aria-label="월 선택"><option value="all">전체 월</option></select><select id="type" aria-label="행사 구분"><option value="all">유형</option><option>PLK 골프대회</option><option>부산권역 행사</option><option>지사 행사</option><option>기타</option><option>실적등록</option></select><input id="search" placeholder="제목/이름 / 골프장 검색" aria-label="행사 검색"></section><div id="activeFilters" class="active-filters" aria-live="polite">기간: 전체 연도 · 전체 월</div>
@@ -264,57 +264,91 @@ el('rows').innerHTML=a.length?a.map(x=>`<tr><td><button type="button" class="eve
 }
 
 function showEventDetail(x){
-const revenueKnown=complete(x,revenueFields),incomeKnown=known(x.eventIncome);
-const subscriptionRevenue=revenueKnown?x.corporateRevenue+x.individualRevenue:null;
-const income=incomeKnown?x.eventIncome:null;
-const profit=revenueKnown&&incomeKnown?subscriptionRevenue+income-x.cost:null;
-const item=(label,value,sub)=>'<div class="detail-kpi"><div class="name">'+label+'</div><div class="num">'+value+'</div>'+(sub?'<div class="sub">'+sub+'</div>':'')+'</div>';
-const line=(label,value)=>'<div class="detail-row"><span>'+label+'</span><strong>'+value+'</strong></div>';
-const none='미입력';
-const attendeeInfo=classified(x.members,x.nonMembers)?'PLK회원 '+fmt(x.members)+'명 / 비회원 '+fmt(x.nonMembers)+'명':'회원·비회원 구분 미입력';
-const productsText=value=>Array.isArray(value)&&value.length?value.map(esc).join(', '):'미선택';
-const signupPaymentDetails=Array.isArray(x.signupEntries)&&x.signupEntries.length?
- '<div class="detail-section-title">가입 건별 납부 내역</div>'+
- x.signupEntries.map((r,i)=>{
-   if(!r||!['corporate','individual'].includes(r.group))return '';
-   const payment=r.paymentType==='installment'?'분납'+(Number.isSafeInteger(r.installmentMonths)&&r.installmentMonths>0?' · '+fmt(r.installmentMonths)+'개월':' · 개월 수 미입력'):r.paymentType==='full'?'완납':'납부 방식 미지정';
-   const label=(i+1)+'건 · '+(r.group==='corporate'?'법인':'개인')+' '+(r.product||'상품 미지정');
-   return line(esc(label),esc(payment)+' · '+fmt(r.seats||0)+'구좌 · 매출 '+(known(r.revenue)?won(r.revenue):'미입력')+' · 연회비 '+(known(r.annualFee)?won(r.annualFee):'미입력'));
- }).join(''):'';
-const seatInfo=classified(x.corporate,x.individual)?'법인 '+fmt(x.corporate)+'구좌 / 개인 '+fmt(x.individual)+'구좌':'가입상품 구분 미입력';
-const fundingInfo=complete(x,fundingFields)?line('판촉물 포인트',won(x.promoPoints))+line('본사 지원',won(x.headOfficeSupport)):line('집행 재원','미분류 (기존 기록)');
-const expenseInfo=complete(x,costFields)?line('대관료',won(x.venueCost))+line('식음료비',won(x.foodCost))+line('시상품비',won(x.prizeCost))+line('기타비용',won(x.otherCost)):line('세부 비용','기존 행사 · 세부 구분 미입력');
-el('detailTitle').textContent=x.name;
-el('detailContent').innerHTML=
-'<p class="detail-meta">'+esc(x.branch||'담당 미지정')+' · '+esc(x.date)+' · '+esc(x.type)+' · '+esc(x.place||'장소 미입력')+'</p>'+
-'<div class="detail-kpis">'+
-item('총 참가인원',fmt(x.attendees)+'명',attendeeInfo)+
-item('목표구좌',fmt(x.goal)+'구좌')+
-item('달성구좌',fmt(x.done)+'구좌',seatInfo)+
-item('목표구좌 대비 달성률',rate(x.goal,x.done))+
-item('참가인원 대비 입회 전환율',signupRate(x),signupCount(x)===null?'법인/개인 구좌 미분류':fmt(signupCount(x))+'건 / '+fmt(x.attendees)+'명 · '+signupNote(x))+
-item('환산 입회 건수',signupCount(x)===null?'미분류':fmt(signupCount(x))+'건','법인 4구좌당 1건 + 개인 1구좌당 1건')+
-item('총 행사비용',won(x.cost),'대관·식음료·시상품·기타')+
-item('행사 수입',incomeKnown?won(income):none,'가입매출 제외')+
-item('가입구좌 매출',revenueKnown?won(subscriptionRevenue):none,revenueKnown?'법인 '+won(x.corporateRevenue)+' / 개인 '+won(x.individualRevenue):'매출 입력 필요')+
-item('총수입 − 행사비용',profit===null?'계산 보류':profitText(profit),'상품원가 등 미반영 · 실제 순이익 아님')+
-item('달성구좌당 비용',x.done?won(x.cost/x.done):'—')+
-'</div>'+
-'<div class="detail-section-title">행사비용 집행 재원</div>'+fundingInfo+
-'<div class="detail-section-title">행사 비용 내역</div>'+expenseInfo+line('총 행사비용',won(x.cost))+
-'<div class="detail-section-title">매출 및 행사 수입</div>'+
-line('법인 가입 매출',revenueKnown?won(x.corporateRevenue):none)+
-line('개인 가입 매출',revenueKnown?won(x.individualRevenue):none)+
-line('연회비 금액',known(x.annualFee)?won(x.annualFee):none)+
-'<div class="detail-section-title">가입상품 선택</div>'+
-line('법인 가입상품',productsText(x.corporateProducts))+
-line('개인 가입상품',productsText(x.individualProducts))+
-signupPaymentDetails+
-line('행사 수입',incomeKnown?won(income):none)+
-line('총수입',revenueKnown&&incomeKnown?won(subscriptionRevenue+income):'계산 보류')+
-(x.memo?'<div class="detail-section-title">행사 메모</div><p>'+esc(x.memo)+'</p>':'')+
-'<p class="foot">※ 손익 차액은 가입구좌 매출과 행사 수입에서 행사비만 차감한 값으로, 상품 원가·수수료·세금 등이 포함되지 않은 금액입니다.</p>';
-el('detailOverlay').classList.add('show');el('detailClose').focus();
+ const none='미입력';
+ const value=n=>known(n)?won(n):none;
+ const count=n=>known(n)?fmt(n)+'구좌':none;
+ const line=(label,v)=>'<div class="detail-row"><span>'+esc(label)+'</span><strong>'+v+'</strong></div>';
+ const heading=label=>'<div class="detail-section-title">'+esc(label)+'</div>';
+ const item=(label,val,sub)=>'<div class="detail-kpi"><div class="name">'+esc(label)+'</div><div class="num">'+val+'</div>'+(sub?'<div class="sub">'+sub+'</div>':'')+'</div>';
+ const moneyFields=complete(x,revenueFields);
+ const subscriptionRevenue=moneyFields?x.corporateRevenue+x.individualRevenue:null;
+ const incomeKnown=known(x.eventIncome);
+ const income=incomeKnown?x.eventIncome:null;
+ const profit=moneyFields&&incomeKnown?subscriptionRevenue+income-x.cost:null;
+ const productList=arr=>Array.isArray(arr)&&arr.length?esc(arr.join(' / ')):'상품 미지정';
+ const signupRows=Array.isArray(x.signupEntries)?x.signupEntries.filter(r=>r&&['corporate','individual'].includes(r.group)):[];
+ const paymentName=r=>r.paymentType==='full'?'완납':r.paymentType==='installment'?'분납':r.paymentType==='unknown'?'기존 미지정':'미입력';
+ const seatsKnown=classified(x.corporate,x.individual);
+ const participantText=classified(x.members,x.nonMembers)?'PLK회원 '+fmt(x.members)+'명 / 비회원 '+fmt(x.nonMembers)+'명':'회원·비회원 구분 미입력';
+ const seatText=seatsKnown?'법인 '+fmt(x.corporate)+'구좌 / 개인 '+fmt(x.individual)+'구좌':'법인·개인 구분 미입력';
+ const expenseFields=complete(x,costFields);
+ const fundingKnown=complete(x,fundingFields);
+ let signupDetail='';
+ if(signupRows.length){
+  signupDetail=signupRows.map((r,i)=>{
+   const label=(r.group==='corporate'?'법인':'개인')+' · '+(r.product||'상품 미지정');
+   const payment=paymentName(r);
+   const months=r.paymentType==='installment'?(Number.isSafeInteger(r.installmentMonths)&&r.installmentMonths>0?fmt(r.installmentMonths)+'개월':'개월 수 미입력'):'해당 없음';
+   return '<div class="detail-entry-card"><div class="detail-entry-head"><strong>가입 '+fmt(i+1)+'건</strong><span>'+esc(label)+'</span></div>'+
+    '<div class="detail-entry-grid">'+
+    '<div><span>가입상품</span><strong>'+esc(r.product||'미입력')+'</strong></div>'+
+    '<div><span>가입구좌</span><strong>'+count(r.seats)+'</strong></div>'+
+    '<div><span>구좌 매출액</span><strong>'+value(r.revenue)+'</strong></div>'+
+    '<div><span>연회비 금액</span><strong>'+value(r.annualFee)+'</strong></div>'+
+    '<div><span>납부 방식</span><strong>'+esc(payment)+'</strong></div>'+
+    '<div><span>분납 개월 수</span><strong>'+esc(months)+'</strong></div>'+
+    '</div></div>';
+  }).join('');
+ }else{
+  signupDetail='<p class="detail-no-entries">가입 건별 세부 기록이 없는 기존 데이터입니다. 아래에 저장된 상품·구좌·매출 합계를 표시하며, 납부 방식 등 미등록 정보는 임의로 생성하지 않습니다.</p>';
+ }
+ el('detailTitle').textContent=x.name||'등록 상세';
+ el('detailContent').innerHTML=
+ heading('기본 등록 정보')+
+ line('제목/이름',esc(x.name||none))+
+ line('담당 지사 / 권역',esc(x.branch||none))+
+ line('담당 본부',esc(normalizeDivision(x.division)||'본부 미지정'))+
+ line('진행일',esc(x.date||none))+
+ line('유형',esc(x.type||none))+
+ line('장소 / 골프장',esc(x.place||none))+
+ heading('가입 건별 상세 · '+fmt(signupRows.length)+'건')+
+ signupDetail+
+ heading('가입 및 매출 합계')+
+ line('총 달성구좌',count(x.done))+
+ line('법인 가입구좌',count(x.corporate))+
+ line('개인 가입구좌',count(x.individual))+
+ line('법인 가입상품',productList(x.corporateProducts))+
+ line('개인 가입상품',productList(x.individualProducts))+
+ line('법인 가입 매출',value(x.corporateRevenue))+
+ line('개인 가입 매출',value(x.individualRevenue))+
+ line('총 가입구좌 매출',subscriptionRevenue===null?none:won(subscriptionRevenue))+
+ line('연회비 합계',value(x.annualFee))+
+ line('행사 수입',value(x.eventIncome))+
+ line('총수입',subscriptionRevenue!==null&&incomeKnown?won(subscriptionRevenue+income):'계산 보류')+
+ heading('참가 인원 및 목표')+
+ line('PLK 회원 인원',known(x.members)?fmt(x.members)+'명':none)+
+ line('비회원 인원',known(x.nonMembers)?fmt(x.nonMembers)+'명':none)+
+ line('총 참가인원',known(x.attendees)?fmt(x.attendees)+'명':none)+
+ line('목표구좌',count(x.goal))+
+ heading('행사비용 집행 재원')+
+ (fundingKnown?line('판촉물 포인트',value(x.promoPoints))+line('본사 지원',value(x.headOfficeSupport)):line('집행 재원','미분류 (기존 기록)'))+
+ heading('행사 비용 내역')+
+ (expenseFields?line('대관료',value(x.venueCost))+line('식음료비',value(x.foodCost))+line('시상품비',value(x.prizeCost))+line('기타비용',value(x.otherCost)):line('세부 비용','기존 기록 · 미분류'))+
+ line('총 행사비용',value(x.cost))+
+ heading('핵심 성과 지표')+
+ '<div class="detail-kpis">'+
+ item('목표구좌 대비 달성률',rate(x.goal,x.done))+
+ item('참가인원 대비 입회 전환율',signupRate(x),signupCount(x)===null?'법인/개인 구분 미입력':fmt(signupCount(x))+'건 / '+fmt(x.attendees)+'명')+
+ item('환산 입회 건수',signupCount(x)===null?'미분류':fmt(signupCount(x))+'건','법인 4구좌당 1건 + 개인 1구좌당 1건')+
+ item('달성구좌당 비용',x.done?won(x.cost/x.done):'—')+
+ item('1인당 행사 비용',x.attendees?won(x.cost/x.attendees):'—')+
+ item('총수입 − 행사비용',profit===null?'계산 보류':profitText(profit),'상품원가·세금·수수료 미반영')+
+ '</div>'+
+ heading('메모')+
+ '<p class="detail-memo">'+(x.memo?esc(x.memo):none)+'</p>'+
+ '<p class="foot">※ 가입매출은 기록된 금액을 기준으로 표시합니다. 분납 개월 수는 실제 수납 완료 금액이 아니며, 연회비는 가입매출 합계에 중복 가산하지 않습니다.</p>';
+ el('detailOverlay').classList.add('show');
+ el('detailClose').focus();
 }
 function closeEventDetail(){el('detailOverlay').classList.remove('show');}
 el('detailClose').onclick=closeEventDetail;
