@@ -470,7 +470,13 @@ function oldSignupEntries(x){
   const detail=x.productSeatCounts||{};
   if(!seats&&!revenue&&!products.length)continue;
   if(products.length>1){
-   products.forEach((product,i)=>result.push({group,product,seats:known(detail[product])?detail[product]:(i===0?Math.max(0,seats-products.slice(1).reduce((n,p)=>n+(known(detail[p])?detail[p]:0),0)):0),revenue:i===0?revenue:0,annualFee:0}));
+   let assigned=0;
+   products.forEach((product,i)=>{
+    const allocated=known(detail[product])?detail[product]:0;
+    assigned+=allocated;
+    result.push({group,product,seats:allocated,revenue:i===0?revenue:0,annualFee:0});
+   });
+   if(seats>assigned)result.push({group,product:'미분류',seats:seats-assigned,revenue:0,annualFee:0});
   }else result.push({group,product:products[0]||'미분류',seats,revenue,annualFee:0});
  }
  if(result.length&&known(x.annualFee))result[0].annualFee=x.annualFee;
