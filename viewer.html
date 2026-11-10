@@ -67,10 +67,18 @@ function normalizeDivision(value){
  return legacy?legacy[1]:v;
 }
 function updateDivisionFilter(){
- const branch=!!restrictedBranch()||multiValues.branch.size>0;
+ const restricted=restrictedBranch();
+ const selected=multiValues.branch;
+ const regionOnly=restricted==='부산권역'||(!restricted&&selected.size===1&&selected.has('부산권역'));
+ const hasDistrict=restricted?restricted!=='부산권역':([...selected].some(b=>b!=='부산권역'));
  const outer=document.getElementById('multi-division');
- if(outer){outer.classList.toggle('multi-disabled',!branch);if(!branch)outer.open=false;}
- if(!branch)multiValues.division.clear();
+ if(outer){
+   outer.hidden=regionOnly;
+   outer.style.display=regionOnly?'none':'';
+   outer.classList.toggle('multi-disabled',!hasDistrict);
+   if(!hasDistrict)outer.open=false;
+ }
+ if(!hasDistrict)multiValues.division.clear();
 }
 const restrictedBranch=()=>typeof assignedBranch!=='undefined'&&assignedBranch?assignedBranch:(typeof access!=='undefined'&&access.role==='branch'?access.branch:null);
 function multiMatch(id,value){
