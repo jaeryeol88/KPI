@@ -47,7 +47,17 @@
 .month-goal-editor button{background:var(--blue);color:#fff;border:0;border-radius:8px;padding:9px 16px;font-weight:750}
 .month-status{font-size:12px;color:var(--muted)}
 @media(max-width:720px){.month-cards{grid-template-columns:1fr}.month-goals{padding:16px}}
-.month-target-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin:12px 0}.month-target-grid label{display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--muted);font-weight:700}.month-target-grid label:first-child{background:#eef4ff;border:1px solid #d8e6ff;border-radius:9px;padding:8px}.month-target-grid label small{font-size:11px;color:var(--muted);font-weight:400}.month-target-note{font-size:12px;font-weight:650;color:var(--blue);padding:9px 0;line-height:1.6}.month-target-grid input{width:100%;min-width:0;padding:9px;border:1px solid var(--line);border-radius:8px;color:var(--text)}@media(max-width:720px){.month-target-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}.monthly-branch-toggle{appearance:none;background:transparent;border:0;padding:5px 3px;color:var(--blue);font-weight:750;text-align:left;cursor:pointer}.monthly-branch-toggle:hover{text-decoration:underline}.monthly-branch-toggle:focus-visible{outline:2px solid var(--blue);outline-offset:2px}.monthly-division-detail{background:#f5f8fe}.monthly-division-detail td:first-child{padding-left:25px!important;color:var(--muted);font-weight:600}.monthly-grand-total{background:#e9f1ff}</style>
+.month-target-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin:12px 0}.month-target-grid label{display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--muted);font-weight:700}.month-target-grid label:first-child{background:#eef4ff;border:1px solid #d8e6ff;border-radius:9px;padding:8px}.month-target-grid label small{font-size:11px;color:var(--muted);font-weight:400}.month-target-note{font-size:12px;font-weight:650;color:var(--blue);padding:9px 0;line-height:1.6}.month-target-grid input{width:100%;min-width:0;padding:9px;border:1px solid var(--line);border-radius:8px;color:var(--text)}@media(max-width:720px){.month-target-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}.monthly-branch-toggle{appearance:none;background:transparent;border:0;padding:5px 3px;color:var(--blue);font-weight:750;text-align:left;cursor:pointer}.monthly-branch-toggle:hover{text-decoration:underline}.monthly-branch-toggle:focus-visible{outline:2px solid var(--blue);outline-offset:2px}.monthly-division-detail{background:#f5f8fe}.monthly-division-detail td:first-child{padding-left:25px!important;color:var(--muted);font-weight:600}.monthly-grand-total{background:#e9f1ff}.month-multi{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:650}
+.month-multi-dropdown{position:relative;min-width:115px}
+.month-multi-dropdown summary{list-style:none;border:1px solid var(--line);border-radius:8px;background:#fff;padding:9px 29px 9px 11px;cursor:pointer;max-width:210px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:700}
+.month-multi-dropdown summary::-webkit-details-marker{display:none}
+.month-multi-dropdown summary:after{content:'⌄';position:absolute;right:11px;top:8px}
+.month-multi-menu{position:absolute;top:calc(100% + 4px);left:0;min-width:165px;max-height:285px;overflow-y:auto;z-index:25;background:#fff;border:1px solid var(--line);border-radius:9px;box-shadow:0 8px 22px #142c4b25;padding:8px}
+.month-multi-menu label{display:flex;align-items:center;gap:8px;padding:7px 5px;font-size:12px;font-weight:550;cursor:pointer;white-space:nowrap}
+.month-multi-menu label:hover{background:#f0f6ff}
+.month-multi-menu input{width:16px;height:16px;min-width:16px;accent-color:#145dc5}
+.month-multi-all{display:block;width:100%;text-align:left;padding:7px;background:#edf4ff;border:0;border-radius:6px;color:#145dc5;font-weight:700;font-size:12px}
+</style>
 </head><body>
 <section class="auth-screen" id="authScreen">
   <div class="auth-card">
@@ -82,13 +92,13 @@
 <section class="metrics"><div class="metric"><div class="label">총 진행 건수</div><div class="value" id="mEvents">0건</div><div class="detail">선택 기간 등록 건수</div></div><div class="metric hide-for-results-only"><div class="label">총 행사 비용</div><div class="value" id="mCost">0원</div><div class="detail" id="mCostSub">대관 · 식음 · 시상품 · 기타</div></div><div class="metric"><div class="label">행사 수입</div><div class="value accent" id="mEventIncome">0원</div><div class="detail" id="mEventIncomeSub">참가비·후원금 등 가입매출 제외</div></div><div class="metric"><div class="label">총 가입구좌 매출</div><div class="value success" id="mRevenue">—</div><div class="detail" id="mRevenueSub">법인/개인 매출액</div><div class="detail" style="margin-top:5px">※ 분납 건은 완납 기준 예상매출로 반영</div></div><div class="metric"><div class="label">손익 (총수입 − 행사비용)</div><div class="value" id="mProfit">—</div><div class="detail" id="mProfitSub">단순 차액 · 순이익 아님</div></div><div class="metric"><div class="label">연회비 매출</div><div class="value accent" id="mAnnualFee">0원</div><div class="detail" id="mAnnualFeeSub">등록된 연회비 실적 합계</div></div><div class="metric"><div class="label">총 달성구좌</div><div class="value success" id="mAchievedSeats">0구좌</div><div class="detail" id="mAchievedSeatsSub">법인 0구좌 · 개인 0구좌</div></div><div class="metric"><div class="label">상품별 가입 실적</div><div class="metric-products" id="mProductStats" aria-live="polite">선택 기간 상품별 실적 집계</div></div><div class="metric event-attendance-only" hidden><div class="label">총 참가 인원</div><div class="value" id="mAttendees">0명</div><div class="detail" id="mAttendeesSub">PLK 회원 0명 · 비회원 0명</div><div class="detail" id="mSignupSub" style="margin-top:5px">입회 전환율 —</div></div><div class="metric"><div class="label">월 목표구좌 달성률</div><div class="value accent" id="mRate">—</div><div class="detail" id="mRateSub">달성 0 / 목표 0구좌</div><div class="detail" id="mProductSub" style="margin-top:5px">법인 0 · 개인 0구좌</div></div></section><section class="month-goals" id="monthlyGoalPanel" aria-label="월별 및 연간 구좌목표 달성률">
 <h2>월별 · 연간 구좌목표 달성률</h2>
 <p>월 목표는 회사에서 배정하며 행사·실적 등록과 별개로 관리됩니다. 부산권역 전체 조회는 부산 1~4지사와 부산권역 실적을 각각 한 번씩 합산합니다. 행사 유형 필터와 무관하게 등록된 실적을 집계합니다.</p>
-<div class="month-controls"><label>연도 <select id="monthlyYear"></select></label><label>지사 <select id="monthlyBranch"></select></label><label>본부 <select id="monthlyDivision"></select></label><label>기준 월 <select id="monthlyMonth"></select></label></div>
+<div class="month-controls" id="monthlyFilterControls" aria-label="월 목표 현황 다중 선택 필터"><div class="month-multi" data-monthly-filter="year"><span>연도</span></div><div class="month-multi" data-monthly-filter="branch"><span>지사</span></div><div class="month-multi" data-monthly-filter="division"><span>본부</span></div><div class="month-multi" data-monthly-filter="month"><span>기준 월</span></div></div>
 <div class="month-cards">
-<div class="month-card"><span>선택 월 달성률</span><strong id="monthlyRate">—</strong><small id="monthlySummary">목표 미입력</small></div>
-<div class="month-card"><span>선택 연도 누적 달성률</span><strong id="annualRate">—</strong><small id="annualSummary">목표 미입력</small></div>
+<div class="month-card"><span>선택 기간 목표 달성률</span><strong id="monthlyRate">—</strong><small id="monthlySummary">목표 미입력</small></div>
+<div class="month-card"><span>선택 기간 달성구좌</span><strong id="annualRate">0구좌</strong><small id="annualSummary">선택한 연도·월 기준</small></div>
 </div>
-<div class="month-scroll"><table><thead><tr><th>월</th><th>목표구좌</th><th>달성구좌</th><th>달성률</th></tr></thead><tbody id="monthlyRows"></tbody></table></div>
-<div class="month-scroll"><table><thead><tr><th>지사별 연간 현황 (지사 클릭 시 본부별 펼침)</th><th>목표구좌</th><th>달성구좌</th><th>달성률</th></tr></thead><tbody id="monthlyBranchRows"></tbody></table></div>
+<div class="month-scroll"><table><thead><tr><th>조회 월</th><th>목표구좌</th><th>달성구좌</th><th>달성률</th></tr></thead><tbody id="monthlyRows"></tbody></table></div>
+<div class="month-scroll"><table><thead><tr><th>선택 기간 지사별 현황 (클릭하면 본부별 펼침)</th><th>목표구좌</th><th>달성구좌</th><th>달성률</th></tr></thead><tbody id="monthlyBranchRows"></tbody></table></div>
 <p class="month-status" id="monthlyStatus">월 목표 데이터 확인 중…</p>
 <details class="month-goal-editor" id="monthlyEditor" hidden><summary>회사 배정 지사 · 본부별 월 목표구좌 등록 · 수정</summary>
 <form id="monthlyGoalForm">
@@ -407,27 +417,64 @@ function showAttendanceMetrics(){
 }
 
 const monthlyMainDivisions=['1본부','2본부','3본부'];
+const monthlyMainDivisions=['1본부','2본부','3본부'];
 const monthlyBranches=['부산 1지사','부산 2지사','부산 3지사','부산 4지사','부산권역'];
-let monthlyTargets=[],monthlyDivisionTargets=[],monthlyReady=false;let expandedMonthlyBranch=null;const monthlyDivisions=['1본부','2본부','3본부','지사장','기타'];
+let monthlyTargets=[],monthlyDivisionTargets=[],monthlyReady=false,expandedMonthlyBranch=null;
+const monthlyDivisions=['1본부','2본부','3본부','지사장','기타'];
+const monthlyFilterValues={year:new Set([String(new Date().getFullYear())]),branch:new Set(),division:new Set(),month:new Set([String(new Date().getMonth()+1)])};
+const monthlyFilterDescriptions={year:'연도',branch:'지사',division:'본부',month:'기준 월'};
 const monthlyGoalKey=(b,y,m)=>b+'|'+y+'|'+m;
 function monthlyAllowedBranches(){
  const fixed=restrictedBranch();
  return fixed?[fixed]:monthlyBranches;
 }
+function monthlyYearList(){
+ const values=[new Date().getFullYear(),...items.map(e=>Number(String(e.date||'').slice(0,4))),...monthlyTargets.map(t=>Number(t.goal_year)),...monthlyDivisionTargets.map(t=>Number(t.goal_year)),...monthlyFilterValues.year].filter(y=>Number.isInteger(Number(y))&&Number(y)>=2020&&Number(y)<=2100);
+ return [...new Set(values.map(Number))].sort((a,b)=>b-a);
+}
+function monthlySelectedYears(){
+ return (monthlyFilterValues.year.size?[...monthlyFilterValues.year].map(Number):monthlyYearList()).sort((a,b)=>a-b);
+}
+function monthlySelectedMonths(){
+ return (monthlyFilterValues.month.size?[...monthlyFilterValues.month].map(Number):Array.from({length:12},(_,i)=>i+1)).sort((a,b)=>a-b);
+}
+function monthlySelectedBranches(){
+ const allowed=monthlyAllowedBranches();
+ return monthlyFilterValues.branch.size?allowed.filter(b=>monthlyFilterValues.branch.has(b)):allowed;
+}
+function monthlySelectedDivisions(){
+ return monthlyFilterValues.division.size?[...monthlyFilterValues.division].filter(d=>monthlyDivisions.includes(d)):['all'];
+}
 function monthlySetup(){
- const year=el('monthlyYear'),month=el('monthlyMonth'),branch=el('monthlyBranch');
- const now=new Date();
- year.value=String(now.getFullYear());
- month.innerHTML=Array.from({length:12},(_,i)=>'<option value="'+(i+1)+'">'+(i+1)+'월</option>').join('');
- month.value=String(now.getMonth()+1);
- branch.addEventListener('change',renderMonthlyGoals);
- el('monthlyDivision').addEventListener('change',renderMonthlyGoals);
- year.addEventListener('change',renderMonthlyGoals);
- month.addEventListener('change',renderMonthlyGoals);
- const inputYear=el('goalInputYear'),inputBranch=el('goalInputBranch'),inputMonth=el('goalInputMonth');
- inputYear.value=year.value;inputMonth.innerHTML=month.innerHTML;inputMonth.value=month.value;
- [inputYear,inputBranch,inputMonth].forEach(x=>x.addEventListener('change',monthlyFillEditor));
- el('monthlyBulkGrid').addEventListener('input',monthlyUpdateEditorNote);
+ // All reporting controls support multiple selection. An empty set means "all".
+ const container=el('monthlyFilterControls');
+ for(const id of Object.keys(monthlyFilterDescriptions)){
+  const host=container.querySelector('[data-monthly-filter="'+id+'"]');
+  host.innerHTML='<span>'+monthlyFilterDescriptions[id]+'</span><details class="month-multi-dropdown" id="monthly-multi-'+id+'"><summary>전체 선택</summary><div class="month-multi-menu"><button type="button" class="month-multi-all">전체 선택 (초기화)</button><div class="month-multi-options"></div></div></details>';
+  host.querySelector('.month-multi-all').addEventListener('click',()=>{
+   monthlyFilterValues[id].clear();renderMonthlyGoals();
+  });
+  host.querySelector('.month-multi-options').addEventListener('change',event=>{
+   if(!event.target.matches('input[type="checkbox"]'))return;
+   if(event.target.checked)monthlyFilterValues[id].add(event.target.value);
+   else monthlyFilterValues[id].delete(event.target.value);
+   renderMonthlyGoals();
+  });
+ }
+ document.addEventListener('click',event=>{
+  container.querySelectorAll('.month-multi-dropdown[open]').forEach(d=>{
+   if(!d.contains(event.target))d.open=false;
+  });
+ });
+ const inputYear=el('goalInputYear'),inputBranch=el('goalInputBranch');
+ inputYear.value=String(new Date().getFullYear());
+ const inputMonth=el('goalInputMonth');
+ if(inputMonth){inputMonth.innerHTML=Array.from({length:12},(_,i)=>'<option value="'+(i+1)+'">'+(i+1)+'월</option>').join('');inputMonth.value=String(new Date().getMonth()+1);}
+ const editorInputs=[inputYear,inputBranch,inputMonth||el('goalInputDivision')].filter(Boolean);
+ editorInputs.forEach(x=>x.addEventListener('change',monthlyFillEditor));
+ const bulk=el('monthlyBulkGrid');
+ if(bulk)bulk.addEventListener('input',()=>{if(typeof monthlyUpdateEditorNote==='function')monthlyUpdateEditorNote();});
+ el('monthlyGoalForm').addEventListener('submit',monthlySaveGoal);
  el('monthlyBranchRows').addEventListener('click',event=>{
   const button=event.target.closest('button[data-expand-monthly-branch]');
   if(!button)return;
@@ -435,33 +482,38 @@ function monthlySetup(){
   expandedMonthlyBranch=expandedMonthlyBranch===branch?null:branch;
   renderMonthlyGoals();
  });
- el('monthlyGoalForm').addEventListener('submit',monthlySaveGoal);
  monthlySyncBranches();
 }
 function monthlySyncBranches(){
- const allowed=monthlyAllowedBranches();
- const branch=el('monthlyBranch'),old=branch.value;
- branch.innerHTML=(allowed.length>1?'<option value="all">부산권역 전체 합계</option>':'')+allowed.map(b=>'<option value="'+b+'">'+b+'</option>').join('');
- branch.value=allowed.includes(old)?old:(allowed.length===1?allowed[0]:'all');
- const divSel=el('monthlyDivision'),divOld=divSel.value;
- divSel.innerHTML='<option value="all">지사 전체 목표</option>'+monthlyDivisions.map(d=>'<option value="'+d+'">'+d+'</option>').join('');
- divSel.value=monthlyDivisions.includes(divOld)?divOld:'all';
+ const permitted=monthlyAllowedBranches();
+ for(const b of [...monthlyFilterValues.branch])if(!permitted.includes(b))monthlyFilterValues.branch.delete(b);
+ const choices={
+  year:monthlyYearList().map(y=>({value:String(y),label:y+'년'})),
+  branch:permitted.map(b=>({value:b,label:b})),
+  division:monthlyDivisions.map(d=>({value:d,label:d})),
+  month:Array.from({length:12},(_,i)=>({value:String(i+1),label:(i+1)+'월'}))
+ };
+ for(const id of Object.keys(choices)){
+  const host=el('monthly-multi-'+id),values=monthlyFilterValues[id];
+  const signature=choices[id].map(o=>o.value).join('|');
+  if(host.dataset.signature!==signature){
+   host.dataset.signature=signature;
+   host.querySelector('.month-multi-options').innerHTML=choices[id].map(o=>'<label><input type="checkbox" value="'+o.value+'"> '+o.label+'</label>').join('');
+  }
+  host.querySelectorAll('input[type="checkbox"]').forEach(c=>{c.checked=values.has(c.value);});
+  const all=values.size===0;
+  const names=choices[id].filter(o=>values.has(o.value)).map(o=>o.label);
+  host.querySelector('summary').textContent=all?(id==='branch'&&permitted.length===1?permitted[0]:'전체 선택'):names.length<=2?names.join(', '):names[0]+' 외 '+(names.length-1)+'개';
+ }
  const editor=el('monthlyEditor');
  editor.hidden=typeof access==='undefined'||!['owner','shared'].includes(access.role);
- const edit=el('goalInputBranch'),current=edit.value;
- edit.innerHTML=allowed.map(b=>'<option value="'+b+'">'+b+'</option>').join('');
- edit.value=allowed.includes(current)?current:allowed[0];
- edit.disabled=allowed.length===1;
- monthlyFillEditor();
+ const edit=el('goalInputBranch'),previous=edit.value;
+ edit.innerHTML=permitted.map(b=>'<option value="'+b+'">'+b+'</option>').join('');
+ edit.value=permitted.includes(previous)?previous:(permitted[0]||'');
+ edit.disabled=permitted.length===1;
+ if(edit.value)monthlyFillEditor();
 }
-function monthlyYearOptions(){
- const select=el('monthlyYear'),keep=select.value||String(new Date().getFullYear());
- const vals=[new Date().getFullYear(),Number(keep),...items.map(e=>Number(String(e.date||'').slice(0,4))),...monthlyTargets.map(t=>Number(t.goal_year)),...monthlyDivisionTargets.map(t=>Number(t.goal_year))];
- const years=[...new Set(vals.filter(n=>Number.isInteger(n)&&n>=2020&&n<=2100))].sort((a,b)=>b-a);
- const html=years.map(y=>'<option value="'+y+'">'+y+'년</option>').join('');
- if(select.innerHTML!==html)select.innerHTML=html;
- select.value=String(years.includes(Number(keep))?keep:years[0]);
-}
+function monthlyYearOptions(){monthlySyncBranches();}
 function monthlyTarget(b,y,m,division='all'){
  const row=monthlyDivisionTargets.find(t=>t.branch===b&&t.division===division&&Number(t.goal_year)===y&&Number(t.goal_month)===m);
  if(division!=='all')return row?Number(row.target_seats):null;
@@ -538,30 +590,44 @@ function renderCoreGoalKpi(filteredEvents){
  if(summaryRateLabel)summaryRateLabel.textContent=scope+' 목표 달성률';
 }
 function renderMonthlyGoals(){
- monthlySyncBranches();monthlyYearOptions();
- const y=Number(el('monthlyYear').value),m=Number(el('monthlyMonth').value),b=el('monthlyBranch').value,division=el('monthlyDivision').value;
- const branches=b==='all'?monthlyAllowedBranches():[b];
- const months=Array.from({length:12},(_,i)=>i+1);
- const current=monthlyRollup(branches,y,[m],division),annual=monthlyRollup(branches,y,months,division);
- el('monthlyRate').textContent=current.rate;el('monthlySummary').textContent=monthlyCaption(current);
- el('annualRate').textContent=annual.rate;el('annualSummary').textContent=monthlyCaption(annual)+' (1~12월 목표 대비)';
- el('monthlyRows').innerHTML=months.map(mm=>{
-  const t=monthlyRollup(branches,y,[mm],division);
-  return '<tr><td>'+mm+'월</td><td>'+t.goal+'구좌'+'</td><td>'+t.done+'구좌</td><td>'+t.rate+'</td></tr>';
- }).join('');
+ monthlySyncBranches();
+ const ys=monthlySelectedYears(),months=monthlySelectedMonths(),branches=monthlySelectedBranches(),divisions=monthlySelectedDivisions();
+ const rollup=(bs,years,ms,ds)=>{
+  let goal=0,done=0;
+  for(const branch of bs)for(const y of years)for(const m of ms){
+   if(ds.length===1&&ds[0]==='all'){
+    goal+=monthlyTarget(branch,y,m,'all')??0;
+    done+=monthlyActual(branch,y,m,'all');
+   }else{
+    for(const d of ds){
+     goal+=monthlyTarget(branch,y,m,d)??0;
+     done+=monthlyActual(branch,y,m,d);
+    }
+   }
+  }
+  return {goal,done,rate:goal>0?(done/goal*100).toFixed(1)+'%':'—'};
+ };
+ const total=rollup(branches,ys,months,divisions);
+ el('monthlyRate').textContent=total.rate;
+ el('monthlySummary').textContent=monthlyCaption(total);
+ el('annualRate').textContent=fmt(total.done)+'구좌';
+ el('annualSummary').textContent='회사 배정 목표 '+fmt(total.goal)+'구좌 · '+ys.length+'개 연도 · '+months.length+'개 월';
+ el('monthlyRows').innerHTML=ys.flatMap(y=>months.map(m=>{
+  const t=rollup(branches,[y],[m],divisions);
+  return '<tr><td>'+y+'년 '+m+'월</td><td>'+fmt(t.goal)+'구좌</td><td>'+fmt(t.done)+'구좌</td><td>'+t.rate+'</td></tr>';
+ })).join('');
  el('monthlyBranchRows').innerHTML=branches.map(br=>{
-  const t=monthlyRollup([br],y,months,division);
+  const t=rollup([br],ys,months,divisions);
   const opened=expandedMonthlyBranch===br;
-  const main='<tr><td><button type="button" class="monthly-branch-toggle" data-expand-monthly-branch="'+br+'" aria-expanded="'+opened+'" aria-label="'+br+' 본부별 연간 현황 '+(opened?'접기':'펼치기')+'"><span aria-hidden="true">'+(opened?'▾':'▸')+'</span> '+br+'</button></td><td>'+t.goal+'구좌</td><td>'+t.done+'구좌</td><td>'+t.rate+'</td></tr>';
+  const main='<tr><td><button type="button" class="monthly-branch-toggle" data-expand-monthly-branch="'+br+'" aria-expanded="'+opened+'" aria-label="'+br+' 본부별 선택 기간 현황 '+(opened?'접기':'펼치기')+'"><span aria-hidden="true">'+(opened?'▾':'▸')+'</span> '+br+'</button></td><td>'+fmt(t.goal)+'구좌</td><td>'+fmt(t.done)+'구좌</td><td>'+t.rate+'</td></tr>';
   if(!opened)return main;
-  const details=monthlyDivisions.map(d=>{
-   const result=monthlyRollup([br],y,months,d);
-   return '<tr class="monthly-division-detail"><td>└ '+d+'</td><td>'+result.goal+'구좌</td><td>'+result.done+'구좌</td><td>'+result.rate+'</td></tr>';
+  const details=(divisions.length===1&&divisions[0]==='all'?monthlyDivisions:divisions).map(d=>{
+   const result=rollup([br],ys,months,[d]);
+   return '<tr class="monthly-division-detail"><td>└ '+d+'</td><td>'+fmt(result.goal)+'구좌</td><td>'+fmt(result.done)+'구좌</td><td>'+result.rate+'</td></tr>';
   }).join('');
   return main+details;
- }).join('')+(branches.length>1?'<tr class="monthly-grand-total"><th>권역 합계</th><th>'+annual.goal+'구좌</th><th>'+annual.done+'구좌</th><th>'+annual.rate+'</th></tr>':'');
+ }).join('')+(branches.length>1?'<tr class="monthly-grand-total"><th>권역 합계</th><th>'+fmt(total.goal)+'구좌</th><th>'+fmt(total.done)+'구좌</th><th>'+total.rate+'</th></tr>':'');
  if(expandedMonthlyBranch&&!branches.includes(expandedMonthlyBranch))expandedMonthlyBranch=null;
- monthlyFillEditor();
 }
 function monthlyFillEditor(){
  const b=el('goalInputBranch').value,y=Number(el('goalInputYear').value),m=Number(el('goalInputMonth').value);
@@ -636,7 +702,7 @@ async function monthlySaveGoal(event){
   const {error:sumError}=await db.from('kpi_monthly_targets').upsert({branch:b,goal_year:y,goal_month:m,target_seats:total,updated_at:new Date().toISOString()},{onConflict:'branch,goal_year,goal_month'});
   if(sumError)throw sumError;
   await loadMonthlyTargets();
-  el('monthlyYear').value=String(y);el('monthlyBranch').value=b;el('monthlyDivision').value='all';el('monthlyMonth').value=String(m);renderMonthlyGoals();
+  monthlyFilterValues.year=new Set([String(y)]);monthlyFilterValues.branch=new Set([b]);monthlyFilterValues.division.clear();monthlyFilterValues.month=new Set([String(m)]);renderMonthlyGoals();
   el('monthlyStatus').textContent=y+'년 '+m+'월 '+b+' 본부 목표 '+divisionRows.length+'개 저장 완료 · 지사 전체 목표 '+total+'구좌';
  }catch(error){el('monthlyStatus').textContent='목표 저장 중 오류: '+(error.message||'알 수 없는 오류')+' · 일부 항목은 저장됐을 수 있습니다.';alert('목표 저장 오류: '+(error.message||'알 수 없는 오류')+'\n일부 목표만 반영됐을 수 있으니 다시 확인해 주세요.');}
  finally{button.disabled=false;}
