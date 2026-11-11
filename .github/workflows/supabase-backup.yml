@@ -1,0 +1,62 @@
+name: Daily encrypted Supabase backup
+
+on:
+  schedule:
+    # Daily 03:00 Asia/Seoul (18:00 UTC previous day)
+    - cron: '0 18 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: daily-supabase-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      BACKUP_ENCRYPTION_PASSWORD: ${{ secrets.BACKUP_ENCRYPTION_PASSWORD }}
+    steps:
+      - name: Confirm backup secrets are configured
+        run: |
+          if [ -z "$SUPABASE_DB_URL" ] || [ -z "$BACKUP_ENCRYPTION_PASSWORD" ]; then
+            echo "::error::Set SUPABASE_DB_URL and BACKUP_ENCRYPTION_PASSWORD in repository Actions secrets."
+            exit 1
+          fi
+
+      - name: Dump Supabase PostgreSQL database
+        run: |
+          set -euo pipefail
+          mkdir -p backup
+          chmod 700 backup
+          # Use the session-pooler URI from Supabase > Connect (port 5432).
+          # The DB URL is provided only via GitHub Actions secrets, never committed.
+          docker run --rm \
+            -e DATABASE_URL="$SUPABASE_DB_URL" \
+            -v "$PWD/backup:/backup" \
+            postgres:17 \
+            sh -c 'pg_dump --dbname="$DATABASE_URL" --format=custom --no-owner --no-acl --file=/backup/database.dump'
+          test -s backup/database.dump
+
+      - name: Encrypt backup before upload
+        run: |
+          set -euo pipefail
+          openssl enc -aes-256-cbc -pbkdf2 -salt -iter 200000 \
+            -in backup/database.dump \
+            -out backup/plk-supabase-$(date -u +%Y%m%d).dump.enc \
+            -pass env:BACKUP_ENCRYPTION_PASSWORD
+          rm -f backup/database.dump
+          test -s backup/*.enc
+
+      - name: Store encrypted backup for 7 days
+        uses: actions/upload-artifact@v4
+        with:
+          name: plk-supabase-${{ github.run_id }}
+          path: backup/*.enc
+          retention-days: 7
+          if-no-files-found: error
+          compression-level: 0
