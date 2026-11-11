@@ -920,7 +920,7 @@ function signupEntryHTML(row={}){
  '<label>가입구좌<input class="entry-seats" type="number" min="0" step="1" placeholder="구좌" value="'+esc(numberValue('seats'))+'"></label>'+
  '<label>구좌 매출액 (원)<input class="entry-revenue" type="number" min="0" step="1" placeholder="매출액" value="'+esc(numberValue('revenue'))+'"><span class="entry-currency-readable entry-revenue-preview" aria-live="polite"></span></label>'+
  '<label>연회비 금액 (원)<input class="entry-fee" type="number" min="0" step="1" placeholder="연회비" value="'+esc(numberValue('annualFee'))+'"><span class="entry-currency-readable entry-fee-preview" aria-live="polite"></span></label></div>'+
- '<div class="entry-assignment"><label>가입 담당 지사<select class="entry-branch"><option value="">지사 선택</option>'+eventBranchOptions.map(b=>'<option value="'+b+'"'+(row.branch===b?' selected':'')+'>'+b+'</option>').join('')+'</select></label><label>가입 담당 본부<select class="entry-division"><option value="">본부 미지정</option>'+divisionBranches.map(d=>'<option value="'+d+'"'+(row.division===d?' selected':'')+'>'+d+'</option>').join('')+'</select></label></div>'+
+ '<div class="entry-assignment"><label>가입 담당 지사<select class="entry-branch"><option value="">지사 선택</option>'+eventBranchOptions.map(b=>'<option value="'+b+'"'+(row.branch===b?' selected':'')+'>'+b+'</option>').join('')+'</select></label><label>가입 담당 본부<select class="entry-division"><option value="">본부 미지정</option>'+divisionBranches.map(d=>'<option value="'+d+'"'+(row.division===d?' selected':'')+'>'+d+'</option>').join('')+'</select></label><label>가입 담당 매니저<input class="entry-manager" type="text" maxlength="60" placeholder="예: 홍길동" value="'+esc(row.manager||'')+'"></label></div>'+
  '<div class="entry-payment"><label>납부 방식<select class="entry-payment-type">'+payOptions+'</select></label><label class="entry-installment-wrap"'+(paymentType==='installment'?'':' hidden')+'>분납 개월 수<input type="number" min="1" max="360" step="1" class="entry-installment-months" placeholder="개월" value="'+installmentMonths+'"'+(paymentType==='installment'?'':' disabled')+'></label></div>'+
  '<div class="entry-promo-title">프로모션 적용</div><div class="entry-calculator"><span>매출액 조정</span><select class="entry-calc-mode"><option value="-">− 할인</option><option value="+">+ 할증</option></select><input class="entry-percent" type="number" min="0" max="100" step="0.1" value="5" aria-label="할인 할증 비율"> % <input class="entry-adjust" type="number" step="1" value="0" aria-label="추가 금액 조정"><span>원 조정</span><button type="button" class="entry-apply">적용</button></div>'+ 
  '<label class="entry-special-note">가입 건별 메모 (수기 입력)<textarea class="entry-note-input" maxlength="500" placeholder="예: 할인 프로모션 외 별도 상품 조건, 특별 협의사항 등">'+esc(row.note||'')+'</textarea></label></div>';
@@ -936,7 +936,7 @@ function readSignupEntries(strict=false){
  for(const [idx,element] of [...el('signupEntryRows').querySelectorAll('.entry-row')].entries()){
   const value=element.querySelector('.entry-product').value;
   const [group,product]=value?value.split('|'):['',''];
-  const raw={group,product,seats:element.querySelector('.entry-seats').value.trim(),revenue:element.querySelector('.entry-revenue').value.trim(),annualFee:element.querySelector('.entry-fee').value.trim(),branch:element.querySelector('.entry-branch').value,division:element.querySelector('.entry-division').value};
+  const raw={group,product,seats:element.querySelector('.entry-seats').value.trim(),revenue:element.querySelector('.entry-revenue').value.trim(),annualFee:element.querySelector('.entry-fee').value.trim(),branch:element.querySelector('.entry-branch').value,division:element.querySelector('.entry-division').value,manager:element.querySelector('.entry-manager').value.trim()};
   const paymentType=element.querySelector('.entry-payment-type').value;
   const monthsRaw=element.querySelector('.entry-installment-months').value.trim();
   const note=element.querySelector('.entry-note-input').value.trim();
@@ -949,7 +949,7 @@ function readSignupEntries(strict=false){
   if(strict&&paymentType==='installment'&&(monthsRaw===''||!Number.isSafeInteger(Number(monthsRaw))||Number(monthsRaw)<1||Number(monthsRaw)>360))throw Error((idx+1)+'번째 가입 건의 분납 개월 수(1~360)를 입력해 주세요.');
   const installmentMonths=paymentType==='installment'&&Number.isSafeInteger(Number(monthsRaw))&&Number(monthsRaw)>0&&Number(monthsRaw)<=360?Number(monthsRaw):null;
   if(strict&&!raw.branch)throw Error((idx+1)+'번째 가입 건의 담당 지사를 선택해 주세요.');
-  entries.push({group,product,seats,revenue,annualFee,branch:raw.branch,division:raw.division,paymentType,installmentMonths,note});
+  entries.push({group,product,seats,revenue,annualFee,branch:raw.branch,division:raw.division,manager:raw.manager,paymentType,installmentMonths,note});
  }
  return entries;
 }
@@ -1179,7 +1179,7 @@ function showEventDetail(x){
     '<div><span>가입구좌</span><strong>'+count(r.seats)+'</strong></div>'+
     '<div><span>구좌 매출액</span><strong>'+value(r.revenue)+'</strong></div>'+
     '<div><span>연회비 금액</span><strong>'+value(r.annualFee)+'</strong></div>'+
-    '<div><span>가입 담당 지사</span><strong>'+esc(r.branch||x.branch||'미지정')+'</strong></div>'+ '<div><span>가입 담당 본부</span><strong>'+esc(normalizeDivision(r.division||x.division)||'미지정')+'</strong></div>'+'<div><span>납부 방식</span><strong>'+esc(payment)+'</strong></div>'+
+    '<div><span>가입 담당 지사</span><strong>'+esc(r.branch||x.branch||'미지정')+'</strong></div>'+ '<div><span>가입 담당 본부</span><strong>'+esc(normalizeDivision(r.division||x.division)||'미지정')+'</strong></div>'+'<div><span>가입 담당 매니저</span><strong>'+esc(r.manager||'미지정')+'</strong></div>'+'<div><span>납부 방식</span><strong>'+esc(payment)+'</strong></div>'+
     '<div><span>분납 개월 수</span><strong>'+esc(months)+'</strong></div>'+
     '</div>'+((typeof r.note==='string'&&r.note.trim())?'<div class="detail-entry-note"><span>가입 건별 메모</span><p>'+esc(r.note)+'</p></div>':'<div class="detail-entry-note"><span>가입 건별 메모</span><p>미입력</p></div>')+'</div>';
   }).join('');
