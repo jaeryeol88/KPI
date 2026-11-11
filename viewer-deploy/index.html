@@ -331,6 +331,52 @@ function monthlyRollup(branches,y,months,division='all'){
 function monthlyCaption(data){
  return '목표 '+data.goal.toLocaleString('ko-KR')+'구좌 · 달성 '+data.done.toLocaleString('ko-KR')+'구좌';
 }
+// 핵심 성과 지표는 상단 연도·월 조회 필터의 실제 집계 기간을 따릅니다.
+function renderCoreGoalKpi(filteredEvents){
+ const branchFilter=multiValues.branch;
+ const fixed=restrictedBranch();
+ const branches=fixed?[fixed]:(branchFilter.size?[...branchFilter].filter(b=>monthlyBranches.includes(b)):monthlyBranches);
+ const divisionFilter=multiValues.division;
+ const divisions=divisionFilter.size?[...divisionFilter].filter(d=>monthlyDivisions.includes(d)):['all'];
+ const yearFilter=multiValues.year;
+ const possibleYears=[...new Set([
+  ...monthlyTargets.map(t=>Number(t.goal_year)),
+  ...monthlyDivisionTargets.map(t=>Number(t.goal_year)),
+  ...items.map(e=>Number(String(e.date||'').slice(0,4)))
+ ].filter(y=>Number.isInteger(y)&&y>=2020&&y<=2100))];
+ const years=yearFilter.size?[...yearFilter].map(Number):possibleYears;
+ const monthFilter=multiValues.month;
+ const months=monthFilter.size?[...monthFilter].map(Number):Array.from({length:12},(_,i)=>i+1);
+ let goal=0;
+ for(const branch of branches)for(const year of years)for(const month of months){
+  for(const division of divisions){
+   const value=monthlyTarget(branch,year,month,division);
+   if(value!==null)goal+=value;
+  }
+ }
+ const achieved=filteredEvents.reduce((total,e)=>total+(Number.isSafeInteger(e.done)&&e.done>=0?e.done:0),0);
+ const percent=goal>0?(achieved/goal*100).toFixed(1)+'%':'—';
+ const isYear=monthFilter.size===0;
+ const scope=isYear?(yearFilter.size===1?'연간':yearFilter.size===0?'전체 기간':'선택 연도 합산'):(monthFilter.size===1?'월간':'선택 월 합산');
+ const goalName=isYear?'연간':'월간';
+ const periodName=(yearFilter.size===1?[...yearFilter][0]+'년 ':yearFilter.size===0?'전체 연도 ':'선택 연도 ')+(isYear?'전체 월':monthFilter.size===1?Number([...monthFilter][0])+'월':'선택 월');
+ const branchName=fixed||(branches.length===1?branches[0]:'부산권역 전체');
+ const divisionName=divisions.length===1&&divisions[0]!=='all'?' · '+divisions[0]:'';
+ el('mRate').textContent=percent;
+ el('mRateSub').textContent='달성 '+fmt(achieved)+' / 회사 배정 목표 '+fmt(goal)+'구좌';
+ el('mProductSub').textContent=periodName+' · '+branchName+divisionName;
+ el('sGoal').textContent=fmt(goal)+'구좌';
+ el('sConv').textContent=percent;
+ const card=el('mRate').closest('.metric');
+ const title=card&&card.querySelector('.label');
+ if(title)title.textContent=goalName+' 목표구좌 달성률';
+ const summaryGoal=el('sGoal').closest('.insight');
+ const summaryGoalLabel=summaryGoal&&summaryGoal.querySelector('span');
+ if(summaryGoalLabel)summaryGoalLabel.textContent=scope+' 회사 배정 목표';
+ const summaryRate=el('sConv').closest('.insight');
+ const summaryRateLabel=summaryRate&&summaryRate.querySelector('span');
+ if(summaryRateLabel)summaryRateLabel.textContent=scope+' 목표 달성률';
+}
 function renderMonthlyGoals(){
  monthlySyncBranches();monthlyYearOptions();
  const y=Number(el('monthlyYear').value),m=Number(el('monthlyMonth').value),b=el('monthlyBranch').value,division=el('monthlyDivision').value;
@@ -338,12 +384,6 @@ function renderMonthlyGoals(){
  const months=Array.from({length:12},(_,i)=>i+1);
  const current=monthlyRollup(branches,y,[m],division),annual=monthlyRollup(branches,y,months,division);
  el('monthlyRate').textContent=current.rate;el('monthlySummary').textContent=monthlyCaption(current);
- // 관리자·공개 뷰어의 기존 KPI 카드도 같은 회사 배정 목표를 사용합니다.
- el('mRate').textContent=current.rate;
- el('mRateSub').textContent='달성 '+fmt(current.done)+' / 회사 목표 '+fmt(current.goal)+'구좌';
- el('mProductSub').textContent=(b==='all'?'부산권역 전체':b)+' · '+y+'년 '+m+'월'+(division==='all'?'':' · '+division);
- el('sGoal').textContent=fmt(current.goal)+'구좌';
- el('sConv').textContent=current.rate;
  el('annualRate').textContent=annual.rate;el('annualSummary').textContent=monthlyCaption(annual)+' (1~12월 목표 대비)';
  el('monthlyRows').innerHTML=months.map(mm=>{
   const t=monthlyRollup(branches,y,[mm],division);
@@ -396,6 +436,7 @@ async function loadMonthlyTargets(){
   el('monthlyStatus').textContent='월 목표 DB 연결 필요: Supabase SQL Editor에서 monthly_targets_setup.sql을 한 번 실행하세요. ('+(error.message||'연결 실패')+')';
  }
  renderMonthlyGoals();
+ renderCoreGoalKpi(filtered());
 }
 async function monthlySaveGoal(event){
  event.preventDefault();
@@ -457,6 +498,7 @@ el('sDone').textContent=fmt(done)+'구좌';el('sCorporate').textContent=fmt(corp
 el('sCpa').textContent=done?won(cost/done):'—';el('sPerson').textContent=people?won(cost/people):'—';el('count').textContent=fmt(count)+'건';
 el('rows').innerHTML=a.length?a.map(x=>`<tr data-record-id="${esc(x.id)}" tabindex="0" aria-label="${esc(x.name)} 상세보기"><td><button type="button" class="event-link" data-view="${esc(x.id)}" title="해당 행사 KPI 보기">${esc(x.name)}</button><small>${esc(x.place||'장소 미입력')}${x.memo?' · '+esc(x.memo):''}</small></td><td>${esc(x.branch||'미지정')}<small>${esc(normalizeDivision(x.division)||'본부 미지정')}</small></td><td>${esc(x.date)}</td><td>${esc(x.type)}</td><td class="event-attendance-only" hidden><strong>${fmt(x.attendees)}명</strong><small>${classified(x.members,x.nonMembers)?'회원 '+fmt(x.members)+' / 비회원 '+fmt(x.nonMembers):'회원/비회원 미분류'}</small></td><td><strong>${won(x.cost)}</strong><small>${complete(x,costFields)?'대관 '+won(x.venueCost)+' / 식음 '+won(x.foodCost):'상세 미분류'}</small>${complete(x,costFields)?'<small>시상품 '+won(x.prizeCost)+' / 기타 '+won(x.otherCost)+'</small>':''}</td><td><strong>${known(x.eventIncome)?won(x.eventIncome):'미입력'}</strong></td><td><strong>${complete(x,revenueFields)?won(x.corporateRevenue+x.individualRevenue):'미입력'}</strong><small>${complete(x,revenueFields)?'법인 '+won(x.corporateRevenue)+' / 개인 '+won(x.individualRevenue):'매출 미입력'}</small><small style="color:#285e9b;font-weight:600;white-space:normal;max-width:250px">${[...(Array.isArray(x.corporateProducts)?x.corporateProducts:[]),...(Array.isArray(x.individualProducts)?x.individualProducts:[])].length?esc([...(Array.isArray(x.corporateProducts)?x.corporateProducts:[]),...(Array.isArray(x.individualProducts)?x.individualProducts:[])].join(' / ')):'상품 미선택'} · 연회비 ${known(x.annualFee)?won(x.annualFee):'미입력'}</small></td><td><strong>${known(x.annualFee)?won(x.annualFee):'미입력'}</strong></td><td>${complete(x,revenueFields)?profitText(x.corporateRevenue+x.individualRevenue+(known(x.eventIncome)?x.eventIncome:0)+(known(x.annualFee)?x.annualFee:0)-x.cost):'—'}</td><td>${fmt(x.goal)}</td><td><strong>${fmt(x.done)}구좌</strong><small>${classified(x.corporate,x.individual)?'법인 '+fmt(x.corporate)+' / 개인 '+fmt(x.individual):'법인/개인 미분류'}</small></td><td><span class="pill ${x.goal>0&&(x.done/x.goal>=1)?'good':x.goal>0&&x.done/x.goal<.5?'low':''}">${rate(x.goal,x.done)}</span></td><td class="event-attendance-only" hidden><strong>${signupRate(x)}</strong><small>${signupCount(x)===null?'법인/개인 구분 미입력':fmt(signupCount(x))+'건 / '+fmt(x.attendees)+'명'}</small></td></tr>`).join(''):'<tr><td colspan="14" class="empty">공개된 행사 데이터가 없습니다.</td></tr>';
 renderMonthlyGoals();
+renderCoreGoalKpi(a);
 const attendanceVisible=showAttendanceMetrics();
 document.querySelectorAll('.event-attendance-only').forEach(node=>{node.hidden=!attendanceVisible;});
 
