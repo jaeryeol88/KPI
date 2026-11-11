@@ -217,6 +217,41 @@ function attributedSeats(event,branches=null,divisions=null){
  const b=event.branch,d=normalizeDivision(event.division);
  return (!branchSet||branchSet.has(b))&&(!divSet||divSet.has(d))&&Number.isSafeInteger(event.done)&&event.done>=0?event.done:0;
 }
+function scopedSignupRows(event){
+ const fixed=restrictedBranch();
+ const branches=fixed?new Set([fixed]):multiValues.branch.size?multiValues.branch:null;
+ const divisions=multiValues.division.size?new Set([...multiValues.division].map(normalizeDivision)):null;
+ if(!Array.isArray(event.signupEntries))return null;
+ return event.signupEntries.filter(r=>{
+  if(!r||!['corporate','individual'].includes(r.group))return false;
+  return (!branches||branches.has(r.branch||event.branch))&&(!divisions||divisions.has(normalizeDivision(r.division||event.division)));
+ });
+}
+function scopedSignupMetric(event,key){
+ const rows=scopedSignupRows(event);
+ if(rows!==null){
+  return rows.reduce((n,r)=>n+(
+   key==='corporate'||key==='individual'?(r.group===key?Number(r.seats)||0:0):
+   key==='corporateRevenue'||key==='individualRevenue'?(r.group===(key==='corporateRevenue'?'corporate':'individual')?Number(r.revenue)||0:0):
+   key==='annualFee'?Number(r.annualFee)||0:0
+  ),0);
+ }
+ const b=restrictedBranch(),branches=b?[b]:multiValues.branch.size?[...multiValues.branch]:null;
+ const divisions=multiValues.division.size?[...multiValues.division]:null;
+ const allowed=(!branches||branches.includes(event.branch))&&(!divisions||divisions.map(normalizeDivision).includes(normalizeDivision(event.division)));
+ return allowed&&Number.isSafeInteger(event[key])&&event[key]>=0?event[key]:0;
+}
+function scopedProducts(event){
+ const rows=scopedSignupRows(event);
+ if(rows===null)return event;
+ return {...event,signupEntries:rows,
+  corporate:scopedSignupMetric(event,'corporate'),
+  individual:scopedSignupMetric(event,'individual'),
+  corporateRevenue:scopedSignupMetric(event,'corporateRevenue'),
+  individualRevenue:scopedSignupMetric(event,'individualRevenue'),
+  annualFee:scopedSignupMetric(event,'annualFee')
+ };
+}
 function eventMatchesMultiAssignment(event){
  const fixed=restrictedBranch();
  if(fixed&&!eventAssignedBranches(event).includes(fixed))return false;
@@ -553,9 +588,9 @@ async function loadMonthlyTargets(){
 // Read-only viewers have no target-write capability.
 async function monthlySaveGoal(event){event.preventDefault();}
 monthlySetup();
-function render(){years();syncLegacyTypes();refreshMultiFilters();const a=filtered();el('activeFilters').textContent='조회 조건: '+multiLabel('branch')+' · '+multiLabel('division')+' · '+multiLabel('year')+' · '+multiLabel('month')+' · '+multiLabel('type')+' · '+a.length+'건';const sum=k=>a.reduce((z,x)=>z+Number(x[k]||0),0),count=a.length,people=sum('attendees'),cost=sum('cost'),goal=sum('goal'),done=sum('done');
+function render(){years();syncLegacyTypes();refreshMultiFilters();const a=filtered();el('activeFilters').textContent='조회 조건: '+multiLabel('branch')+' · '+multiLabel('division')+' · '+multiLabel('year')+' · '+multiLabel('month')+' · '+multiLabel('type')+' · '+a.length+'건';const sum=k=>a.reduce((z,x)=>z+Number(x[k]||0),0),count=a.length,people=sum('attendees'),cost=sum('cost'),goal=sum('goal'),done=a.reduce((z,x)=>z+scopedSignupMetric(x,'corporate')+scopedSignupMetric(x,'individual'),0);
 const members=a.reduce((z,x)=>z+(known(x.members)?x.members:0),0),nonMembers=a.reduce((z,x)=>z+(known(x.nonMembers)?x.nonMembers:0),0);
-const corporate=a.reduce((z,x)=>z+(known(x.corporate)?x.corporate:0),0),individual=a.reduce((z,x)=>z+(known(x.individual)?x.individual:0),0);
+const corporate=a.reduce((z,x)=>z+scopedSignupMetric(x,'corporate'),0),individual=a.reduce((z,x)=>z+scopedSignupMetric(x,'individual'),0);
 const unclassifiedPeople=a.reduce((z,x)=>z+(classified(x.members,x.nonMembers)?0:Number(x.attendees||0)),0);
 const unclassifiedDone=a.reduce((z,x)=>z+(classified(x.corporate,x.individual)?0:Number(x.done||0)),0);
 const missingSignup=a.some(x=>signupCount(x)===null);
@@ -567,8 +602,8 @@ el('sSignupCount').textContent=missingSignup?'—':fmt(signupTotal)+'건';
 el('mEvents').textContent=fmt(count)+'건';el('mAttendees').textContent=fmt(people)+'명';el('mAttendeesSub').textContent='PLK 회원 '+fmt(members)+'명 · 비회원 '+fmt(nonMembers)+'명'+(unclassifiedPeople?' · 미분류 '+fmt(unclassifiedPeople)+'명':'');
 const venue=sumKnown(a,'venueCost'), food=sumKnown(a,'foodCost'),prize=sumKnown(a,'prizeCost'),other=sumKnown(a,'otherCost');
 const legacyCost=a.reduce((z,x)=>z+(complete(x,costFields)?0:Number(x.cost||0)),0);
-const corpRevenue=sumKnown(a,'corporateRevenue'),indRevenue=sumKnown(a,'individualRevenue'),hasMissingRevenue=a.some(x=>!complete(x,revenueFields));
-const revenue=corpRevenue+indRevenue,eventIncome=sumKnown(a,'eventIncome'),annualFee=sumKnown(a,'annualFee'),missingAnnualFee=a.filter(x=>!known(x.annualFee)).length,missingEventIncome=a.filter(x=>!known(x.eventIncome)).length,profit=revenue+eventIncome+annualFee-cost;
+const corpRevenue=a.reduce((z,x)=>z+scopedSignupMetric(x,'corporateRevenue'),0),indRevenue=a.reduce((z,x)=>z+scopedSignupMetric(x,'individualRevenue'),0),hasMissingRevenue=a.some(x=>!complete(x,revenueFields));
+const revenue=corpRevenue+indRevenue,eventIncome=sumKnown(a,'eventIncome'),annualFee=a.reduce((z,x)=>z+scopedSignupMetric(x,'annualFee'),0),missingAnnualFee=a.filter(x=>!known(x.annualFee)).length,missingEventIncome=a.filter(x=>!known(x.eventIncome)).length,profit=revenue+eventIncome+annualFee-cost;
 el('mCost').textContent=won(cost);
 const points=sumKnown(a,'promoPoints'),hq=sumKnown(a,'headOfficeSupport');const unallocated=a.reduce((z,x)=>z+(complete(x,fundingFields)?0:Number(x.cost||0)),0);
 el('mCostSub').textContent='판촉물 포인트 '+won(points)+' · 본사 지원 '+won(hq)+(unallocated?' · 재원 미분류 '+won(unallocated):'');
@@ -588,8 +623,8 @@ el('sFundingNote').textContent=unallocated?'※ 집행재원 미분류 행사비
 el('sVenue').textContent=won(venue);el('sFood').textContent=won(food);el('sPrize').textContent=won(prize);el('sOther').textContent=won(other);
 el('sCorporateRevenue').textContent=won(corpRevenue);el('sIndividualRevenue').textContent=won(indRevenue);/* 월 목표 달성률은 renderMonthlyGoals()에서 회사 배정 목표로 계산 */
 el('mProductSub').textContent='법인 '+fmt(corporate)+' · 개인 '+fmt(individual)+(unclassifiedDone?' · 미분류 '+fmt(unclassifiedDone):'')+'구좌';
-el('mAchievedSeats').textContent=fmt(done)+'구좌';el('mAchievedSeatsSub').textContent='법인 '+fmt(corporate)+'구좌 · 개인 '+fmt(individual)+'구좌'+(unclassifiedDone?' · 미분류 '+fmt(unclassifiedDone)+'구좌':'');el('mProductStats').innerHTML=productCardSummary(a);
-el('sDone').textContent=fmt(done)+'구좌';el('sCorporate').textContent=fmt(corporate)+'구좌';el('sIndividual').textContent=fmt(individual)+'구좌';el('sCorporateProducts').innerHTML=productBreakdown(a,'corporate');el('sIndividualProducts').innerHTML=productBreakdown(a,'individual');
+el('mAchievedSeats').textContent=fmt(done)+'구좌';el('mAchievedSeatsSub').textContent='법인 '+fmt(corporate)+'구좌 · 개인 '+fmt(individual)+'구좌'+(unclassifiedDone?' · 미분류 '+fmt(unclassifiedDone)+'구좌':'');el('mProductStats').innerHTML=productCardSummary(a.map(scopedProducts));
+el('sDone').textContent=fmt(done)+'구좌';el('sCorporate').textContent=fmt(corporate)+'구좌';el('sIndividual').textContent=fmt(individual)+'구좌';el('sCorporateProducts').innerHTML=productBreakdown(a.map(scopedProducts),'corporate');el('sIndividualProducts').innerHTML=productBreakdown(a.map(scopedProducts),'individual');
 el('sCpa').textContent=done?won(cost/done):'—';el('sPerson').textContent=people?won(cost/people):'—';el('count').textContent=fmt(count)+'건';
 el('rows').innerHTML=a.length?a.map(x=>`<tr data-record-id="${esc(x.id)}" tabindex="0" aria-label="${esc(x.name)} 상세보기"><td><button type="button" class="event-link" data-view="${esc(x.id)}" title="해당 행사 KPI 보기">${esc(x.name)}</button><small>${esc(x.place||'장소 미입력')}${x.memo?' · '+esc(x.memo):''}</small></td><td>${esc(x.branch||'미지정')}<small>${esc(normalizeDivision(x.division)||'본부 미지정')}</small></td><td>${esc(x.date)}</td><td>${esc(x.type)}</td><td class="event-attendance-only" hidden><strong>${fmt(x.attendees)}명</strong><small>${classified(x.members,x.nonMembers)?'회원 '+fmt(x.members)+' / 비회원 '+fmt(x.nonMembers):'회원/비회원 미분류'}</small></td><td><strong>${won(x.cost)}</strong><small>${complete(x,costFields)?'대관 '+won(x.venueCost)+' / 식음 '+won(x.foodCost):'상세 미분류'}</small>${complete(x,costFields)?'<small>시상품 '+won(x.prizeCost)+' / 기타 '+won(x.otherCost)+'</small>':''}</td><td><strong>${known(x.eventIncome)?won(x.eventIncome):'미입력'}</strong></td><td><strong>${complete(x,revenueFields)?won(x.corporateRevenue+x.individualRevenue):'미입력'}</strong><small>${complete(x,revenueFields)?'법인 '+won(x.corporateRevenue)+' / 개인 '+won(x.individualRevenue):'매출 미입력'}</small><small style="color:#285e9b;font-weight:600;white-space:normal;max-width:250px">${[...(Array.isArray(x.corporateProducts)?x.corporateProducts:[]),...(Array.isArray(x.individualProducts)?x.individualProducts:[])].length?esc([...(Array.isArray(x.corporateProducts)?x.corporateProducts:[]),...(Array.isArray(x.individualProducts)?x.individualProducts:[])].join(' / ')):'상품 미선택'} · 연회비 ${known(x.annualFee)?won(x.annualFee):'미입력'}</small></td><td><strong>${known(x.annualFee)?won(x.annualFee):'미입력'}</strong></td><td>${complete(x,revenueFields)?profitText(x.corporateRevenue+x.individualRevenue+(known(x.eventIncome)?x.eventIncome:0)+(known(x.annualFee)?x.annualFee:0)-x.cost):'—'}</td><td class="event-goal-only" hidden>${fmt(x.goal)}</td><td><strong>${fmt(x.done)}구좌</strong><small>${classified(x.corporate,x.individual)?'법인 '+fmt(x.corporate)+' / 개인 '+fmt(x.individual):'법인/개인 미분류'}</small></td><td class="event-goal-only" hidden><span class="pill ${x.goal>0&&(x.done/x.goal>=1)?'good':x.goal>0&&x.done/x.goal<.5?'low':''}">${rate(x.goal,x.done)}</span></td><td class="event-attendance-only" hidden><strong>${signupRate(x)}</strong><small>${signupCount(x)===null?'법인/개인 구분 미입력':fmt(signupCount(x))+'건 / '+fmt(x.attendees)+'명'}</small></td></tr>`).join(''):'<tr><td colspan="${10+(showAttendanceMetrics()?4:0)}" class="empty">공개된 행사 데이터가 없습니다.</td></tr>';
 renderMonthlyGoals();
