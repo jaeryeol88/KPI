@@ -220,7 +220,7 @@ function scopedSignupRows(event){
  const fixed=restrictedBranch();
  const branches=fixed?new Set([fixed]):multiValues.branch.size?multiValues.branch:null;
  const divisions=multiValues.division.size?new Set([...multiValues.division].map(normalizeDivision)):null;
- if(!Array.isArray(event.signupEntries))return null;
+ if(!Array.isArray(event.signupEntries)||!event.signupEntries.some(r=>r&&['corporate','individual'].includes(r.group)))return null;
  return event.signupEntries.filter(r=>{
   if(!r||!['corporate','individual'].includes(r.group))return false;
   return (!branches||branches.has(r.branch||event.branch))&&(!divisions||divisions.has(normalizeDivision(r.division||event.division)));
