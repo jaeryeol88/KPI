@@ -812,7 +812,7 @@ function showEventDetail(x){
     '<div><span>가입구좌</span><strong>'+count(r.seats)+'</strong></div>'+
     '<div><span>구좌 매출액</span><strong>'+value(r.revenue)+'</strong></div>'+
     '<div><span>연회비 금액</span><strong>'+value(r.annualFee)+'</strong></div>'+
-    '<div><span>가입 담당 지사</span><strong>'+esc(r.branch||x.branch||'미지정')+'</strong></div>'+ '<div><span>가입 담당 본부</span><strong>'+esc(normalizeDivision(r.division||x.division)||'미지정')+'</strong></div>'+'<div><span>납부 방식</span><strong>'+esc(payment)+'</strong></div>'+
+    '<div><span>가입 담당 지사</span><strong>'+esc(r.branch||x.branch||'미지정')+'</strong></div>'+ '<div><span>가입 담당 본부</span><strong>'+esc(normalizeDivision(r.division||x.division)||'미지정')+'</strong></div>'+'<div><span>가입 담당 매니저</span><strong>'+esc(r.manager||'미지정')+'</strong></div>'+'<div><span>입회자 성함</span><strong>'+esc(r.memberName||'미입력')+'</strong></div>'+'<div><span>납부 방식</span><strong>'+esc(payment)+'</strong></div>'+
     '<div><span>분납 개월 수</span><strong>'+esc(months)+'</strong></div>'+
     '</div>'+((typeof r.note==='string'&&r.note.trim())?'<div class="detail-entry-note"><span>가입 건별 메모</span><p>'+esc(r.note)+'</p></div>':'<div class="detail-entry-note"><span>가입 건별 메모</span><p>미입력</p></div>')+'</div>';
   }).join('');
