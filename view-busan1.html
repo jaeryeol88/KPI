@@ -196,7 +196,34 @@ function setupMultiFilters(){
 }
 setupMultiFilters();
 
-function filtered(){const q=el('search').value.trim().toLowerCase();return items.filter(x=>(!assignedBranch||x.branch===assignedBranch)&&multiMatch('branch',x.branch||'unassigned')&&multiMatch('division',x.division||'unassigned')&&multiMatch('year',String(x.date||'').slice(0,4))&&multiMatch('month',String(x.date||'').slice(5,7))&&multiMatch('type',x.type)&&(!q||(x.name+' '+(x.place||'')).toLowerCase().includes(q))).sort((a,b)=>b.date.localeCompare(a.date));}
+// Multiple participating branches are presentation metadata; signup seats are counted once at their own responsible branch.
+function eventAssignedBranches(event){
+ return [...new Set((Array.isArray(event.branches)&&event.branches.length?event.branches:[event.branch]).filter(Boolean))];
+}
+function eventAssignedDivisions(event){
+ return [...new Set((Array.isArray(event.divisions)&&event.divisions.length?event.divisions:[event.division]).filter(Boolean).map(normalizeDivision))];
+}
+function attributedSeats(event,branches=null,divisions=null){
+ const branchSet=branches?new Set(branches):null;
+ const divSet=divisions?new Set(divisions.map(normalizeDivision)):null;
+ if(Array.isArray(event.signupEntries)&&event.signupEntries.some(row=>row&&Number.isSafeInteger(row.seats)&&row.seats>=0)){
+  return event.signupEntries.reduce((total,row)=>{
+   if(!row||!Number.isSafeInteger(row.seats)||row.seats<0)return total;
+   const b=row.branch||event.branch,d=normalizeDivision(row.division||event.division);
+   return (!branchSet||branchSet.has(b))&&(!divSet||divSet.has(d))?total+row.seats:total;
+  },0);
+ }
+ const b=event.branch,d=normalizeDivision(event.division);
+ return (!branchSet||branchSet.has(b))&&(!divSet||divSet.has(d))&&Number.isSafeInteger(event.done)&&event.done>=0?event.done:0;
+}
+function eventMatchesMultiAssignment(event){
+ const fixed=restrictedBranch();
+ if(fixed&&!eventAssignedBranches(event).includes(fixed))return false;
+ if(multiValues.branch.size&&!eventAssignedBranches(event).some(b=>multiValues.branch.has(b)))return false;
+ if(multiValues.division.size&&!eventAssignedDivisions(event).some(d=>multiValues.division.has(d)))return false;
+ return true;
+}
+function filtered(){const q=el('search').value.trim().toLowerCase();return items.filter(x=>(!assignedBranch||eventAssignedBranches(x).includes(assignedBranch))&&eventMatchesMultiAssignment(x)&&multiMatch('year',String(x.date||'').slice(0,4))&&multiMatch('month',String(x.date||'').slice(5,7))&&multiMatch('type',x.type)&&(!q||(x.name+' '+(x.place||'')).toLowerCase().includes(q))).sort((a,b)=>b.date.localeCompare(a.date));}
 function rate(goal,done){return goal>0?(done/goal*100).toFixed(1)+'%':'—';}
 const known = v => Number.isSafeInteger(v) && v>=0;
 const classified = (a,b) => known(a) && known(b);
@@ -392,7 +419,7 @@ function monthlyTarget(b,y,m,division='all'){
  return old?Number(old.target_seats):null;
 }
 function monthlyActual(b,y,m,division='all'){
- return items.reduce((sum,e)=>e.branch===b&&(division==='all'||normalizeDivision(e.division)===division)&&String(e.date||'').slice(0,4)===String(y)&&(m===null||Number(String(e.date||'').slice(5,7))===m)?sum+(Number.isSafeInteger(e.done)&&e.done>=0?e.done:0):sum,0);
+ return items.reduce((sum,e)=>String(e.date||'').slice(0,4)===String(y)&&(m===null||Number(String(e.date||'').slice(5,7))===m)?sum+attributedSeats(e,[b],division==='all'?null:[division]):sum,0);
 }
 function monthlyRollup(branches,y,months,division='all'){
  let goal=0,done=0,missing=0;
@@ -429,7 +456,7 @@ function renderCoreGoalKpi(filteredEvents){
    if(value!==null)goal+=value;
   }
  }
- const achieved=filteredEvents.reduce((total,e)=>total+(Number.isSafeInteger(e.done)&&e.done>=0?e.done:0),0);
+ const achieved=filteredEvents.reduce((total,e)=>total+attributedSeats(e,branches,divisions.length===1&&divisions[0]==='all'?null:divisions),0);
  const percent=goal>0?(achieved/goal*100).toFixed(1)+'%':'—';
  const isYear=monthFilter.size===0;
  const scope=isYear?(yearFilter.size===1?'연간':yearFilter.size===0?'전체 기간':'선택 연도 합산'):(monthFilter.size===1?'월간':'선택 월 합산');
@@ -686,7 +713,7 @@ async function loadPublic(){
       rows.push(...(data||[]));
       if((data||[]).length<1000)break;
     }
-    items=rows.map(r=>({...r.event_data,id:r.id})).filter(x=>!assignedBranch||x.branch===assignedBranch);
+    items=rows.map(r=>({...r.event_data,id:r.id})).filter(x=>!assignedBranch||eventAssignedBranches(x).includes(assignedBranch));
     await loadMonthlyTargets();
     render();
     status((assignedBranch?assignedBranch+' 전용 · ':'')+'공개 KPI 데이터 조회 완료 · '+fmt(items.length)+'건 · 읽기 전용');
