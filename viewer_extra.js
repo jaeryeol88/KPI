@@ -276,7 +276,7 @@ el('v-months').addEventListener('change',e=>{
     p=p.parent?orgNodes.find(x=>x.id===p.parent):null;
    }return {b,d};
   };
-  const data=orgNodes.filter(n=>n&&n.staffHidden!==true&&['person','root','group','division'].includes(n.type)&&String(n.label||'').trim()&&!placeholder.includes(n.label)&&(n.type==='person'||effectiveRole(n))).map(n=>{
+  const data=orgNodes.filter(n=>n&&n.staffHidden!==true&&['person','root','group','division'].includes(n.type)&&String(n.label||'').trim()&&!placeholder.includes(n.label)&&(n.type==='person'||n.type!=='group'&&effectiveRole(n))).map(n=>{
    const loc=tree(n);return {name:n.label,role:roles[effectiveRole(n)]||n.subtitle||'미지정',branch:loc.b,division:loc.d,hire:join(n)};
   }).sort((a,b)=>a.branch.localeCompare(b.branch,'ko')||a.division.localeCompare(b.division,'ko')||a.name.localeCompare(b.name,'ko'));
   el('v-staff-count').textContent='총 '+data.length+'명';
