@@ -44,7 +44,7 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
  .v-org-branch-heading{display:flex;align-items:center;justify-content:center;min-width:210px;min-height:74px;padding:12px 9px;border:1px solid #263859;border-radius:11px;background:#111d36;color:white;font-size:16px;font-weight:800;text-align:center;box-shadow:0 2px 6px rgba(21,39,64,.06)}
  .v-org-branch-leader{position:relative;min-width:210px;display:flex;justify-content:center}
  .v-org-branch-leader:before{content:'';position:absolute;top:-26px;left:50%;height:26px;border-left:2px solid #cad6e8}
- .v-org-branch-leader .v-org-card.group{background:#fff!important;color:#122a47!important;border-color:#d5dfeb!important;min-width:175px;min-height:64px}
+ .v-org-branch-leader .v-org-card.group{min-width:175px;min-height:64px}
  .v-org-branch-leader .v-org-card.group strong{font-size:14px}
  .v-org-direct-members{display:flex;flex-direction:column;gap:8px;align-items:center}
  .v-org-direct-members:before{content:'';height:16px;border-left:2px solid #cad6e8}
@@ -222,7 +222,8 @@ el('v-months').addEventListener('change',e=>{
  }
  function card(n){
   let colors=palette[n.color]||palette.default;
-  if(!n.color||n.color==='default'){if(n.type==='root'||n.type==='division')colors=palette.blue;else if(n.type==='group')colors=palette.navy}
+  if(n.type==='group'&&(!n.color||n.color==='default'))colors=palette.default;
+  if(!n.color||n.color==='default'){if(n.type==='root'||n.type==='division')colors=palette.blue;else if(n.type==='group')colors=palette.default}
   const role=roles[effectiveRole(n)]||'',subtitle=String(n.subtitle||'').trim();
   const sub=subtitle&&subtitle.replace(/\s+/g,'')!==role?'<small>'+safe(subtitle)+'</small>':'';
   const date=join(n);
@@ -270,7 +271,7 @@ el('v-months').addEventListener('change',e=>{
   const tree=n=>{
    let b='',d='',p=n,depth=0;
    while(p&&depth++<12){
-    if(p.type==='group')b=p.label;
+    if(p.type==='group')b=branchHeading(p);
     if(p.type==='division')d=p.label;
     p=p.parent?orgNodes.find(x=>x.id===p.parent):null;
    }return {b,d};
