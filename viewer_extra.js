@@ -41,6 +41,15 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
  .v-org-root{display:flex;flex-direction:column;align-items:center;gap:30px}
  .v-org-groups{display:flex;gap:24px;justify-content:center;align-items:flex-start;position:relative;--org-line-left:50%;--org-line-right:50%}
  .v-org-group{min-width:240px;display:flex;flex-direction:column;align-items:center;gap:26px;position:relative}
+ .v-org-branch-heading{display:flex;align-items:center;justify-content:center;min-width:210px;min-height:74px;padding:12px 9px;border:1px solid #263859;border-radius:11px;background:#111d36;color:white;font-size:16px;font-weight:800;text-align:center;box-shadow:0 2px 6px rgba(21,39,64,.06)}
+ .v-org-branch-leader{position:relative;min-width:210px;display:flex;justify-content:center}
+ .v-org-branch-leader:before{content:'';position:absolute;top:-26px;left:50%;height:26px;border-left:2px solid #cad6e8}
+ .v-org-branch-leader .v-org-card.group{background:#fff!important;color:#122a47!important;border-color:#d5dfeb!important;min-width:175px;min-height:64px}
+ .v-org-branch-leader .v-org-card.group strong{font-size:14px}
+ .v-org-direct-members{display:flex;flex-direction:column;gap:8px;align-items:center}
+ .v-org-direct-members:before{content:'';height:16px;border-left:2px solid #cad6e8}
+ .v-org-branch-units{position:relative}
+ .v-org-branch-units:not(:empty):before{content:'';position:absolute;top:-21px;left:50%;height:21px;border-left:2px solid #cad6e8}
  .v-org-group:before{content:'';position:absolute;top:-15px;left:50%;height:15px;border-left:2px solid #cad6e8;transform:translateX(-1px)}
  .v-org-groups:before{content:'';position:absolute;top:-15px;left:var(--org-line-left);right:var(--org-line-right);border-top:2px solid #cad6e8}
  .v-org-groups:after{content:'';position:absolute;top:-30px;left:50%;height:15px;border-left:2px solid #cad6e8;transform:translateX(-1px)}
@@ -200,13 +209,24 @@ el('v-months').addEventListener('change',e=>{
   pink:['#fce7f3','#9d174d','#f9a8d4'],coral:['#ffe4e6','#9f1239','#fda4af'],orange:['#ffedd5','#9a3412','#fdba74'],
   yellow:['#fef9c3','#854d0e','#fde047'],gray:['#e5e7eb','#374151','#cbd5e1']
  };
+ function branchHeading(n){
+  const explicit=String(n.branchName||'').trim();if(explicit)return explicit;
+  const match=String(n.label||'').match(/부산\\s*[1-4]\\s*지사/);
+  if(match)return match[0].replace(/\\s+/g,' ').replace(/부산 ([1-4]) 지사/,'부산 $1지사').replace(/부산([1-4])지사/,'부산 $1지사');
+  const siblings=children(n.parent).filter(x=>x.type==='group'),index=siblings.findIndex(x=>x.id===n.id);
+  return index>=0&&index<4?'부산 '+(index+1)+'지사':'지사 / 부서';
+ }
+ function branchLeaderName(n){
+  const name=String(n.label||'').trim();
+  return !name||name.replace(/\\s+/g,'')===branchHeading(n).replace(/\\s+/g,'')||name==='새 지사 / 부서'?'지사장 / 담당자 입력':name;
+ }
  function card(n){
   let colors=palette[n.color]||palette.default;
   if(!n.color||n.color==='default'){if(n.type==='root'||n.type==='division')colors=palette.blue;else if(n.type==='group')colors=palette.navy}
   const role=roles[effectiveRole(n)]||'',subtitle=String(n.subtitle||'').trim();
   const sub=subtitle&&subtitle.replace(/\s+/g,'')!==role?'<small>'+safe(subtitle)+'</small>':'';
   const date=join(n);
-  return '<div class="v-org-card '+safe(n.type||'')+'" style="background:'+colors[0]+';color:'+colors[1]+';border-color:'+colors[2]+'"><strong>'+safe(n.label||'이름 미입력')+'</strong>'+(role?'<small class="v-org-role">'+safe(role)+'</small>':'')+sub+(date?'<small class="v-org-date">입사 '+safe(date)+'</small>':'')+'</div>';
+  return '<div class="v-org-card '+safe(n.type||'')+'" style="background:'+colors[0]+';color:'+colors[1]+';border-color:'+colors[2]+'"><strong>'+safe(n.type==='group'?branchLeaderName(n):(n.label||'이름 미입력'))+'</strong>'+(role?'<small class="v-org-role">'+safe(role)+'</small>':'')+sub+(date?'<small class="v-org-date">입사 '+safe(date)+'</small>':'')+'</div>';
  }
  function alignOrgConnectors(){
   el('v-org-canvas').querySelectorAll('.v-org-groups').forEach(row=>{
@@ -225,7 +245,7 @@ el('v-months').addEventListener('change',e=>{
   el('v-org-note').textContent=orgMessage||'부산권역 전체 조직도 · 읽기 전용';
   const person=n=>card(n);
   const division=n=>'<div class="v-org-division">'+card(n)+'<div class="v-org-members">'+children(n.id).map(person).join('')+'</div></div>';
-  const group=n=>'<div class="v-org-group">'+card(n)+'<div class="v-org-divisions">'+children(n.id).map(division).join('')+'</div></div>';
+  const group=n=>'<div class="v-org-group"><div class="v-org-branch-heading">'+safe(branchHeading(n))+'</div><div class="v-org-branch-leader">'+card(n)+'</div>'+(children(n.id).some(x=>x.type==='person')?'<div class="v-org-direct-members">'+children(n.id).filter(x=>x.type==='person').map(person).join('')+'</div>':'')+'<div class="v-org-divisions v-org-branch-units">'+children(n.id).filter(x=>x.type==='division').map(division).join('')+'</div></div>';
   const root=n=>'<div class="v-org-root">'+card(n)+'<div class="v-org-groups">'+children(n.id).map(group).join('')+'</div></div>';
   el('v-org-canvas').innerHTML=children(null).map(root).join('')||'<p class="v-note">등록된 조직도가 없습니다.</p>';
   alignOrgConnectors();
