@@ -911,7 +911,7 @@ function orgDefaultNodes(){
  const root=make(null,'root','부산권역');
  for(const [group,divisions] of [['부산 1지사',['1본부','2본부','3본부']],['부산 2지사',['1본부','2본부','3본부']],['부산 3지사',['1본부','2본부','3본부']],['부산 4지사',['1본부','2본부','3본부']]]){
   const gid=make(root,'group',group);
-  for(const division of divisions)make(gid,'division',division);
+  for(const division of divisions){const did=make(gid,'division',division);make(did,'person','구성원');}
  }
  return nodes;
 }
