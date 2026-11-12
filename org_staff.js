@@ -275,9 +275,13 @@ function parseCSV(content){
  row.push(field);if(row.some(v=>v.trim()))result.push(row);
  if(result.length<2)throw Error('CSV에 연락처 데이터가 없습니다.');
  const headers=result.shift().map(normalized);
- const required=['권역별','권역내소속','성명(예명)','연락처'];
- for(const col of required)if(!headers.includes(normalized(col)))throw Error('CSV 필수 열이 없습니다: '+col);
- return result.map((cells,i)=>Object.fromEntries(headers.map((name,j)=>[name,(cells[j]||'').trim()]))).filter(r=>r['성명(예명)']||r['연락처']);
+ const nameColumn=headers.includes('성명(예명)')?'성명(예명)':headers.includes('성명')?'성명':headers.includes('이름')?'이름':'';
+ if(!nameColumn||!headers.includes('연락처'))throw Error('CSV에 성명(예명) 또는 이름, 연락처 열이 필요합니다.');
+ return result.map(cells=>{
+  const row=Object.fromEntries(headers.map((name,j)=>[name,(cells[j]||'').trim()]));
+  row['성명(예명)']=row[nameColumn];
+  return row;
+ }).filter(r=>r['성명(예명)']||r['연락처']);
 }
 function findImportMatches(rows){
  const entries=staffEntries(true);
@@ -288,19 +292,22 @@ function findImportMatches(rows){
   const role=normalized(row['호칭']);
   if(!/^01[016789]-?\d{3,4}-?\d{4}$/.test(phone)){missing.push(name+' (연락처 형식 확인 필요)');continue;}
   const found=entries.filter(entry=>{
-   if(normalized(entry.name)!==name||normalized(entry.branch)!==branch)return false;
+   if(normalized(entry.name)!==name)return false;
+   // A two-column name/phone file is accepted only if the name uniquely matches.
+   // With a detailed file, also validate branch and division to avoid ambiguous merges.
+   if(branch&&normalized(entry.branch)!==branch)return false;
    const entryDivision=normalized(entry.division);
    if(division==='지사'){if(entryDivision)return false;}
-   else if(entryDivision!==division)return false;
+   else if(division&&entryDivision!==division)return false;
    const job={regional:'권역대표',branch:'지사장',division:'본부장',manager:'매니저'}[entry.role]||'';
    return !role||!job||role===job;
   });
   if(found.length===1){
    const person=found[0],id=String(person.node.staffContactId||person.node.id);
-   if(seen.has(id)){ambiguous.push(name+' ('+branch+' / 중복 입력)');continue;}
+   if(seen.has(id)){ambiguous.push(name+' ('+(branch||'소속 미기재')+' / 중복 입력)');continue;}
    seen.add(id);updates.push({id,name:person.name,branch:person.branch,phone,employment_status:person.status});
-  }else if(found.length===0)missing.push(name+' ('+branch+' / '+division+' · 조직도에 일치 인원 없음)');
-  else ambiguous.push(name+' ('+branch+' / 중복 조직원 '+found.length+'명)');
+  }else if(found.length===0)missing.push(name+' ('+(branch||'소속 미기재')+' / '+(division||'소속 미기재')+' · 조직도에 일치 인원 없음)');
+  else ambiguous.push(name+' ('+(branch||'소속 미기재')+' / 중복 조직원 '+found.length+'명)');
  }
  return {updates,missing,ambiguous};
 }
