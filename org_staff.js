@@ -254,18 +254,18 @@ $('staffTableBody').addEventListener('click',async e=>{
 });
 
 // Private CSV import: contacts never enter the public organization chart JSON or GitHub.
-function normalized(s){return String(s||'').trim().replace(/\\s+/g,'');}
+function normalized(s){return String(s||'').trim().replace(/\s+/g,'');}
 function parseCSV(content){
  const result=[];let row=[],field='',quoted=false;
- const src=String(content||'').replace(/^\\uFEFF/,'');
+ const src=String(content||'').replace(/^\uFEFF/,'');
  for(let i=0;i<src.length;i++){
   const c=src[i];
   if(c==='"'){
    if(quoted&&src[i+1]==='"'){field+='"';i++;}
    else quoted=!quoted;
   }else if(c===','&&!quoted){row.push(field);field='';}
-  else if((c==='\\n'||c==='\\r')&&!quoted){
-   if(c==='\\r'&&src[i+1]==='\\n')i++;
+  else if((c==='\n'||c==='\r')&&!quoted){
+   if(c==='\r'&&src[i+1]==='\n')i++;
    row.push(field);field='';
    if(row.some(v=>v.trim()))result.push(row);
    row=[];
@@ -286,7 +286,7 @@ function findImportMatches(rows){
   const name=normalized(row['성명(예명)']),branch=normalized(row['권역별']),division=normalized(row['권역내소속']);
   const phone=String(row['연락처']||'').trim();
   const role=normalized(row['호칭']);
-  if(!/^01[016789]-?\\d{3,4}-?\\d{4}$/.test(phone)){missing.push(name+' (연락처 형식 확인 필요)');continue;}
+  if(!/^01[016789]-?\d{3,4}-?\d{4}$/.test(phone)){missing.push(name+' (연락처 형식 확인 필요)');continue;}
   const found=entries.filter(entry=>{
    if(normalized(entry.name)!==name||normalized(entry.branch)!==branch)return false;
    const entryDivision=normalized(entry.division);
