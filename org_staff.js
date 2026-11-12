@@ -9,7 +9,7 @@ const safe=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'
 const roles={regional:'권역대표',branch:'지사장',division:'본부장',manager:'매니저'};
 const branches=['부산권역','부산 1지사','부산 2지사','부산 3지사','부산 4지사'];
 const placeholders=new Set(['구성원','새 구성원','이름 미입력','최상위 조직','새 지사 / 부서','새 본부 / 팀','지사장 / 담당자 입력']);
-let contacts=new Map(),loaded=false,available=false,loading=null,editingId=null,staffSaving=false,showExcluded=false;
+let contacts=new Map(),loaded=false,available=false,loading=null,editingId=null,staffSaving=false,showExcluded=false,importPending=[];
 const style=document.createElement('style');
 style.textContent=`
  #orgStaffPage[hidden],#orgStaffDialog[hidden]{display:none!important}
@@ -38,6 +38,11 @@ style.textContent=`
  .staff-table tr.staff-excluded .staff-name{text-decoration:line-through;color:#98747c}
  .staff-tools .staff-excluded-toggle{border:1px solid #cfd9e8;color:#385372;background:#f5f8fc;border-radius:9px;padding:9px 11px;cursor:pointer;font-size:12px}
  .staff-tools .staff-excluded-toggle.active{background:#e9f1ff;border-color:#8baee8;color:#2054a4;font-weight:800}
+ .staff-import-trigger{border:1px solid #bfcfea;color:#1c52ad;background:#eff5ff;border-radius:9px;padding:9px 13px;cursor:pointer;font-size:12px;font-weight:800}
+ .staff-import-preview{border:1px solid #b9cde9;background:#f5f9ff;border-radius:10px;padding:13px;margin-bottom:14px;font-size:12px;line-height:1.8}
+ .staff-import-preview[hidden]{display:none!important}
+ .staff-import-preview button{margin:8px 8px 0 0;border:1px solid #adc4e7;background:#fff;border-radius:8px;color:#164b9b;padding:7px 11px;cursor:pointer}
+ .staff-import-preview .staff-import-missing{color:#96552a;max-height:110px;overflow:auto;margin-top:7px}
  .staff-tip{margin:12px 1px 0;color:#71819a;font-size:12px;line-height:1.7}
  .staff-message{font-size:12px;color:#57718c;margin:6px 0 10px}
  #orgStaffDialog{margin-top:16px;border:1px solid #cddcf0;border-radius:13px;padding:17px;background:#fafcff}
@@ -56,9 +61,9 @@ host.innerHTML=`
  <div class="staff-tools"><input id="staffSearch" type="search" placeholder="성명·직급·소속 검색" aria-label="조직원 검색">
   <select id="staffBranchFilter" aria-label="지사별 검색"><option value="all">전체 지사</option></select>
   <select id="staffStatusFilter" aria-label="재직상태"><option value="all">전체 재직상태</option><option value="재직">재직</option><option value="휴직">휴직</option><option value="퇴사">퇴사</option></select>
-  <button class="btn primary" type="button" id="staffAdd">+ 조직원 추가</button><button type="button" id="staffShowExcluded" class="staff-excluded-toggle">제외된 조직원 보기 (0)</button>
+  <button class="btn primary" type="button" id="staffAdd">+ 조직원 추가</button><button type="button" id="staffShowExcluded" class="staff-excluded-toggle">제외된 조직원 보기 (0)</button><label class="staff-import-trigger">연락처 CSV 가져오기<input id="staffImportFile" type="file" accept=".csv,text/csv" hidden></label>
  </div>
- <p id="staffMessage" class="staff-message" role="status"></p>
+ <p id="staffMessage" class="staff-message" role="status"></p><div id="staffImportPreview" class="staff-import-preview" hidden></div>
  <div class="staff-scroll"><table class="staff-table">
   <thead><tr><th>No.</th><th>성명</th><th>직급</th><th>소속 지사</th><th>소속 본부/부서</th><th>연락처</th><th>입사년월</th><th>재직상태</th><th>관리</th></tr></thead>
   <tbody id="staffTableBody"></tbody></table></div>
@@ -125,6 +130,7 @@ function refreshTable(){
  else if(!available&&can)message('연락처 저장 DB 설정이 필요합니다. Supabase SQL Editor에서 org_staff_setup.sql을 실행하세요.',true);
  else message('조직도와 연동된 조직원 정보입니다. '+(can?'명단 강제 삭제는 조직도 카드를 유지합니다.':'조회 전용'));
  $('staffShowExcluded').hidden=!can;
+ const importTrigger=document.querySelector('.staff-import-trigger');if(importTrigger)importTrigger.hidden=!can;
 }
 function options(){
  const select=$('staffBranchFilter'),current=select.value;
@@ -246,13 +252,102 @@ $('staffTableBody').addEventListener('click',async e=>{
   contacts.delete(String(node.staffContactId||node.id));orgApi.draw();refreshTable();message('조직원을 삭제했습니다.');
  }catch(err){orgApi.nodes=previous;orgApi.draw();message('삭제 실패: '+(err.message||String(err)),true);}
 });
+
+// Private CSV import: contacts never enter the public organization chart JSON or GitHub.
+function normalized(s){return String(s||'').trim().replace(/\\s+/g,'');}
+function parseCSV(content){
+ const result=[];let row=[],field='',quoted=false;
+ const src=String(content||'').replace(/^\\uFEFF/,'');
+ for(let i=0;i<src.length;i++){
+  const c=src[i];
+  if(c==='"'){
+   if(quoted&&src[i+1]==='"'){field+='"';i++;}
+   else quoted=!quoted;
+  }else if(c===','&&!quoted){row.push(field);field='';}
+  else if((c==='\\n'||c==='\\r')&&!quoted){
+   if(c==='\\r'&&src[i+1]==='\\n')i++;
+   row.push(field);field='';
+   if(row.some(v=>v.trim()))result.push(row);
+   row=[];
+  }else field+=c;
+ }
+ if(quoted)throw Error('CSV 파일의 따옴표가 올바르게 닫히지 않았습니다.');
+ row.push(field);if(row.some(v=>v.trim()))result.push(row);
+ if(result.length<2)throw Error('CSV에 연락처 데이터가 없습니다.');
+ const headers=result.shift().map(normalized);
+ const required=['권역별','권역내소속','성명(예명)','연락처'];
+ for(const col of required)if(!headers.includes(normalized(col)))throw Error('CSV 필수 열이 없습니다: '+col);
+ return result.map((cells,i)=>Object.fromEntries(headers.map((name,j)=>[name,(cells[j]||'').trim()]))).filter(r=>r['성명(예명)']||r['연락처']);
+}
+function findImportMatches(rows){
+ const entries=staffEntries(true);
+ const updates=[],missing=[],ambiguous=[],seen=new Set();
+ for(const row of rows){
+  const name=normalized(row['성명(예명)']),branch=normalized(row['권역별']),division=normalized(row['권역내소속']);
+  const phone=String(row['연락처']||'').trim();
+  const role=normalized(row['호칭']);
+  if(!/^01[016789]-?\\d{3,4}-?\\d{4}$/.test(phone)){missing.push(name+' (연락처 형식 확인 필요)');continue;}
+  const found=entries.filter(entry=>{
+   if(normalized(entry.name)!==name||normalized(entry.branch)!==branch)return false;
+   const entryDivision=normalized(entry.division);
+   if(division==='지사'){if(entryDivision)return false;}
+   else if(entryDivision!==division)return false;
+   const job={regional:'권역대표',branch:'지사장',division:'본부장',manager:'매니저'}[entry.role]||'';
+   return !role||role===job;
+  });
+  if(found.length===1){
+   const person=found[0],id=String(person.node.staffContactId||person.node.id);
+   if(seen.has(id)){ambiguous.push(name+' ('+branch+' / 중복 입력)');continue;}
+   seen.add(id);updates.push({id,name:person.name,branch:person.branch,phone,employment_status:person.status});
+  }else if(found.length===0)missing.push(name+' ('+branch+' / '+division+' · 조직도에 일치 인원 없음)');
+  else ambiguous.push(name+' ('+branch+' / 중복 조직원 '+found.length+'명)');
+ }
+ return {updates,missing,ambiguous};
+}
+function renderImportPreview(result){
+ importPending=result.updates;
+ const p=$('staffImportPreview');p.hidden=false;
+ p.innerHTML='<strong>연락처 일괄 등록 미리보기</strong><div>일치 '+result.updates.length+'명 · 미일치 '+result.missing.length+'명 · 중복 '+result.ambiguous.length+'명</div>'+
+ (result.missing.length||result.ambiguous.length?'<div class="staff-import-missing">'+[...result.missing,...result.ambiguous].map(safe).join(' / ')+'</div>':'')+
+ '<button type="button" id="staffImportApply"'+(!result.updates.length?' disabled':'')+'>일치한 '+result.updates.length+'명 연락처 저장</button><button type="button" id="staffImportCancel">취소</button>'+
+ '<div>일치하지 않는 이름은 자동 생성하지 않습니다. 기존 전화번호 외 조직도와 재직 상태는 변경하지 않습니다.</div>';
+ $('staffImportCancel').onclick=()=>{importPending=[];p.hidden=true;p.replaceChildren()};
+ $('staffImportApply').onclick=async e=>{
+  if(!orgApi.canEdit()||!available){message('관리자 로그인 또는 조직원 정보 DB 연결이 필요합니다. org_staff_setup.sql 설정을 확인하세요.',true);return;}
+  if(!importPending.length)return;
+  if(!confirm('일치하는 '+importPending.length+'명의 연락처를 비공개 조직원 DB에 저장할까요?'))return;
+  const btn=e.currentTarget;btn.disabled=true;
+  try{
+   const save=importPending.map(x=>({node_id:x.id,phone:x.phone,employment_status:x.employment_status,updated_at:new Date().toISOString()}));
+   const {error}=await orgApi.db.from('kpi_org_staff_contacts').upsert(save,{onConflict:'node_id'});
+   if(error)throw error;
+   for(const row of save)contacts.set(row.node_id,row);
+   const count=save.length;importPending=[];p.hidden=true;p.replaceChildren();refreshTable();
+   message('연락처 '+count+'명 저장 완료. 연락처는 관리자 전용 DB에만 보관됩니다.');
+  }catch(error){message('연락처 일괄 저장 실패: '+(error.message||String(error)),true);btn.disabled=false;}
+ };
+}
+$('staffImportFile').addEventListener('change',async e=>{
+ const file=e.target.files?.[0];if(!file)return;
+ try{
+  if(!orgApi.canEdit())throw Error('관리자 권한이 필요합니다.');
+  if(!orgApi.loaded)await orgApi.load();
+  if(!loaded)await loadContacts();
+  if(!available)throw Error('org_staff_setup.sql을 실행해 연락처 저장 DB를 먼저 연결해 주세요.');
+  const rows=parseCSV(await file.text());
+  if(rows.length>1000)throw Error('최대 1,000명까지 일괄 등록할 수 있습니다.');
+  renderImportPreview(findImportMatches(rows));
+ }catch(error){message('CSV 확인 실패: '+(error.message||String(error)),true);}
+ finally{e.target.value='';}
+});
+
 $('staffAdd').onclick=()=>openForm();
 $('staffShowExcluded').onclick=()=>{showExcluded=!showExcluded;refreshTable();};
 $('staffCancel').onclick=()=>{$('orgStaffDialog').hidden=true;editingId=null};
 $('staffBranch').onchange=()=>divisionOptions($('staffBranch').value,null);
 for(const id of ['staffSearch','staffBranchFilter','staffStatusFilter'])$(id).addEventListener(id==='staffSearch'?'input':'change',refreshTable);
 options();
-window.resetOrgStaff=function(){contacts.clear();loaded=false;available=false;loading=null;editingId=null;showExcluded=false;$('orgStaffDialog').hidden=true;};
+window.resetOrgStaff=function(){contacts.clear();loaded=false;available=false;loading=null;editingId=null;showExcluded=false;importPending=[];$('staffImportPreview').hidden=true;$('orgStaffDialog').hidden=true;};
 window.renderOrgStaff=function(){
  if(!orgApi.loaded){orgApi.load().then(()=>{if(!loaded)loadContacts();refreshTable()});}
  else if(!loaded)loadContacts();
