@@ -8,7 +8,7 @@ if(!orgApi)throw new Error('조직관리 연결을 초기화하지 못했습니�
 const safe=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
 const roles={regional:'권역대표',branch:'지사장',division:'본부장',manager:'매니저'};
 const branches=['부산 1지사','부산 2지사','부산 3지사','부산 4지사'];
-const placeholders=new Set(['구성원','새 구성원','이름 미입력','최상위 조직','새 지사 / 부서','새 본부 / 팀']);
+const placeholders=new Set(['구성원','새 구성원','이름 미입력','최상위 조직','새 지사 / 부서','새 본부 / 팀','지사장 / 담당자 입력']);
 let contacts=new Map(),loaded=false,available=false,loading=null,editingId=null,staffSaving=false,showExcluded=false;
 const style=document.createElement('style');
 style.textContent=`
