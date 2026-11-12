@@ -8,8 +8,8 @@ if(!document.getElementById(CSS_ID)){
  '.org-connectors-svg{position:absolute!important;left:0!important;top:0!important;z-index:0!important;overflow:visible;pointer-events:none!important}',
  '.org-region-direct-members:before,.org-group-wrap:before,.org-group-row:before,.org-group-row:after,.org-branch-direct-members:before,.org-group-wrap .org-unit-row:before,.org-branch-leader:before,.v-org-region-members:before,.v-org-group:before,.v-org-groups:before,.v-org-groups:after,.v-org-direct-members:before,.v-org-branch-units:before,.v-org-branch-leader:before{display:none!important}',
  '.org-region-direct-members .org-node-person,.v-org-region-members .v-org-card.person{min-width:215px;min-height:89px;padding:15px 18px;gap:5px}',
- '.org-region-direct-members .org-node-person strong,.v-org-region-members .v-org-card.person strong{font-size:20px;line-height:1.45}',
- '.org-region-direct-members .org-node-person .org-card-role,.v-org-region-members .v-org-card.person .v-org-role{font-size:18px;font-weight:850;line-height:1.5}',
+ '.org-region-direct-members .org-node-person strong,.v-org-region-members .v-org-card.person strong{font-size:23px;font-weight:900;line-height:1.45}',
+ '.org-region-direct-members .org-node-person .org-card-role,.v-org-region-members .v-org-card.person .v-org-role{font-size:15px;font-weight:750;line-height:1.5}',
  '.org-region-direct-members .org-node-person small:not(.org-card-role),.v-org-region-members .v-org-card.person small:not(.v-org-role){font-size:14px}'
  ].join('\n');
  document.head.appendChild(sheet);
