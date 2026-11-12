@@ -254,7 +254,7 @@ el('v-months').addEventListener('change',e=>{
   for(const n of orgNodes){
    const name=String(n.label||'').trim();
    if(!name||['구성원','새 구성원','이름 미입력','최상위 조직','새 지사 / 부서','새 본부 / 팀','지사장 / 담당자 입력'].includes(name))continue;
-   if(n.type!=='person'&&!Object.prototype.hasOwnProperty.call(n,'headcountRole'))continue;
+   if(n.type==='group'||(n.type!=='person'&&!Object.prototype.hasOwnProperty.call(n,'headcountRole')))continue;
    const r=effectiveRole(n);if(Object.prototype.hasOwnProperty.call(counts,r))counts[r]++;
   }
   const total=Object.values(counts).reduce((sum,v)=>sum+v,0);
