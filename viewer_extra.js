@@ -6,7 +6,7 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
  const branches=['부산 1지사','부산 2지사','부산 3지사','부산 4지사'];
  const divisions=['1본부','2본부','3본부','지사장','기타'];
  const roles={regional:'권역대표',branch:'지사장',division:'본부장',manager:'매니저'};
- let active='dashboard',year=new Date().getFullYear(),pyear=year,pmonth=0,pbranch='all',pdivision='all',orgNodes=[],orgLoaded=false,orgMessage='';
+ let active='dashboard',year=new Date().getFullYear(),pyear=year,pmonths=new Set(),pbranch='all',pdivision='all',orgNodes=[],orgLoaded=false,orgMessage='';
  const css=`
  .v-nav{display:flex;flex-direction:column;gap:8px}
  .v-nav button{border:0;border-radius:11px;background:transparent;color:#dce9ff;text-align:left;font:inherit;font-size:13px;padding:12px 12px;cursor:pointer;line-height:1.5}
@@ -24,6 +24,9 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
  .v-months{display:flex;gap:5px;flex-wrap:wrap;margin:14px 0}
  .v-months button{padding:6px 9px;border:1px solid #d9e3f0;border-radius:8px;background:#f6f8fc;font-size:12px;color:#637187;cursor:pointer}
  .v-months button.active{background:#2e63c5;border-color:#2e63c5;color:white;font-weight:800}
+ .v-months .v-month-check{display:inline-flex;align-items:center;gap:5px;border:1px solid #d9e3f0;background:#f6f8fc;border-radius:8px;padding:6px 9px;color:#637187;cursor:pointer;font-size:12px;user-select:none;white-space:nowrap}
+ .v-months .v-month-check.checked{background:#eaf1ff;border-color:#2e63c5;color:#2152a9;font-weight:800}
+ .v-months .v-month-check input{width:14px;height:14px;margin:0;accent-color:#2e63c5;cursor:pointer}
  .v-table-scroll{overflow-x:auto;border:1px solid #cfdaea;border-radius:10px;background:#fff}
  .v-table{border-collapse:separate;border-spacing:0;width:100%;table-layout:fixed;font-size:11px}
  .v-table th,.v-table td{padding:6px 6px;border-right:1px solid #d1dbea;border-bottom:1px solid #d1dbea;text-align:center!important;vertical-align:middle;font-variant-numeric:tabular-nums;overflow:hidden;text-overflow:ellipsis}
@@ -136,8 +139,8 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
   selectOptions(el('v-pyear'),years().map(y=>[y,y+'년']),pyear);
   selectOptions(el('v-pbranch'),[['all','전체 지사'],...branches.map(b=>[b,b])],pbranch);
   selectOptions(el('v-pdivision'),[['all','전체 본부'],...divisions.map(d=>[d,d])],pdivision);
-  el('v-months').innerHTML='<button type="button" data-month="0" class="'+(pmonth===0?'active':'')+'">전체(1~12월)</button>'+months.map(m=>'<button type="button" data-month="'+m+'" class="'+(pmonth===m?'active':'')+'">'+m+'월</button>').join('');
-  const shown=pmonth===0?months:[pmonth],byKey=new Map();
+  el('v-months').innerHTML='<button type="button" data-all-months class="'+(pmonths.size===0?'active':'')+'">전체(1~12월)</button>'+months.map(m=>'<label class="v-month-check'+(pmonths.has(m)?' checked':'')+'"><input type="checkbox" data-v-month="'+m+'" value="'+m+'" '+(pmonths.has(m)?'checked ':'')+'aria-label="'+m+'월 선택">'+m+'월</label>').join('');
+  const shown=pmonths.size?months.filter(m=>pmonths.has(m)):months,byKey=new Map();
   const add=(b,d,name,m,seats)=>{
    if(!branches.includes(b)||pbranch!=='all'&&pbranch!==b||pdivision!=='all'&&pdivision!==d)return;
    const key=JSON.stringify([b,d,name]);if(!byKey.has(key))byKey.set(key,{b,d,name,months:Array(12).fill(0)});
@@ -145,7 +148,7 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
   };
   for(const event of getAllEvents()){
    const dat=String(event.date||''),y=Number(dat.slice(0,4)),m=Number(dat.slice(5,7));
-   if(y!==pyear||m<1||m>12||pmonth!==0&&pmonth!==m)continue;
+   if(y!==pyear||m<1||m>12||!shown.includes(m))continue;
    const valid=Array.isArray(event.signupEntries)?event.signupEntries.filter(row=>row&&['corporate','individual'].includes(row.group)&&Number.isSafeInteger(row.seats)&&row.seats>=0):[];
    if(valid.length){
     for(const r of valid)add(r.branch||event.branch,normalizeDivision(r.division||event.division),String(r.manager||'').trim()||'담당자 미지정',m,r.seats);
@@ -155,20 +158,30 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
   }
   const rows=[...byKey.values()].map(x=>({...x,total:shown.reduce((sum,m)=>sum+x.months[m-1],0)})).filter(x=>x.total>0).sort((a,b)=>b.total-a.total||a.b.localeCompare(b.b,'ko')||a.d.localeCompare(b.d,'ko')||a.name.localeCompare(b.name,'ko'));
   const t=Array(12).fill(0);for(const row of rows)row.months.forEach((v,i)=>t[i]+=v);
-  const full=pmonth===0;
-  el('v-person-table').style.minWidth=full?'1350px':'540px';
-  el('v-person-head').innerHTML='<tr><th>No.</th><th>소속 지사</th><th>본부</th><th>성명</th>'+shown.map(m=>'<th>'+m+'월</th>').join('')+(full?'<th>연간 합계</th>':'')+'</tr>';
-  let body=rows.map((x,i)=>'<tr><td>'+(i+1)+'</td><td>'+safe(x.b)+'</td><td>'+safe(x.d||'본부 미지정')+'</td><td style="font-weight:750">'+safe(x.name)+'</td>'+shown.map(m=>'<td class="v-number">'+fmt(x.months[m-1])+'구좌</td>').join('')+(full?'<td class="v-number">'+fmt(x.total)+'구좌</td>':'')+'</tr>').join('');
+  const full=pmonths.size===0,showTotal=shown.length>1;
+  el('v-person-table').style.minWidth=(444+shown.length*80+(showTotal?88:0))+'px';
+  el('v-person-head').innerHTML='<tr><th>No.</th><th>소속 지사</th><th>본부</th><th>성명</th>'+shown.map(m=>'<th>'+m+'월</th>').join('')+(showTotal?'<th>'+(full?'연간 합계':'선택 월 합계')+'</th>':'')+'</tr>';
+  let body=rows.map((x,i)=>'<tr><td>'+(i+1)+'</td><td>'+safe(x.b)+'</td><td>'+safe(x.d||'본부 미지정')+'</td><td style="font-weight:750">'+safe(x.name)+'</td>'+shown.map(m=>'<td class="v-number">'+fmt(x.months[m-1])+'구좌</td>').join('')+(showTotal?'<td class="v-number">'+fmt(x.total)+'구좌</td>':'')+'</tr>').join('');
   const total=shown.reduce((sum,m)=>sum+t[m-1],0);
-  if(rows.length)body+='<tr class="v-total"><td colspan="4">합계</td>'+shown.map(m=>'<td>'+fmt(t[m-1])+'구좌</td>').join('')+(full?'<td>'+fmt(total)+'구좌</td>':'')+'</tr>';
-  else body='<tr><td colspan="'+(shown.length+4+(full?1:0))+'">선택한 기간의 등록된 가입 실적이 없습니다.</td></tr>';
+  if(rows.length)body+='<tr class="v-total"><td colspan="4">합계</td>'+shown.map(m=>'<td>'+fmt(t[m-1])+'구좌</td>').join('')+(showTotal?'<td>'+fmt(total)+'구좌</td>':'')+'</tr>';
+  else body='<tr><td colspan="'+(shown.length+4+(showTotal?1:0))+'">선택한 기간의 등록된 가입 실적이 없습니다.</td></tr>';
   el('v-person-body').innerHTML=body;
-  el('v-person-note').textContent=pyear+'년 '+(full?'전체(1~12월)':pmonth+'월')+' · 부산 1~4지사 · '+rows.length+'명/소속 · '+fmt(total)+'구좌 · 동일 성명이라도 지사 또는 본부가 다르면 별도 집계합니다.';
+  el('v-person-note').textContent=pyear+'년 '+(full?'전체(1~12월)':shown.map(m=>m+'월').join('·'))+' · 부산 1~4지사 · '+rows.length+'명/소속 · '+fmt(total)+'구좌 · 동일 성명이라도 지사 또는 본부가 다르면 별도 집계합니다.';
  }
  el('v-pyear').addEventListener('change',e=>{pyear=Number(e.target.value);renderPersonal()});
  el('v-pbranch').addEventListener('change',e=>{pbranch=e.target.value;renderPersonal()});
  el('v-pdivision').addEventListener('change',e=>{pdivision=e.target.value;renderPersonal()});
- el('v-months').addEventListener('click',e=>{const b=e.target.closest('[data-month]');if(b){pmonth=Number(b.dataset.month);renderPersonal()}});
+ el('v-months').addEventListener('click',e=>{
+ if(!e.target.closest('[data-all-months]'))return;
+ pmonths.clear();renderPersonal();
+});
+el('v-months').addEventListener('change',e=>{
+ const input=e.target.closest('input[data-v-month]');if(!input)return;
+ const month=Number(input.value);
+ if(input.checked)pmonths.add(month);else pmonths.delete(month);
+ if(pmonths.size===12)pmonths.clear();
+ renderPersonal();
+});
  const children=id=>orgNodes.filter(n=>n.parent===id).sort((a,b)=>(a.order||0)-(b.order||0));
  const effectiveRole=n=>{
   if(Object.prototype.hasOwnProperty.call(n,'headcountRole'))return roles[n.headcountRole]?n.headcountRole:'';
