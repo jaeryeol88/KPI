@@ -172,6 +172,18 @@
 .org-root-branch{display:flex;flex-direction:column;align-items:center;gap:30px}
 .org-empty{color:#62748d;padding:25px;font-size:13px}
 .org-help{margin:12px 2px 0}
+.org-headcount{margin-top:20px;padding:19px 20px 15px;background:#fff;border:1px solid #dce5f2;border-radius:14px}
+.org-headcount-top{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:9px;margin-bottom:14px}
+.org-headcount-top h3{margin:0;font-size:18px;color:#172c4b}
+.org-headcount-top span,.org-headcount-note{font-size:12px;color:#70819b}
+.org-headcount-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+.org-headcount-stat{text-align:center;padding:18px 10px 16px;background:#f3f7fd;border:1px solid #e2eaf5;border-radius:11px}
+.org-headcount-stat strong{display:block;font-size:29px;line-height:1.3;font-weight:850;color:#1c4d9a;font-variant-numeric:tabular-nums}
+.org-headcount-stat span{display:block;font-size:13px;color:#526782;font-weight:700;margin-bottom:5px}
+.org-headcount-stat.org-headcount-total{background:#e7efff;border-color:#b8d0ff}
+.org-headcount-stat.org-headcount-total strong{color:#1449b4}
+.org-headcount-note{margin:12px 0 0;line-height:1.6}
+@media(max-width:760px){.org-headcount-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.org-headcount-stat:last-child{grid-column:1/-1}}
 .org-editor{max-width:950px;margin:16px 0;padding:17px;background:#fff;border:1px solid #cddbef;border-radius:13px}
 .org-edit-head,.org-edit-buttons{display:flex;align-items:center;gap:8px;justify-content:space-between;flex-wrap:wrap}
 .org-edit-head h3{font-size:17px;margin:0 0 12px}
@@ -257,12 +269,18 @@
  <div class="org-actions"><button class="btn" id="orgAddGroup" type="button">+ 지사 / 부서 추가</button><button class="btn" id="orgAddRoot" type="button">+ 최상위 추가</button><button class="btn primary" id="orgSave" type="button">저장</button></div></div>
  <p class="org-status" id="orgStatus" role="status" aria-live="polite">조직도 준비 중…</p>
  <div class="org-scroll"><div id="orgCanvas" class="org-canvas"></div></div>
- <p class="org-help">위계: 최상위 → 지사 / 부서 → 본부 / 팀 → 구성원. 카드 클릭 시 이름·직급·설명 수정, 하위 카드 추가, 순서 변경, 삭제가 가능합니다.</p>
+ <section class="org-headcount" aria-label="조직 인원 현황">
+ <div class="org-headcount-top"><h3>조직 인원 현황</h3><span>조직도 카드 기준 · 자동 집계</span></div>
+ <div id="orgHeadcountGrid" class="org-headcount-grid" aria-live="polite"></div>
+ <p class="org-headcount-note">이름이 입력된 카드 중 직책 구분이 지정된 인원만 집계합니다. 지사·본부 이름이나 기본 구성원 카드는 제외됩니다.</p>
+ </section>
+ <p class="org-help">위계: 최상위 → 지사 / 부서 → 본부 / 팀 → 구성원. 카드 클릭 시 이름·직급·직책 구분 수정, 하위 카드 추가, 순서 변경, 삭제가 가능합니다.</p>
  <div id="orgEditor" class="org-editor" hidden>
   <div class="org-edit-head"><h3 id="orgEditTitle">조직 카드 편집</h3><button type="button" id="orgEditClose" class="btn" aria-label="편집 닫기">닫기</button></div>
   <form id="orgEditForm">
    <label>제목 / 이름<input id="orgLabel" maxlength="60" required placeholder="조직명 또는 이름"></label>
    <label>부제목 / 직급<input id="orgSubtitle" maxlength="80" placeholder="직급, 담당 업무 등 (선택)"></label>
+   <label>인원 집계 직책<select id="orgRole"><option value="">집계 제외 (조직명 / 빈 카드)</option><option value="regional">권역대표</option><option value="branch">지사장</option><option value="division">본부장</option><option value="manager">매니저</option></select></label>
    <label id="orgJoinDateField" hidden>입사 연월<input id="orgJoinDate" type="text" inputmode="numeric" maxlength="5" pattern="[0-9]{2}[.](0[1-9]|1[0-2])" title="연도.월 형식으로 입력하세요 (예: 26.09)" aria-label="입사 연월"></label>
    <label>카드 색상<select id="orgColor"><option value="default">기본</option><option value="blue">파랑</option><option value="navy">남색</option><option value="mint">민트</option><option value="white">흰색</option><option value="sky">하늘색</option><option value="teal">청록색</option><option value="green">초록색</option><option value="purple">보라색</option><option value="lavender">연보라색</option><option value="pink">분홍색</option><option value="coral">코랄색</option><option value="orange">주황색</option><option value="yellow">노란색</option><option value="gray">회색</option></select></label>
    <div class="org-edit-buttons"><button type="submit" class="btn primary">변경 적용</button><button type="button" class="btn" id="orgAddChild">+ 하위 카드</button><button type="button" class="btn" id="orgAddSibling">+ 같은 단계</button><button type="button" class="btn" id="orgMovePrev">← 앞 순서</button><button type="button" class="btn" id="orgMoveNext">뒤 순서 →</button><button type="button" class="btn org-danger" id="orgDelete">삭제</button></div>
@@ -940,6 +958,35 @@ function orgJoinYearMonth(value){
  const legacy=v.match(/^([0-9]{4})-(0[1-9]|1[0-2])(?:-[0-9]{2})?$/);
  return legacy?legacy[1].slice(-2)+'.'+legacy[2]:'';
 }
+function orgEffectiveRole(node){
+ const valid=['regional','branch','division','manager'];
+ // Explicit selection, including an explicit opt-out, always takes precedence.
+ if(Object.prototype.hasOwnProperty.call(node,'headcountRole'))return valid.includes(node.headcountRole)?node.headcountRole:'';
+ // Older saved member cards can be classified from their existing job-title text.
+ if(node.type!=='person')return '';
+ const title=String(node.subtitle||'').trim().replace(/\\s+/g,'');
+ if(/권역대표/.test(title))return 'regional';
+ if(/지사장/.test(title))return 'branch';
+ if(/본부장/.test(title))return 'division';
+ if(/매니저/.test(title))return 'manager';
+ return '';
+}
+function orgCountable(node){
+ const name=String(node.label||'').trim();
+ if(!name||/^(구성원|새 구성원|이름 미입력|최상위 조직|새 지사 \\/ 부서|새 본부 \\/ 팀)$/.test(name))return false;
+ // Organizational headings are not counted unless explicitly assigned a role.
+ if(node.type!=='person'&&!Object.prototype.hasOwnProperty.call(node,'headcountRole'))return false;
+ return true;
+}
+function orgRenderHeadcount(){
+ const target=el('orgHeadcountGrid');if(!target)return;
+ const counts={regional:0,branch:0,division:0,manager:0};
+ for(const node of orgNodes){const role=orgEffectiveRole(node);if(role&&orgCountable(node))counts[role]++;}
+ const labels=[['regional','권역대표'],['branch','지사장'],['division','본부장'],['manager','매니저']];
+ const total=Object.values(counts).reduce((a,b)=>a+b,0);
+ target.innerHTML=labels.map(([key,label])=>'<div class="org-headcount-stat"><span>'+label+'</span><strong>'+fmt(counts[key])+'명</strong></div>').join('')+
+  '<div class="org-headcount-stat org-headcount-total"><span>총인원</span><strong>'+fmt(total)+'명</strong></div>';
+}
 function orgNodeMarkup(node){
  const sub=node.subtitle?'<small>'+esc(node.subtitle)+'</small>':'';
  const joinMonth=['group','person'].includes(node.type)?orgJoinYearMonth(node.joinDate):'';
@@ -949,12 +996,13 @@ function orgNodeMarkup(node){
 }
 function orgDraw(){
  const canvas=el('orgCanvas');if(!canvas)return;
- if(!orgNodes.length){canvas.innerHTML='<p class="org-empty">등록된 조직이 없습니다. 최상위 조직을 추가하세요.</p>';return;}
+ if(!orgNodes.length){canvas.innerHTML='<p class="org-empty">등록된 조직이 없습니다. 최상위 조직을 추가하세요.</p>';orgRenderHeadcount();return;}
  function person(n){return '<div class="org-person">'+orgNodeMarkup(n)+'</div>';}
  function division(n){const children=orgChildren(n.id);return '<div class="org-unit-col">'+orgNodeMarkup(n)+'<div class="org-person-list">'+children.map(person).join('')+'</div></div>';}
  function group(n){const children=orgChildren(n.id);return '<div class="org-group-wrap">'+orgNodeMarkup(n)+'<div class="org-unit-row">'+children.map(division).join('')+'</div></div>';}
  function root(n){return '<div class="org-root-branch"><div class="org-root-row">'+orgNodeMarkup(n)+'</div><div class="org-group-row">'+orgChildren(n.id).map(group).join('')+'</div></div>';}
  canvas.innerHTML=orgChildren(null).map(root).join('');
+ orgRenderHeadcount();
  orgAlignConnectors();
  canvas.querySelectorAll('[data-org-node]').forEach(button=>button.addEventListener('click',()=>orgSelect(button.dataset.orgNode)));
 }
@@ -980,6 +1028,7 @@ function orgSelect(id){
  el('orgEditTitle').textContent=['최상위 조직','지사 / 부서','본부 / 팀','구성원'][orgNodeTypes.indexOf(node.type)]+' 편집';
  el('orgLabel').value=node.label||'';el('orgSubtitle').value=node.subtitle||'';
  el('orgColor').value=node.color||'default';
+ el('orgRole').value=orgEffectiveRole(node);
  const canJoinDate=node.type==='group'||node.type==='person';
  el('orgJoinDateField').hidden=!canJoinDate;
  el('orgJoinDate').value=canJoinDate?orgJoinYearMonth(node.joinDate):'';
@@ -1051,6 +1100,7 @@ el('orgEditForm').addEventListener('submit',event=>{
  const node=orgNodes.find(n=>n.id===orgSelectedId);if(!node)return;
  const label=el('orgLabel').value.trim();if(!label)return;
  node.label=label;node.subtitle=el('orgSubtitle').value.trim();node.color=el('orgColor').value;
+ node.headcountRole=el('orgRole').value;
  if(node.type==='group'||node.type==='person')node.joinDate=el('orgJoinDate').value.trim()||'';
  orgMarkDirty();orgSelect(node.id);
 });
