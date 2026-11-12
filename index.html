@@ -267,7 +267,7 @@
 
 <section id="orgPage" class="org-page" hidden>
  <div class="org-toolbar"><div><h2>조직관리 <span class="perf-linked">조직도</span></h2><p>조직과 본부, 구성원을 자유롭게 추가하고 수정할 수 있습니다. 카드를 클릭하면 상세 편집이 열립니다.</p></div>
- <div class="org-actions"><button class="btn" id="orgAddGroup" type="button">+ 지사 / 부서 추가</button><button class="btn" id="orgAddRoot" type="button">+ 최상위 추가</button><button class="btn primary" id="orgSave" type="button">저장</button></div></div>
+ <div class="org-actions"><button class="btn" id="orgAddGroup" type="button">+ 지사 / 부서 추가</button><button class="btn" id="orgAddRoot" type="button">+ 최상위 추가</button><button class="btn primary" id="orgSave" type="button">저장</button><button class="btn" id="orgExportPpt" type="button" title="현재 조직도를 편집 가능한 PowerPoint 파일로 다운로드">↓ PPT 다운로드</button></div></div>
  <p class="org-status" id="orgStatus" role="status" aria-live="polite">조직도 준비 중…</p>
  <div class="org-scroll"><div id="orgCanvas" class="org-canvas"></div></div>
  <section class="org-headcount" aria-label="조직 인원 현황">
@@ -2019,4 +2019,6 @@ el('backup').onclick=()=>dl('PLK_KPI_백업_'+new Date().toISOString().slice(0,1
 el('restore').onclick=()=>el('file').click();
 el('file').onchange=async e=>{const f=e.target.files[0];if(!f)return;if(access.role!=='owner'){alert('데이터 복원은 최고관리자만 가능합니다.');e.target.value='';return;}try{const j=JSON.parse(await f.text()),data=Array.isArray(j)?j:j.items;if(!Array.isArray(data)||!data.every(x=>x&&typeof x.id==='string'&&typeof x.date==='string'&&typeof x.name==='string'&&['attendees','cost','goal','done'].every(k=>Number.isSafeInteger(x[k])&&x[k]>=0))||new Set(data.map(x=>x.id)).size!==data.length)throw Error('형식 오류');if(!confirm('현재 온라인 데이터가 백업 파일 내용으로 교체됩니다. 계속할까요?'))return;lock(true);status('온라인 데이터 복원 중…');const oldIds=new Set(items.map(x=>x.id)),newIds=new Set(data.map(x=>x.id));for(let i=0;i<data.length;i+=100){const rows=data.slice(i,i+100).map(x=>({id:x.id,user_id:currentUser.id,event_data:x}));const {error}=await db.from('kpi_events').upsert(rows,{onConflict:'user_id,id'});if(error)throw error;}const removed=[...oldIds].filter(id=>!newIds.has(id));for(let i=0;i<removed.length;i+=100){const {error}=await db.from('kpi_events').delete().eq('user_id',currentUser.id).in('id',removed.slice(i,i+100));if(error)throw error;}await loadEvents();alert('온라인 복원이 완료되었습니다.');}catch(err){status('복원 실패: '+errText(err),true);alert('복원 실패: '+errText(err)+'\n일부 변경이 적용되었을 수 있으므로 새로고침 후 확인하세요.');}finally{lock(false);e.target.value='';}};
 el('year').value=String(new Date().getFullYear());render();
-</script></body></html>
+</script>
+<script src="org_ppt_export.js"></script>
+</body></html>
