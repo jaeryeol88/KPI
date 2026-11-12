@@ -96,7 +96,7 @@ function staffEntries(includeExcluded=false){
   if(n.staffHidden===true&&!includeExcluded)return false;
   const name=String(n.label||'').trim();
   if(!name||placeholders.has(name))return false;
-  return n.type==='person'||Boolean(orgApi.effectiveRole(n));
+  return n.type!=='group'&&(n.type==='person'||Boolean(orgApi.effectiveRole(n)));
  }).map(n=>{
   const hierarchy=branchOf(n),record=contacts.get(String(n.staffContactId||n.id))||{};
   const role=orgApi.effectiveRole(n);
