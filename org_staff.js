@@ -208,6 +208,27 @@ $('staffForm').addEventListener('submit',async e=>{
 });
 $('staffTableBody').addEventListener('click',async e=>{
  const edit=e.target.closest('[data-staff-edit]'),del=e.target.closest('[data-staff-delete]');
+ const excludeButton=e.target.closest('[data-staff-exclude]'),restoreButton=e.target.closest('[data-staff-restore]');
+ if(excludeButton||restoreButton){
+  if(!orgApi.canEdit()||!orgApi.dbReady){message('조직도를 저장할 수 있는 관리자 권한과 DB 연결이 필요합니다.',true);return;}
+  const button=excludeButton||restoreButton;
+  const id=excludeButton?excludeButton.dataset.staffExclude:restoreButton.dataset.staffRestore;
+  const node=orgApi.nodes.find(n=>String(n.id)===id);
+  if(!node)return;
+  const remove=Boolean(excludeButton);
+  if(remove&&!confirm(node.label+' 조직원을 명단에서 강제 삭제할까요?\n\n조직도 카드는 그대로 유지되며, 제외된 조직원 보기에서 복원할 수 있습니다.'))return;
+  button.disabled=true;
+  const previous=node.staffHidden;
+  node.staffHidden=remove;
+  try{
+   const {error}=await orgApi.db.from('kpi_org_chart').upsert({id:1,nodes:orgApi.nodes,updated_at:new Date().toISOString()},{onConflict:'id'});
+   if(error)throw error;
+   orgApi.dirty=false;orgApi.draw();refreshTable();
+   message(remove?'조직도 카드는 유지하고 조직원 명단에서 제외했습니다.':'조직원을 명단에 복원했습니다.');
+  }catch(err){node.staffHidden=previous;refreshTable();message('명단 변경 실패: '+(err.message||String(err)),true);}
+  finally{button.disabled=false;}
+  return;
+ }
  if(edit){openForm(edit.dataset.staffEdit);return;}
  if(!del||!orgApi.canEdit())return;
  const node=orgApi.nodes.find(x=>String(x.id)===del.dataset.staffDelete);
