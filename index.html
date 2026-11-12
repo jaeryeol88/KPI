@@ -132,6 +132,9 @@
 .org-scroll{overflow-x:auto;padding:22px 14px;background:#fafcff;border:1px solid #dce5f2;border-radius:14px}
 .org-canvas{width:max-content;min-width:100%;display:flex;flex-direction:column;align-items:center;gap:30px;padding:12px 0 28px}
 .org-root-row,.org-group-row,.org-unit-row{display:flex;gap:26px;align-items:flex-start;justify-content:center}
+.org-region-direct-members{display:flex;flex-direction:column;align-items:center;gap:8px;position:relative}
+.org-region-direct-members:before{content:'';position:absolute;top:-30px;height:30px;left:50%;border-left:2px solid #cad6e8}
+.org-region-direct-members .org-node-person{min-width:180px;min-height:67px}
 .org-root-row{position:relative}
 .org-group-row{position:relative;gap:24px;--org-line-left:50%;--org-line-right:50%}
 .org-group-wrap{display:flex;flex-direction:column;align-items:center;gap:26px;min-width:240px;position:relative}
@@ -961,6 +964,8 @@ function orgDefaultNodes(){
  const nodes=[];let seq=0;
  const make=(parent,type,label)=>{const id='sample-'+(++seq);nodes.push({id,parent,type,label,subtitle:'',color:'default',order:seq});return id;};
  const root=make(null,'root','부산권역');
+ const representative=make(root,'person','구성원');
+ nodes.find(n=>n.id===representative).headcountRole='regional';
  for(const [group,divisions] of [['부산 1지사',['1본부','2본부','3본부']],['부산 2지사',['1본부','2본부','3본부']],['부산 3지사',['1본부','2본부','3본부']],['부산 4지사',['1본부','2본부','3본부']]]){
   const gid=make(root,'group',group);
   for(const division of divisions){const did=make(gid,'division',division);make(did,'person','구성원');}
@@ -994,7 +999,7 @@ function orgCountable(node){
  const name=String(node.label||'').trim();
  if(!name||['구성원','새 구성원','이름 미입력','최상위 조직','새 지사 / 부서','새 본부 / 팀','지사장 / 담당자 입력'].includes(name))return false;
  // Organizational headings are not counted unless explicitly assigned a role.
- if(node.type==='group')return false;
+ if(['group','root'].includes(node.type))return false;
  if(node.type!=='person'&&!Object.prototype.hasOwnProperty.call(node,'headcountRole'))return false;
  return true;
 }
@@ -1018,6 +1023,25 @@ function orgGroupBranchName(group){
 }
 function orgNormalizeBranches(nodes){
  let changed=false;
+ for(const root of nodes.filter(n=>n.type==='root')){
+  const direct=nodes.filter(n=>n.type==='person'&&n.parent===root.id);
+  if(!direct.length){
+   const role=orgEffectiveRole(root);
+   const subtitle=String(root.subtitle||'').trim();
+   const label=String(root.label||'').trim();
+   const hasPersonName=label&&!/권역|지역|최상위 조직/.test(label);
+   const personName=hasPersonName?label:(role==='regional'?subtitle.replace(/권역대표|대표/g,'').trim():'');
+   const person={id:orgNewId(),parent:root.id,type:'person',label:personName||'구성원',
+    subtitle:hasPersonName?subtitle:'',headcountRole:'regional',color:'white',order:-1,
+    joinDate:root.joinDate||'',staffHidden:root.staffHidden===true};
+   if(personName)person.staffContactId=String(root.id);
+   nodes.push(person);changed=true;
+   if(hasPersonName){root.label=String(root.regionName||'부산권역');changed=true;}
+  }
+  if(root.headcountRole==='regional'&&root.label==='부산권역'){
+   delete root.headcountRole;changed=true;
+  }
+ }
  for(const group of [...nodes]){
   if(group.type!=='group')continue;
   const branch=orgGroupBranchName(group);
@@ -1066,7 +1090,13 @@ function orgDraw(){
   (people.length?'<div class="org-branch-direct-members">'+people.map(person).join('')+'</div>':'')+
   '<div class="org-unit-row">'+divisions.map(division).join('')+'</div></div>';
 }
- function root(n){return '<div class="org-root-branch"><div class="org-root-row">'+orgNodeMarkup(n)+'</div><div class="org-group-row">'+orgChildren(n.id).map(group).join('')+'</div></div>';}
+ function root(n){
+  const members=orgChildren(n.id).filter(x=>x.type==='person');
+  const groups=orgChildren(n.id).filter(x=>x.type==='group');
+  return '<div class="org-root-branch"><div class="org-root-row">'+orgNodeMarkup(n)+'</div>'+
+   (members.length?'<div class="org-region-direct-members">'+members.map(person).join('')+'</div>':'')+
+   '<div class="org-group-row">'+groups.map(group).join('')+'</div></div>';
+ }
  canvas.innerHTML=orgChildren(null).map(root).join('');
  orgRenderHeadcount();
  orgAlignConnectors();
@@ -1109,7 +1139,8 @@ function orgSelect(id){
  el('orgRole').disabled=!can||editingBranch;
  el('orgJoinDate').disabled=!can||!canJoinDate;
  el('orgAddChild').hidden=node.type==='person';
- el('orgAddDirectPerson').hidden=!editingBranch;
+ el('orgAddDirectPerson').hidden=!editingBranch&&node.type!=='root';
+ el('orgAddDirectPerson').textContent=node.type==='root'?'+ 권역대표 / 직속 구성원':'+ 지사 소속 구성원';
  el('orgAddSibling').hidden=node.type==='root';
  el('orgDelete').hidden=!can;
  if(!can)orgStatus('조직도를 조회 중입니다. 조직 수정은 최고관리자 및 공동 관리자만 가능합니다.');
@@ -1119,6 +1150,7 @@ function orgAdd(parent,type){
  if(!orgCanEdit())return;
  if(parent!==null&&!orgNodes.some(n=>n.id===parent))return;
  const next={id:orgNewId(),parent,type,label:{root:'최상위 조직',group:'새 지사 / 부서',division:'새 본부 / 팀',person:'새 구성원'}[type],subtitle:'',color:'default',order:orgNodes.length+1};
+ if(type==='person'&&orgNodes.some(n=>n.id===parent&&n.type==='root'))next.headcountRole='regional';
  if(type==='group')next.branchName='새 지사 / 부서';
  orgNodes.push(next);orgMarkDirty();orgSelect(next.id);
  el('orgLabel').focus();el('orgLabel').select();
@@ -1182,7 +1214,7 @@ el('orgEditForm').addEventListener('submit',event=>{
  if(node.type==='person')node.joinDate=el('orgJoinDate').value.trim()||'';
  orgMarkDirty();orgSelect(node.id);
 });
-el('orgAddDirectPerson').addEventListener('click',()=>{const n=orgNodes.find(x=>x.id===orgSelectedId);if(n?.type==='group')orgAdd(n.id,'person');});
+el('orgAddDirectPerson').addEventListener('click',()=>{const n=orgNodes.find(x=>x.id===orgSelectedId);if(n&&['group','root'].includes(n.type))orgAdd(n.id,'person');});
 el('orgAddChild').addEventListener('click',()=>{
  const n=orgNodes.find(x=>x.id===orgSelectedId);if(!n)return;
  const next={root:'group',group:'division',division:'person'}[n.type];if(next)orgAdd(n.id,next);
