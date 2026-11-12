@@ -61,7 +61,7 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
  const stylesheet=document.createElement('style');stylesheet.textContent=css;document.head.appendChild(stylesheet);
  const main=document.querySelector('main.main'),side=document.querySelector('.sidebar');
  const nav=document.createElement('nav');nav.className='v-nav';nav.setAttribute('aria-label','실적 조회 메뉴');
- nav.innerHTML='<button type="button" data-vpage="dashboard" class="active">▦ &nbsp; 실적관리</button><div class="v-parent">▤ &nbsp; 실적현황</div><button type="button" data-vpage="yearboard" class="v-child">지사별 / 본부별 실적현황</button><button type="button" data-vpage="personal" class="v-child">개인별 실적현황</button><button type="button" data-vpage="org">♧ &nbsp; 조직관리</button>';
+ nav.innerHTML='<button type="button" data-vpage="dashboard" class="active">▦ &nbsp; 실적관리</button><div class="v-parent">▤ &nbsp; 실적현황</div><button type="button" data-vpage="yearboard" class="v-child">지사별 / 본부별 실적현황</button><button type="button" data-vpage="personal" class="v-child">개인별 실적현황</button><div class="v-parent">♧ &nbsp; 조직관리</div><button type="button" data-vpage="org" class="v-child">조직도</button><button type="button" data-vpage="orgstaff" class="v-child">조직원 정보</button>';
  const oldNav=side.querySelector('.nav-item');if(oldNav)oldNav.replaceWith(nav);else side.insertBefore(nav,side.querySelector('.aside-note'));
  const originals=[...main.children].filter(n=>n.tagName!=='HEADER'&&n.id!=='status');
  originals.forEach(n=>n.classList.add('v-original'));
@@ -81,12 +81,19 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
   <p class="v-note" id="v-org-note">조직도를 불러오는 중…</p>
   <div class="v-org-scroll"><div id="v-org-canvas" class="v-org-canvas"></div></div>
   <div class="v-headcount"><h3>조직 인원 현황</h3><div id="v-headcount-grid" class="v-headcount-grid"></div><p class="v-note">이름과 집계 직책이 등록된 카드만 포함합니다.</p></div>
+ </section>
+ <section id="v-orgstaff" class="v-extra" hidden>
+  <div class="v-extra-head"><div><h2>PACIFIC 부산권역 임직원 명단</h2><p>조직도에 등록된 전체 조직원 목록입니다. 개인정보 보호를 위해 연락처는 공개하지 않습니다.</p></div>
+  <strong id="v-staff-count" style="background:#e9f1ff;color:#215ddd;border-radius:7px;padding:6px 10px;font-size:13px">총 0명</strong></div>
+  <div class="v-filters" style="margin-bottom:12px"><input id="v-staff-search" placeholder="성명·직급·소속 검색" aria-label="조직원 검색" type="search" style="padding:9px 12px;border:1px solid #d4deec;border-radius:9px"></div>
+  <div class="v-table-scroll"><table class="v-table v-staff-table" style="min-width:1000px"><thead><tr><th>No.</th><th>성명</th><th>직급</th><th>소속 지사</th><th>소속 본부/부서</th><th>연락처</th><th>입사년월</th><th>재직상태</th></tr></thead><tbody id="v-staff-body"></tbody></table></div>
+  <p class="v-note">연락처와 인사상태는 공개뷰어에 제공되지 않습니다. 조직 정보는 관리자가 등록한 내용을 기준으로 표시됩니다.</p>
  </section>`;
  main.appendChild(wrapper);
- const pages={yearboard:el('v-yearboard'),personal:el('v-personal'),org:el('v-org')};
- const labels={dashboard:'KPI · 실적관리',yearboard:'지사별 / 본부별 실적현황',personal:'개인별 실적현황',org:'조직관리'};
+ const pages={yearboard:el('v-yearboard'),personal:el('v-personal'),org:el('v-org'),orgstaff:el('v-orgstaff')};
+ const labels={dashboard:'KPI · 실적관리',yearboard:'지사별 / 본부별 실적현황',personal:'개인별 실적현황',org:'조직도',orgstaff:'조직원 정보'};
  function show(page){
-  if(!['dashboard','yearboard','personal','org'].includes(page))return;
+  if(!['dashboard','yearboard','personal','org','orgstaff'].includes(page))return;
   active=page;
   originals.forEach(n=>n.hidden=page!=='dashboard');
   Object.entries(pages).forEach(([key,element])=>element.hidden=page!==key);
@@ -96,6 +103,7 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
   if(page==='yearboard')renderYear();
   if(page==='personal')renderPersonal();
   if(page==='org')renderOrg();
+  if(page==='orgstaff')renderStaff();
  }
  nav.addEventListener('click',event=>{const b=event.target.closest('button[data-vpage]');if(b)show(b.dataset.vpage)});
  const selectOptions=(node,opts,value)=>{node.innerHTML=opts.map(([v,t])=>'<option value="'+safe(v)+'">'+safe(t)+'</option>').join('');node.value=String(value)};
@@ -221,8 +229,28 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
  async function refreshOrganization(){
   try{const rows=await loadOrganization();orgNodes=Array.isArray(rows)?rows:[];orgMessage='부산권역 전체 조직도 · 읽기 전용';}
   catch(error){orgNodes=[];orgMessage='조직도를 표시할 수 없습니다. 관리자에게 공개 조회 설정 확인을 요청하세요. ('+(error.message||'오류')+')';}
-  orgLoaded=true;if(active==='org')renderOrg();
+  orgLoaded=true;if(active==='org')renderOrg();if(active==='orgstaff')renderStaff();
  }
+ function renderStaff(){
+  if(!orgLoaded){el('v-staff-body').innerHTML='<tr><td colspan="8">조직원 정보를 불러오는 중…</td></tr>';return;}
+  const placeholder=['구성원','새 구성원','이름 미입력','최상위 조직','새 지사 / 부서','새 본부 / 팀'];
+  const tree=n=>{
+   let b='',d='',p=n,depth=0;
+   while(p&&depth++<12){
+    if(p.type==='group')b=p.label;
+    if(p.type==='division')d=p.label;
+    p=p.parent?orgNodes.find(x=>x.id===p.parent):null;
+   }return {b,d};
+  };
+  const data=orgNodes.filter(n=>n&&['person','root','group','division'].includes(n.type)&&String(n.label||'').trim()&&!placeholder.includes(n.label)&&(n.type==='person'||effectiveRole(n))).map(n=>{
+   const loc=tree(n);return {name:n.label,role:roles[effectiveRole(n)]||n.subtitle||'미지정',branch:loc.b,division:loc.d,hire:join(n)};
+  }).sort((a,b)=>a.branch.localeCompare(b.branch,'ko')||a.division.localeCompare(b.division,'ko')||a.name.localeCompare(b.name,'ko'));
+  el('v-staff-count').textContent='총 '+data.length+'명';
+  const query=el('v-staff-search').value.trim().toLocaleLowerCase('ko');
+  const filtered=data.filter(r=>!query||[r.name,r.role,r.branch,r.division].join(' ').toLocaleLowerCase('ko').includes(query));
+  el('v-staff-body').innerHTML=filtered.map((r,i)=>'<tr><td>'+(i+1)+'</td><td style="font-weight:800">'+safe(r.name)+'</td><td><span style="color:#235fe0;background:#edf4ff;border:1px solid #cfddf5;border-radius:4px;padding:3px 8px;font-weight:800">'+safe(r.role)+'</span></td><td>'+safe(r.branch||'—')+'</td><td>'+safe(r.division||'—')+'</td><td>비공개</td><td>'+safe(r.hire||'—')+'</td><td>—</td></tr>').join('')||'<tr><td colspan="8">조직원 정보가 없습니다.</td></tr>';
+ }
+ el('v-staff-search').addEventListener('input',renderStaff);
  function refresh(){if(active==='yearboard')renderYear();if(active==='personal')renderPersonal();}
  return {refresh,refreshOrganization};
 }
