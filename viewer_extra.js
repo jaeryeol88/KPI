@@ -1,3 +1,4 @@
+import { drawOrgConnectorLines } from './org_connector_lines.js';
 /* Read-only supplemental KPI views, shared by all public viewers. */
 export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTarget,countSeats,normalizeDivision,loadOrganization}) {
  const el=id=>document.getElementById(id);
@@ -233,15 +234,9 @@ el('v-months').addEventListener('change',e=>{
   return '<div class="v-org-card '+safe(n.type||'')+'" style="background:'+colors[0]+';color:'+colors[1]+';border-color:'+colors[2]+'"><strong>'+safe(n.type==='group'?branchLeaderName(n):(n.label||'이름 미입력'))+'</strong>'+(role?'<small class="v-org-role">'+safe(role)+'</small>':'')+sub+(date?'<small class="v-org-date">입사 '+safe(date)+'</small>':'')+'</div>';
  }
  function alignOrgConnectors(){
-  el('v-org-canvas').querySelectorAll('.v-org-groups').forEach(row=>{
-   const groups=[...row.children].filter(child=>child.classList.contains('v-org-group'));
-   row.classList.toggle('v-org-single',groups.length<2);
-   if(groups.length<2)return;
-   const bounds=row.getBoundingClientRect(),first=groups[0].getBoundingClientRect(),last=groups[groups.length-1].getBoundingClientRect();
-   if(!bounds.width)return;
-   row.style.setProperty('--org-line-left',(first.left+first.width/2-bounds.left)+'px');
-   row.style.setProperty('--org-line-right',(bounds.right-last.left-last.width/2)+'px');
-  });
+  const canvas=el('v-org-canvas');
+  if(!canvas)return;
+  requestAnimationFrame(()=>drawOrgConnectorLines(canvas,'viewer'));
  }
  window.addEventListener('resize',()=>{if(active==='org')alignOrgConnectors()});
  function renderOrg(){
