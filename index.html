@@ -262,7 +262,7 @@
   <form id="orgEditForm">
    <label>제목 / 이름<input id="orgLabel" maxlength="60" required placeholder="조직명 또는 이름"></label>
    <label>부제목 / 직급<input id="orgSubtitle" maxlength="80" placeholder="직급, 담당 업무 등 (선택)"></label>
-   <label id="orgJoinDateField" hidden>입사 연월<input id="orgJoinDate" type="text" inputmode="numeric" maxlength="5" placeholder="26.09" pattern="[0-9]{2}\\.(0[1-9]|1[0-2])" title="연도.월 형식으로 입력하세요 (예: 26.09)" aria-label="지사 부서 입사 연월"></label>
+   <label id="orgJoinDateField" hidden>입사 연월<input id="orgJoinDate" type="text" inputmode="numeric" maxlength="5" pattern="[0-9]{2}[.](0[1-9]|1[0-2])" title="연도.월 형식으로 입력하세요 (예: 26.09)" aria-label="지사 부서 입사 연월"></label>
    <label>카드 색상<select id="orgColor"><option value="default">기본</option><option value="blue">파랑</option><option value="navy">남색</option><option value="mint">민트</option><option value="white">흰색</option><option value="sky">하늘색</option><option value="teal">청록색</option><option value="green">초록색</option><option value="purple">보라색</option><option value="lavender">연보라색</option><option value="pink">분홍색</option><option value="coral">코랄색</option><option value="orange">주황색</option><option value="yellow">노란색</option><option value="gray">회색</option></select></label>
    <div class="org-edit-buttons"><button type="submit" class="btn primary">변경 적용</button><button type="button" class="btn" id="orgAddChild">+ 하위 카드</button><button type="button" class="btn" id="orgAddSibling">+ 같은 단계</button><button type="button" class="btn" id="orgMovePrev">← 앞 순서</button><button type="button" class="btn" id="orgMoveNext">뒤 순서 →</button><button type="button" class="btn org-danger" id="orgDelete">삭제</button></div>
   </form>
@@ -935,8 +935,8 @@ function orgChildren(id){return orgNodes.filter(n=>n.parent===id).sort((a,b)=>a.
 function orgNewId(){return typeof crypto!=='undefined'&&crypto.randomUUID?crypto.randomUUID():'org-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2);}
 function orgJoinYearMonth(value){
  const v=String(value||'').trim();
- if(/^\\d{2}\\.(0[1-9]|1[0-2])$/.test(v))return v;
- const legacy=v.match(/^(\\d{4})-(0[1-9]|1[0-2])(?:-\\d{2})?$/);
+ if(/^[0-9]{2}[.](0[1-9]|1[0-2])$/.test(v))return v;
+ const legacy=v.match(/^([0-9]{4})-(0[1-9]|1[0-2])(?:-[0-9]{2})?$/);
  return legacy?legacy[1].slice(-2)+'.'+legacy[2]:'';
 }
 function orgNodeMarkup(node){
