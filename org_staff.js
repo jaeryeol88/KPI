@@ -46,7 +46,7 @@ style.textContent=`
 document.head.appendChild(style);
 host.innerHTML=`
 <div class="staff-shell">
- <div class="staff-header"><h2>PACIFIC 호남권역 임직원 명단</h2><strong id="staffTotal" class="staff-count">총 0명</strong></div>
+ <div class="staff-header"><h2>PACIFIC 부산권역 임직원 명단</h2><strong id="staffTotal" class="staff-count">총 0명</strong></div>
  <div class="staff-tools"><input id="staffSearch" type="search" placeholder="성명·직급·소속 검색" aria-label="조직원 검색">
   <select id="staffBranchFilter" aria-label="지사별 검색"><option value="all">전체 지사</option></select>
   <select id="staffStatusFilter" aria-label="재직상태"><option value="all">전체 재직상태</option><option value="재직">재직</option><option value="휴직">휴직</option><option value="퇴사">퇴사</option></select>
@@ -71,7 +71,6 @@ host.innerHTML=`
   </div></form>
  </div>
 </div>`;
-host.querySelector('.staff-header h2').textContent='PACIFIC 부산권역 임직원 명단';
 const $=id=>document.getElementById(id);
 const message=(v,error=false)=>{$('staffMessage').textContent=v;$('staffMessage').style.color=error?'#bd3746':'#58738c'};
 function branchOf(node){
@@ -167,7 +166,7 @@ async function saveNodeAndContact(node,record){
  if(error)throw error;
  orgApi.dirty=false;
  const {error:contactError}=await orgApi.db.from('kpi_org_staff_contacts').upsert({node_id:String(node.id),phone:record.phone,employment_status:record.employment_status,updated_at:new Date().toISOString()},{onConflict:'node_id'});
- if(contactError)throw contactError;
+ if(contactError)throw new Error('조직도는 저장되었지만 연락처/재직상태 저장에 실패했습니다: '+contactError.message);
  contacts.set(String(node.id),{node_id:String(node.id),...record});
 }
 $('staffForm').addEventListener('submit',async e=>{
@@ -191,8 +190,8 @@ $('staffForm').addEventListener('submit',async e=>{
   orgApi.draw();refreshTable();message('조직원 정보가 온라인에 저장되었습니다.');
  }catch(err){
   // Avoid deleting an organization node that was saved but whose contact update failed.
-  if(!String(err.message||'').includes('연락처')){orgApi.nodes=JSON.parse(oldNodes);}
-  refreshTable();message('저장에 실패했습니다: '+(err.message||String(err)),true);
+  if(!String(err.message||'').includes('조직도는 저장되었지만'))orgApi.nodes=JSON.parse(oldNodes);
+  orgApi.draw();refreshTable();message('저장에 실패했습니다: '+(err.message||String(err)),true);
  }finally{staffSaving=false;$('staffSubmit').disabled=false;}
 });
 $('staffTableBody').addEventListener('click',async e=>{
@@ -219,6 +218,7 @@ $('staffCancel').onclick=()=>{$('orgStaffDialog').hidden=true;editingId=null};
 $('staffBranch').onchange=()=>divisionOptions($('staffBranch').value,null);
 for(const id of ['staffSearch','staffBranchFilter','staffStatusFilter'])$(id).addEventListener(id==='staffSearch'?'input':'change',refreshTable);
 options();
+window.resetOrgStaff=function(){contacts.clear();loaded=false;available=false;loading=null;editingId=null;$('orgStaffDialog').hidden=true;};
 window.renderOrgStaff=function(){
  if(!orgApi.loaded){orgApi.load().then(()=>{if(!loaded)loadContacts();refreshTable()});}
  else if(!loaded)loadContacts();
