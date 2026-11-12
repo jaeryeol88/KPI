@@ -352,6 +352,7 @@ const lock = flag => { loading=flag; ['add','backup','restore','logout'].forEach
 async function enter(user) {
   if (!db) return;
   orgLoaded=false;orgDbReady=false;orgNodes=[];orgSelectedId=null;el('orgEditor').hidden=true;
+  if(window.resetOrgStaff)window.resetOrgStaff();
   const {data,error}=await db.rpc('kpi_my_access');
   if(error){
     // 이전 단일 최고관리자 정책과의 호환: 새 권한 SQL 적용 전에도 기존 소유자 로그인 유지
