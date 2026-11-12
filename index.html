@@ -154,6 +154,7 @@
 .org-node-person{background:#fff;min-height:64px}
 .org-node-person strong{font-size:14px}
 .org-node-person small{color:inherit;opacity:.86}
+.org-node .org-join-date{font-size:12px;font-weight:650;opacity:.92}
 .org-node.color-mint{background:#e9fbf4;color:#084d40;border-color:#73dfb5}
 .org-node.color-white{background:#fff;color:#122a47;border-color:#d5dfeb}
 .org-node.color-navy{background:#111d36;color:white;border-color:#263859}
@@ -261,6 +262,7 @@
   <form id="orgEditForm">
    <label>제목 / 이름<input id="orgLabel" maxlength="60" required placeholder="조직명 또는 이름"></label>
    <label>부제목 / 직급<input id="orgSubtitle" maxlength="80" placeholder="직급, 담당 업무 등 (선택)"></label>
+   <label id="orgJoinDateField" hidden>입사일<input id="orgJoinDate" type="date" aria-label="지사 부서 입사일"></label>
    <label>카드 색상<select id="orgColor"><option value="default">기본</option><option value="blue">파랑</option><option value="navy">남색</option><option value="mint">민트</option><option value="white">흰색</option><option value="sky">하늘색</option><option value="teal">청록색</option><option value="green">초록색</option><option value="purple">보라색</option><option value="lavender">연보라색</option><option value="pink">분홍색</option><option value="coral">코랄색</option><option value="orange">주황색</option><option value="yellow">노란색</option><option value="gray">회색</option></select></label>
    <div class="org-edit-buttons"><button type="submit" class="btn primary">변경 적용</button><button type="button" class="btn" id="orgAddChild">+ 하위 카드</button><button type="button" class="btn" id="orgAddSibling">+ 같은 단계</button><button type="button" class="btn" id="orgMovePrev">← 앞 순서</button><button type="button" class="btn" id="orgMoveNext">뒤 순서 →</button><button type="button" class="btn org-danger" id="orgDelete">삭제</button></div>
   </form>
@@ -933,8 +935,9 @@ function orgChildren(id){return orgNodes.filter(n=>n.parent===id).sort((a,b)=>a.
 function orgNewId(){return typeof crypto!=='undefined'&&crypto.randomUUID?crypto.randomUUID():'org-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2);}
 function orgNodeMarkup(node){
  const sub=node.subtitle?'<small>'+esc(node.subtitle)+'</small>':'';
+ const join=node.type==='group'&&/^\d{4}-\d{2}-\d{2}$/.test(String(node.joinDate||''))?'<small class="org-join-date">입사일 '+esc(node.joinDate)+'</small>':'';
  const col=node.color==='default'?'':' color-'+esc(node.color);
- return '<button type="button" class="org-node org-node-'+esc(node.type)+col+'" data-org-node="'+esc(node.id)+'" title="카드 선택 후 편집"><strong>'+esc(node.label||'이름 미입력')+'</strong>'+sub+'</button>';
+ return '<button type="button" class="org-node org-node-'+esc(node.type)+col+'" data-org-node="'+esc(node.id)+'" title="카드 선택 후 편집"><strong>'+esc(node.label||'이름 미입력')+'</strong>'+sub+join+'</button>';
 }
 function orgDraw(){
  const canvas=el('orgCanvas');if(!canvas)return;
@@ -969,6 +972,8 @@ function orgSelect(id){
  el('orgEditTitle').textContent=['최상위 조직','지사 / 부서','본부 / 팀','구성원'][orgNodeTypes.indexOf(node.type)]+' 편집';
  el('orgLabel').value=node.label||'';el('orgSubtitle').value=node.subtitle||'';
  el('orgColor').value=node.color||'default';
+ el('orgJoinDateField').hidden=node.type!=='group';
+ el('orgJoinDate').value=node.type==='group'&&/^\d{4}-\d{2}-\d{2}$/.test(String(node.joinDate||''))?node.joinDate:'';
  const can=orgCanEdit();
  el('orgEditForm').querySelectorAll('input,select,button').forEach(input=>input.disabled=!can);
  el('orgAddChild').hidden=node.type==='person';
@@ -1036,6 +1041,7 @@ el('orgEditForm').addEventListener('submit',event=>{
  const node=orgNodes.find(n=>n.id===orgSelectedId);if(!node)return;
  const label=el('orgLabel').value.trim();if(!label)return;
  node.label=label;node.subtitle=el('orgSubtitle').value.trim();node.color=el('orgColor').value;
+ if(node.type==='group')node.joinDate=el('orgJoinDate').value||'';
  orgMarkDirty();orgSelect(node.id);
 });
 el('orgAddChild').addEventListener('click',()=>{
