@@ -51,11 +51,18 @@
   const date=orgApi.joinYearMonth(node.joinDate);
   const more=[role,subtitle.replace(/\s+/g,'')===role?'':subtitle,date?'입사 '+date:''].filter(Boolean);
   const main=clamp(node.label||'이름 미입력',opts.maxLabel||36);
-  const titleH=more.length?Math.max(.23,h*.52):h-.06;
-  text(slide,main,x+.08,y+.04,w-.16,titleH,{size:opts.fontSize||13,bold:true,color:c[1]});
-  if(more.length){
-   text(slide,clamp(more.join(' · '),opts.maxSub||64),x+.06,y+titleH,w-.12,Math.max(.19,h-titleH-.05),
-    {size:opts.subSize||9,color:c[1]});
+  if(role&&node.type==='person'){
+   const roleH=Math.min(.20,h*.35),nameH=Math.max(.19,h*.41);
+   text(slide,role,x+.06,y+.015,w-.12,roleH,{size:opts.subSize||9,bold:false,color:c[1]});
+   text(slide,main,x+.06,y+roleH,w-.12,nameH,{size:Math.max(12,(opts.fontSize||13)+2),bold:true,color:c[1]});
+   const other=more.filter(t=>t!==role);
+   if(other.length&&h>roleH+nameH+.09)text(slide,clamp(other.join(' · '),opts.maxSub||64),
+     x+.06,y+roleH+nameH,w-.12,Math.max(.10,h-roleH-nameH-.025),{size:opts.subSize||9,color:c[1]});
+  }else{
+   const titleH=more.length?Math.max(.23,h*.52):h-.06;
+   text(slide,main,x+.08,y+.04,w-.16,titleH,{size:opts.fontSize||13,bold:true,color:c[1]});
+   if(more.length)text(slide,clamp(more.join(' · '),opts.maxSub||64),x+.06,y+titleH,w-.12,Math.max(.19,h-titleH-.05),
+     {size:opts.subSize||9,color:c[1]});
   }
  }
  function base(slide,pptx,title,sub,page){
