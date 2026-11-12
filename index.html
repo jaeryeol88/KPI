@@ -296,8 +296,8 @@
  <div id="orgEditor" class="org-editor" hidden>
   <div class="org-edit-head"><h3 id="orgEditTitle">조직 카드 편집</h3><button type="button" id="orgEditClose" class="btn" aria-label="편집 닫기">닫기</button></div>
   <form id="orgEditForm">
-   <label>제목 / 이름<input id="orgLabel" maxlength="60" required placeholder="조직명 또는 이름"></label>
    <label id="orgBranchNameField" hidden>지사 / 부서명 (상단 제목)<input id="orgBranchName" maxlength="60" placeholder="예: 부산 1지사"></label>
+   <label><span id="orgLabelCaption">제목 / 이름</span><input id="orgLabel" maxlength="60" required placeholder="조직명 또는 이름"></label>
    <label>부제목 / 직급<input id="orgSubtitle" maxlength="80" placeholder="직급, 담당 업무 등 (선택)"></label>
    <label>인원 집계 직책<select id="orgRole"><option value="">집계 제외 (조직명 / 빈 카드)</option><option value="regional">권역대표</option><option value="branch">지사장</option><option value="division">본부장</option><option value="manager">매니저</option></select></label>
    <label id="orgJoinDateField" hidden>입사 연월<input id="orgJoinDate" type="text" inputmode="numeric" maxlength="5" pattern="[0-9]{2}[.](0[1-9]|1[0-2])" title="연도.월 형식으로 입력하세요 (예: 26.09)" aria-label="입사 연월"></label>
@@ -993,7 +993,7 @@ function orgEffectiveRole(node){
 }
 function orgCountable(node){
  const name=String(node.label||'').trim();
- if(!name||['구성원','새 구성원','이름 미입력','최상위 조직','새 지사 / 부서','새 본부 / 팀'].includes(name))return false;
+ if(!name||['구성원','새 구성원','이름 미입력','최상위 조직','새 지사 / 부서','새 본부 / 팀','지사장 / 담당자 입력'].includes(name))return false;
  // Organizational headings are not counted unless explicitly assigned a role.
  if(node.type!=='person'&&!Object.prototype.hasOwnProperty.call(node,'headcountRole'))return false;
  return true;
@@ -1072,6 +1072,7 @@ function orgSelect(id){
  const node=orgNodes.find(n=>n.id===id);if(!node)return;
  orgSelectedId=id;el('orgEditor').hidden=false;
  el('orgEditTitle').textContent=['최상위 조직','지사 / 부서','본부 / 팀','구성원'][orgNodeTypes.indexOf(node.type)]+' 편집';
+ el('orgLabelCaption').textContent=node.type==='group'?'지사장 / 담당자 성명':'제목 / 이름';
  el('orgLabel').value=node.label||'';el('orgSubtitle').value=node.subtitle||'';
  el('orgColor').value=node.color||'default';
  const editingBranch=node.type==='group';
@@ -1095,7 +1096,8 @@ function orgMarkDirty(){orgDirty=true;orgDraw();orgStatus('변경사항이 아�
 function orgAdd(parent,type){
  if(!orgCanEdit())return;
  if(parent!==null&&!orgNodes.some(n=>n.id===parent))return;
- const next={id:orgNewId(),parent,type,label:{root:'최상위 조직',group:'새 지사 / 부서',division:'새 본부 / 팀',person:'새 구성원'}[type],subtitle:'',color:'default',order:orgNodes.length+1};
+ const next={id:orgNewId(),parent,type,label:{root:'최상위 조직',group:'지사장 / 담당자 입력',division:'새 본부 / 팀',person:'새 구성원'}[type],subtitle:'',color:'default',order:orgNodes.length+1};
+ if(type==='group')next.branchName='새 지사 / 부서';
  orgNodes.push(next);orgMarkDirty();orgSelect(next.id);
  el('orgLabel').focus();el('orgLabel').select();
 }
