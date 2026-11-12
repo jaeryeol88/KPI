@@ -9,7 +9,7 @@ const safe=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'
 const roles={regional:'권역대표',branch:'지사장',division:'본부장',manager:'매니저'};
 const branches=['부산 1지사','부산 2지사','부산 3지사','부산 4지사'];
 const placeholders=new Set(['구성원','새 구성원','이름 미입력','최상위 조직','새 지사 / 부서','새 본부 / 팀']);
-let contacts=new Map(),loaded=false,available=false,loading=null,editingId=null,staffSaving=false;
+let contacts=new Map(),loaded=false,available=false,loading=null,editingId=null,staffSaving=false,showExcluded=false;
 const style=document.createElement('style');
 style.textContent=`
  #orgStaffPage[hidden],#orgStaffDialog[hidden]{display:none!important}
@@ -32,6 +32,12 @@ style.textContent=`
  .staff-status.left{color:#8691a0;background:#eff2f5;border-color:#dce2e9}
  .staff-actions{white-space:nowrap}.staff-actions button{border:0;background:transparent;color:#6d87ab;padding:5px 6px;cursor:pointer}
  .staff-actions button:hover{color:#195bd4}.staff-actions button.staff-delete:hover{color:#bb3542}
+ .staff-actions button.staff-force-remove{color:#ba3549;font-weight:750}
+ .staff-actions button.staff-force-remove:hover{color:#8f1d31}
+ .staff-table tr.staff-excluded td{background:#fff7f7;color:#8a6c76}
+ .staff-table tr.staff-excluded .staff-name{text-decoration:line-through;color:#98747c}
+ .staff-tools .staff-excluded-toggle{border:1px solid #cfd9e8;color:#385372;background:#f5f8fc;border-radius:9px;padding:9px 11px;cursor:pointer;font-size:12px}
+ .staff-tools .staff-excluded-toggle.active{background:#e9f1ff;border-color:#8baee8;color:#2054a4;font-weight:800}
  .staff-tip{margin:12px 1px 0;color:#71819a;font-size:12px;line-height:1.7}
  .staff-message{font-size:12px;color:#57718c;margin:6px 0 10px}
  #orgStaffDialog{margin-top:16px;border:1px solid #cddcf0;border-radius:13px;padding:17px;background:#fafcff}
@@ -50,13 +56,13 @@ host.innerHTML=`
  <div class="staff-tools"><input id="staffSearch" type="search" placeholder="성명·직급·소속 검색" aria-label="조직원 검색">
   <select id="staffBranchFilter" aria-label="지사별 검색"><option value="all">전체 지사</option></select>
   <select id="staffStatusFilter" aria-label="재직상태"><option value="all">전체 재직상태</option><option value="재직">재직</option><option value="휴직">휴직</option><option value="퇴사">퇴사</option></select>
-  <button class="btn primary" type="button" id="staffAdd">+ 조직원 추가</button>
+  <button class="btn primary" type="button" id="staffAdd">+ 조직원 추가</button><button type="button" id="staffShowExcluded" class="staff-excluded-toggle">제외된 조직원 보기 (0)</button>
  </div>
  <p id="staffMessage" class="staff-message" role="status"></p>
  <div class="staff-scroll"><table class="staff-table">
   <thead><tr><th>No.</th><th>성명</th><th>직급</th><th>소속 지사</th><th>소속 본부/부서</th><th>연락처</th><th>입사년월</th><th>재직상태</th><th>관리</th></tr></thead>
   <tbody id="staffTableBody"></tbody></table></div>
- <p class="staff-tip">조직도에서 등록한 구성원도 자동으로 목록에 표시됩니다. 성명·직급·소속·입사연월 변경은 조직도에도 반영됩니다. 연락처는 공개뷰어에 노출하지 않습니다.</p>
+ <p class="staff-tip">조직도에서 등록한 구성원도 자동으로 목록에 표시됩니다. <strong>명단 강제 삭제</strong>는 조직도 카드를 유지한 채 조직원 명단에서만 제외합니다. 제외된 조직원 보기에서 복원할 수 있습니다. 연락처는 공개뷰어에 노출하지 않습니다.</p>
  <div id="orgStaffDialog" hidden>
   <h3 id="staffFormTitle">조직원 등록</h3>
   <form id="staffForm"><div class="staff-form-grid">
@@ -84,34 +90,40 @@ function branchOf(node){
  if(node.type==='division')division=node.label;
  return {branch,division};
 }
-function staffEntries(){
+function staffEntries(includeExcluded=false){
  return orgApi.nodes.filter(n=>{
   if(!n||!['person','root','group','division'].includes(n.type))return false;
+  if(n.staffHidden===true&&!includeExcluded)return false;
   const name=String(n.label||'').trim();
   if(!name||placeholders.has(name))return false;
   return n.type==='person'||Boolean(orgApi.effectiveRole(n));
  }).map(n=>{
   const hierarchy=branchOf(n),record=contacts.get(String(n.id))||{};
   const role=orgApi.effectiveRole(n);
-  return {node:n,name:String(n.label||''),role,branch:hierarchy.branch,division:hierarchy.division,phone:record.phone||'',
+  return {node:n,name:String(n.label||''),role,branch:hierarchy.branch,division:hierarchy.division,excluded:n.staffHidden===true,phone:record.phone||'',
    status:record.employment_status||'재직',hire:orgApi.joinYearMonth(n.joinDate)};
  }).sort((a,b)=>branches.indexOf(a.branch)-branches.indexOf(b.branch)||a.division.localeCompare(b.division,'ko')||a.name.localeCompare(b.name,'ko'));
 }
 function refreshTable(){
  const entries=staffEntries();
+ const excluded=staffEntries(true).filter(x=>x.excluded);
+ const list=showExcluded?excluded:entries;
  $('staffTotal').textContent='총 '+entries.length+'명';
+ $('staffShowExcluded').textContent=showExcluded?'전체 조직원 보기':'제외된 조직원 보기 ('+excluded.length+')';
+ $('staffShowExcluded').classList.toggle('active',showExcluded);
  const query=$('staffSearch').value.trim().toLocaleLowerCase('ko');
  const filter=$('staffBranchFilter').value,status=$('staffStatusFilter').value;
- const visible=entries.filter(r=>(filter==='all'||r.branch===filter)&&(status==='all'||status===r.status)&&(!query||[r.name,roles[r.role]||r.node.subtitle,r.branch,r.division].join(' ').toLocaleLowerCase('ko').includes(query)));
+ const visible=list.filter(r=>(filter==='all'||r.branch===filter)&&(status==='all'||status===r.status)&&(!query||[r.name,roles[r.role]||r.node.subtitle,r.branch,r.division].join(' ').toLocaleLowerCase('ko').includes(query)));
  const can=orgApi.canEdit();
  $('staffAdd').hidden=!can;
  $('staffTableBody').innerHTML=visible.map((r,i)=>{
   const id=safe(r.node.id),st=r.status==='휴직'?'leave':r.status==='퇴사'?'left':'';
-  return '<tr><td class="staff-num">'+(i+1)+'</td><td class="staff-name">'+safe(r.name)+'</td><td><span class="staff-pill">'+safe(roles[r.role]||r.node.subtitle||'미지정')+'</span></td><td>'+safe(r.branch||'—')+'</td><td>'+safe(r.division||'—')+'</td><td>'+safe(can?r.phone||'—':'비공개')+'</td><td>'+safe(r.hire||'—')+'</td><td><span class="staff-status '+st+'">'+safe(r.status)+'</span></td><td class="staff-actions">'+(can?'<button type="button" data-staff-edit="'+id+'" aria-label="수정">✎</button><button class="staff-delete" type="button" data-staff-delete="'+id+'" aria-label="삭제">♧</button>':'—')+'</td></tr>';
- }).join('')||'<tr><td colspan="9">등록된 조직원이 없습니다. 조직도에 구성원을 등록하거나 조직원을 추가하세요.</td></tr>';
+  return '<tr'+(r.excluded?' class="staff-excluded"':'')+'><td class="staff-num">'+(i+1)+'</td><td class="staff-name">'+safe(r.name)+'</td><td><span class="staff-pill">'+safe(roles[r.role]||r.node.subtitle||'미지정')+'</span></td><td>'+safe(r.branch||'—')+'</td><td>'+safe(r.division||'—')+'</td><td>'+safe(can?r.phone||'—':'비공개')+'</td><td>'+safe(r.hire||'—')+'</td><td><span class="staff-status '+st+'">'+safe(r.status)+'</span></td><td class="staff-actions">'+(can?(r.excluded?'<button type="button" data-staff-restore="'+id+'" aria-label="명단 복원">↩ 명단 복원</button>':'<button type="button" data-staff-edit="'+id+'" aria-label="수정">✎</button><button class="staff-force-remove" type="button" data-staff-exclude="'+id+'" aria-label="명단 강제 삭제">명단 강제 삭제</button><button class="staff-delete" type="button" data-staff-delete="'+id+'" aria-label="조직도 포함 삭제">♧</button>'):'—')+'</td></tr>';
+ }).join('')||'<tr><td colspan="9">'+(showExcluded?'명단에서 제외된 조직원이 없습니다.':'등록된 조직원이 없습니다. 조직도에 구성원을 등록하거나 조직원을 추가하세요.')+'</td></tr>';
  if(!loaded)message('조직원 연락처 데이터를 불러오는 중…');
  else if(!available&&can)message('연락처 저장 DB 설정이 필요합니다. Supabase SQL Editor에서 org_staff_setup.sql을 실행하세요.',true);
- else message('조직도와 연동된 조직원 정보입니다. '+(can?'추가·수정·삭제 후 온라인에 바로 저장합니다.':'조회 전용'));
+ else message('조직도와 연동된 조직원 정보입니다. '+(can?'명단 강제 삭제는 조직도 카드를 유지합니다.':'조회 전용'));
+ $('staffShowExcluded').hidden=!can;
 }
 function options(){
  const select=$('staffBranchFilter'),current=select.value;
@@ -214,11 +226,12 @@ $('staffTableBody').addEventListener('click',async e=>{
  }catch(err){orgApi.nodes=previous;orgApi.draw();message('삭제 실패: '+(err.message||String(err)),true);}
 });
 $('staffAdd').onclick=()=>openForm();
+$('staffShowExcluded').onclick=()=>{showExcluded=!showExcluded;refreshTable();};
 $('staffCancel').onclick=()=>{$('orgStaffDialog').hidden=true;editingId=null};
 $('staffBranch').onchange=()=>divisionOptions($('staffBranch').value,null);
 for(const id of ['staffSearch','staffBranchFilter','staffStatusFilter'])$(id).addEventListener(id==='staffSearch'?'input':'change',refreshTable);
 options();
-window.resetOrgStaff=function(){contacts.clear();loaded=false;available=false;loading=null;editingId=null;$('orgStaffDialog').hidden=true;};
+window.resetOrgStaff=function(){contacts.clear();loaded=false;available=false;loading=null;editingId=null;showExcluded=false;$('orgStaffDialog').hidden=true;};
 window.renderOrgStaff=function(){
  if(!orgApi.loaded){orgApi.load().then(()=>{if(!loaded)loadContacts();refreshTable()});}
  else if(!loaded)loadContacts();
