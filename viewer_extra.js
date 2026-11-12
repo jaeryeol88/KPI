@@ -253,7 +253,7 @@ el('v-months').addEventListener('change',e=>{
   const counts={regional:0,branch:0,division:0,manager:0};
   for(const n of orgNodes){
    const name=String(n.label||'').trim();
-   if(!name||['구성원','새 구성원','이름 미입력','최상위 조직','새 지사 / 부서','새 본부 / 팀'].includes(name))continue;
+   if(!name||['구성원','새 구성원','이름 미입력','최상위 조직','새 지사 / 부서','새 본부 / 팀','지사장 / 담당자 입력'].includes(name))continue;
    if(n.type!=='person'&&!Object.prototype.hasOwnProperty.call(n,'headcountRole'))continue;
    const r=effectiveRole(n);if(Object.prototype.hasOwnProperty.call(counts,r))counts[r]++;
   }
@@ -267,7 +267,7 @@ el('v-months').addEventListener('change',e=>{
  }
  function renderStaff(){
   if(!orgLoaded){el('v-staff-body').innerHTML='<tr><td colspan="8">조직원 정보를 불러오는 중…</td></tr>';return;}
-  const placeholder=['구성원','새 구성원','이름 미입력','최상위 조직','새 지사 / 부서','새 본부 / 팀'];
+  const placeholder=['구성원','새 구성원','이름 미입력','최상위 조직','새 지사 / 부서','새 본부 / 팀','지사장 / 담당자 입력'];
   const tree=n=>{
    let b='',d='',p=n,depth=0;
    while(p&&depth++<12){
