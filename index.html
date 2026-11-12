@@ -2102,7 +2102,8 @@ window.PLK_ORG={
  canEdit:()=>orgCanEdit(),effectiveRole:node=>orgEffectiveRole(node),
  joinYearMonth:value=>orgJoinYearMonth(value),children:id=>orgChildren(id),
  newId:()=>orgNewId(),load:()=>orgLoad(),draw:()=>orgDraw(),
- countable:node=>orgCountable(node),status:(message,error)=>orgStatus(message,error)
+ countable:node=>orgCountable(node),branchHeading:group=>orgGroupBranchName(group),branchLeaderName:group=>orgGroupLeaderLabel(group),
+ status:(message,error)=>orgStatus(message,error)
 };
 await import('./org_ppt_export.js');
 await import('./org_staff.js');
