@@ -145,7 +145,7 @@
 .org-node{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:50px;min-width:105px;text-align:center;border:1px solid #e0e8f4;border-radius:11px;padding:12px 9px;box-shadow:0 2px 6px rgba(21,39,64,.06);font-family:inherit;cursor:pointer;background:white;color:#122a47;white-space:normal}
 .org-node:hover{outline:2px solid #77a5ec;outline-offset:2px}
 .org-node strong{font-size:13px;line-height:1.45;overflow-wrap:anywhere}
-.org-node small{font-size:11px;opacity:.8;line-height:1.4;overflow-wrap:anywhere}
+.org-node small{font-size:14px;font-weight:650;opacity:.93;line-height:1.5;overflow-wrap:anywhere}
 .org-node-root{min-width:260px;min-height:85px;color:#fff;background:linear-gradient(135deg,#1b56d5,#343b9c);border-color:#406fd3}
 .org-node-root strong{font-size:20px}
 .org-node-group{min-width:210px;min-height:74px;background:#111d36;color:white;border-color:#263859}
@@ -153,11 +153,21 @@
 .org-node-division{background:linear-gradient(135deg,#1254d4,#3734a8);color:#fff;min-width:103px}
 .org-node-person{background:#fff;min-height:64px}
 .org-node-person strong{font-size:14px}
-.org-node-person small{color:#60748e}
+.org-node-person small{color:inherit;opacity:.86}
 .org-node.color-mint{background:#e9fbf4;color:#084d40;border-color:#73dfb5}
 .org-node.color-white{background:#fff;color:#122a47;border-color:#d5dfeb}
 .org-node.color-navy{background:#111d36;color:white;border-color:#263859}
 .org-node.color-blue{background:linear-gradient(135deg,#1557d8,#343aa4);color:white;border-color:#3663cc}
+.org-node.color-sky{background:#e0f2fe;color:#075985;border-color:#7dd3fc}
+.org-node.color-teal{background:#ccfbf1;color:#115e59;border-color:#5eead4}
+.org-node.color-green{background:#dcfce7;color:#166534;border-color:#86efac}
+.org-node.color-purple{background:#6d28d9;color:#fff;border-color:#7c3aed}
+.org-node.color-lavender{background:#ede9fe;color:#5b21b6;border-color:#c4b5fd}
+.org-node.color-pink{background:#fce7f3;color:#9d174d;border-color:#f9a8d4}
+.org-node.color-coral{background:#ffe4e6;color:#9f1239;border-color:#fda4af}
+.org-node.color-orange{background:#ffedd5;color:#9a3412;border-color:#fdba74}
+.org-node.color-yellow{background:#fef9c3;color:#854d0e;border-color:#fde047}
+.org-node.color-gray{background:#e5e7eb;color:#374151;border-color:#cbd5e1}
 .org-root-branch{display:flex;flex-direction:column;align-items:center;gap:30px}
 .org-empty{color:#62748d;padding:25px;font-size:13px}
 .org-help{margin:12px 2px 0}
@@ -251,7 +261,7 @@
   <form id="orgEditForm">
    <label>제목 / 이름<input id="orgLabel" maxlength="60" required placeholder="조직명 또는 이름"></label>
    <label>부제목 / 직급<input id="orgSubtitle" maxlength="80" placeholder="직급, 담당 업무 등 (선택)"></label>
-   <label>카드 색상<select id="orgColor"><option value="default">기본</option><option value="blue">파랑</option><option value="navy">남색</option><option value="mint">민트</option><option value="white">흰색</option></select></label>
+   <label>카드 색상<select id="orgColor"><option value="default">기본</option><option value="blue">파랑</option><option value="navy">남색</option><option value="mint">민트</option><option value="white">흰색</option><option value="sky">하늘색</option><option value="teal">청록색</option><option value="green">초록색</option><option value="purple">보라색</option><option value="lavender">연보라색</option><option value="pink">분홍색</option><option value="coral">코랄색</option><option value="orange">주황색</option><option value="yellow">노란색</option><option value="gray">회색</option></select></label>
    <div class="org-edit-buttons"><button type="submit" class="btn primary">변경 적용</button><button type="button" class="btn" id="orgAddChild">+ 하위 카드</button><button type="button" class="btn" id="orgAddSibling">+ 같은 단계</button><button type="button" class="btn" id="orgMovePrev">← 앞 순서</button><button type="button" class="btn" id="orgMoveNext">뒤 순서 →</button><button type="button" class="btn org-danger" id="orgDelete">삭제</button></div>
   </form>
  </div>
