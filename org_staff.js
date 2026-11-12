@@ -293,7 +293,7 @@ function findImportMatches(rows){
    if(division==='지사'){if(entryDivision)return false;}
    else if(entryDivision!==division)return false;
    const job={regional:'권역대표',branch:'지사장',division:'본부장',manager:'매니저'}[entry.role]||'';
-   return !role||role===job;
+   return !role||!job||role===job;
   });
   if(found.length===1){
    const person=found[0],id=String(person.node.staffContactId||person.node.id);
