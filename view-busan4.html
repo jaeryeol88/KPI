@@ -81,6 +81,7 @@ a.btn{display:inline-flex;align-items:center}
 <div class="section-top"><h2>등록 내역</h2><span class="count" id="count">0건</span></div><div class="table-wrap"><table><thead><tr><th>제목/이름</th><th>담당 지사/권역 · 본부</th><th>진행일</th><th>행사 유형</th><th class="event-attendance-only" hidden>참가인원 (회원/비회원)</th><th>행사비용 (4개 항목)</th><th>행사 수입</th><th>가입매출</th><th>연회비 매출</th><th>손익비</th><th class="event-goal-only" hidden>목표구좌</th><th>달성구좌 (법인/개인)</th><th class="event-goal-only" hidden>달성률</th><th class="event-attendance-only" hidden>입회 전환율</th></tr></thead><tbody id="rows"></tbody></table></div><p class="foot">※ 목표구좌 대비 달성률 = 달성구좌 ÷ 목표구좌 × 100. 법인 4구좌 미만 잔여분은 1건으로 계산하지 않습니다. 구좌당 비용 = 행사비용 ÷ 달성구좌. 수입−행사비 차액 = 가입매출 + 행사 수입 + 연회비 실적 − 행사비용이며 상품원가·수수료·환불·세금 등을 반영한 실제 순이익이 아닙니다. 과거 행사의 회원/비회원 및 법인/개인 미분류 값은 원래 합계로 보존됩니다. 동일 참가자의 중복 참석 여부는 구분하지 않습니다. 등록된 데이터는 관리자가 변경할 수 있으며, 이 화면에서는 조회만 가능합니다. 공개 링크를 받은 누구나 전체 매출·비용·메모까지 확인할 수 있습니다.</p></main></div><div class="overlay" id="detailOverlay" role="presentation"><div class="modal detail-modal" role="dialog" aria-modal="true" aria-labelledby="detailTitle"><div class="modal-head"><h2 id="detailTitle">행사 KPI 상세</h2><button type="button" class="close" id="detailClose" aria-label="상세 화면 닫기">×</button></div><div id="detailContent"></div><div class="modal-footer"><button type="button" class="btn" id="detailCloseBottom">닫기</button></div></div></div><script src="./config.js"></script>
 <script type="module">
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+import { installViewerExtras } from './viewer_extra.js';
 const el=id=>document.getElementById(id);
 const cfg=window.PLK_CONFIG||{};
 const branchLinks=Object.freeze({busan1:'부산 1지사',busan2:'부산 2지사',busan3:'부산 3지사',busan4:'부산 4지사',busanarea:'부산권역'});
@@ -90,6 +91,7 @@ const won=n=>fmt(Math.round(n))+'원';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const status=(msg,error=false)=>{el('status').textContent=msg;el('status').classList.toggle('error',error);};
 let items=[];
+let allViewerEvents=[];
 if(assignedBranch){
   document.querySelector('.h1').textContent='KPI · 실적관리';
   document.querySelector('.sub').textContent=assignedBranch+' 전용 · 로그인 없이 조회';
@@ -920,13 +922,30 @@ async function loadPublic(){
       rows.push(...(data||[]));
       if((data||[]).length<1000)break;
     }
-    items=rows.map(r=>({...r.event_data,id:r.id})).filter(x=>!assignedBranch||eventAssignedBranches(x).includes(assignedBranch));
+    allViewerEvents=rows.map(r=>({...r.event_data,id:r.id}));
+    items=allViewerEvents.filter(x=>!assignedBranch||eventAssignedBranches(x).includes(assignedBranch));
     await loadMonthlyTargets();
     render();
+    viewerExtras.refresh();
+    await viewerExtras.refreshOrganization();
     status((assignedBranch?assignedBranch+' 전용 · ':'')+'공개 KPI 데이터 조회 완료 · '+fmt(items.length)+'건 · 읽기 전용');
   }catch(error){
     status('공개 데이터 설정이 완료되지 않았거나 조회에 실패했습니다. 관리자에게 Supabase viewer_setup.sql 실행 여부를 확인해 주세요. ('+(error?.message||'연결 오류')+')',true);
   }
 }
+const viewerExtras=installViewerExtras({
+ assignedBranch,
+ getAllEvents:()=>allViewerEvents,
+ getYears:()=>monthlyYearList(),
+ getTarget:(b,y,m,d)=>monthlyTarget(b,y,m,d),
+ countSeats:(event,branches,divs)=>attributedSeats(event,branches,divs),
+ normalizeDivision,
+ loadOrganization:async()=>{
+  const client=createClient(cfg.supabaseUrl,cfg.supabaseAnonKey,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});
+  const {data,error}=await client.from('kpi_org_chart').select('nodes').eq('id',1).maybeSingle();
+  if(error)throw error;
+  return Array.isArray(data?.nodes)?data.nodes:[];
+ }
+});
 loadPublic();
 </script></body></html>
