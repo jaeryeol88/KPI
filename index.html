@@ -1009,8 +1009,8 @@ function orgRenderHeadcount(){
 function orgGroupBranchName(group){
  const explicit=String(group.branchName||'').trim();
  if(explicit)return explicit;
- const existing=String(group.label||'').match(/부산\\s*[1-4]\\s*지사/);
- if(existing)return existing[0].replace(/\\s+/g,' ').replace(/부산 ([1-4]) 지사/,'부산 $1지사').replace(/부산([1-4])지사/,'부산 $1지사');
+ const existing=String(group.label||'').match(/부산\s*[1-4]\s*지사/);
+ if(existing)return existing[0].replace(/\s+/g,' ').replace(/부산 ([1-4]) 지사/,'부산 $1지사').replace(/부산([1-4])지사/,'부산 $1지사');
  const siblings=orgChildren(group.parent).filter(n=>n.type==='group');
  const idx=siblings.findIndex(n=>n.id===group.id);
  return idx>=0&&idx<4?'부산 '+(idx+1)+'지사':'지사 / 부서';
@@ -2121,7 +2121,7 @@ window.PLK_ORG={
  canEdit:()=>orgCanEdit(),effectiveRole:node=>orgEffectiveRole(node),
  joinYearMonth:value=>orgJoinYearMonth(value),children:id=>orgChildren(id),
  newId:()=>orgNewId(),load:()=>orgLoad(),draw:()=>orgDraw(),
- countable:node=>orgCountable(node),branchHeading:group=>orgGroupBranchName(group),branchLeaderName:group=>orgGroupLeaderLabel(group),
+ countable:node=>orgCountable(node),branchHeading:group=>orgGroupBranchName(group),
  status:(message,error)=>orgStatus(message,error)
 };
 await import('./org_ppt_export.js');
