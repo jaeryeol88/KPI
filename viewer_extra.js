@@ -64,7 +64,7 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
  .v-org-card{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-width:105px;min-height:50px;border:1px solid #e0e8f4;border-radius:11px;box-shadow:0 2px 6px rgba(21,39,64,.06);padding:12px 9px;text-align:center;background:#fff;white-space:normal}
  .v-org-card strong{font-size:13px;line-height:1.45;overflow-wrap:anywhere}.v-org-card small{font-size:14px;font-weight:650;line-height:1.5;overflow-wrap:anywhere}
  .v-org-card.root{min-width:260px;min-height:85px}.v-org-card.root strong{font-size:20px}
- .v-org-card.group{min-width:210px;min-height:74px}.v-org-card.group strong{font-size:16px}.v-org-card.division{min-width:103px}.v-org-card.person{min-height:64px}.v-org-card.person strong{font-size:14px}.v-org-card .v-org-date{font-size:12px;font-weight:650;opacity:.92}.v-org-card .v-org-role{font-size:14px;font-weight:800;opacity:1}
+ .v-org-card.group{min-width:210px;min-height:74px}.v-org-card.group strong{font-size:16px}.v-org-card.division{min-width:103px}.v-org-card.person{min-height:64px}.v-org-card.person strong{font-size:17px;font-weight:850;line-height:1.4;letter-spacing:.1px}.v-org-card .v-org-date{font-size:12px;font-weight:650;opacity:.92}.v-org-card .v-org-role{font-size:12px;font-weight:750;opacity:.86}
  .v-headcount{margin-top:20px;padding:19px 20px 15px;background:#fff;border:1px solid #dce5f2;border-radius:14px}
  .v-headcount h3{margin:0 0 14px;font-size:18px;color:#172c4b}
  .v-headcount-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
@@ -231,7 +231,7 @@ el('v-months').addEventListener('change',e=>{
   const role=roles[effectiveRole(n)]||'',subtitle=String(n.subtitle||'').trim();
   const sub=subtitle&&subtitle.replace(/\s+/g,'')!==role?'<small>'+safe(subtitle)+'</small>':'';
   const date=join(n);
-  return '<div class="v-org-card '+safe(n.type||'')+'" style="background:'+colors[0]+';color:'+colors[1]+';border-color:'+colors[2]+'"><strong>'+safe(n.type==='group'?branchLeaderName(n):(n.label||'이름 미입력'))+'</strong>'+(role?'<small class="v-org-role">'+safe(role)+'</small>':'')+sub+(date?'<small class="v-org-date">입사 '+safe(date)+'</small>':'')+'</div>';
+  return '<div class="v-org-card '+safe(n.type||'')+'" style="background:'+colors[0]+';color:'+colors[1]+';border-color:'+colors[2]+'">'+(role?'<small class="v-org-role">'+safe(role)+'</small>':'')+'<strong>'+safe(n.type==='group'?branchLeaderName(n):(n.label||'이름 미입력'))+'</strong>'+sub+(date?'<small class="v-org-date">입사 '+safe(date)+'</small>':'')+'</div>';
  }
  function alignOrgConnectors(){
   const canvas=el('v-org-canvas');
