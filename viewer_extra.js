@@ -38,6 +38,10 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
  .v-org-root{display:flex;flex-direction:column;align-items:center;gap:30px}
  .v-org-groups{display:flex;gap:24px;justify-content:center;align-items:flex-start;position:relative;--org-line-left:50%;--org-line-right:50%}
  .v-org-group{min-width:240px;display:flex;flex-direction:column;align-items:center;gap:26px;position:relative}
+ .v-org-group:before{content:'';position:absolute;top:-15px;left:50%;height:15px;border-left:2px solid #cad6e8;transform:translateX(-1px)}
+ .v-org-groups:before{content:'';position:absolute;top:-15px;left:var(--org-line-left);right:var(--org-line-right);border-top:2px solid #cad6e8}
+ .v-org-groups:after{content:'';position:absolute;top:-30px;left:50%;height:15px;border-left:2px solid #cad6e8;transform:translateX(-1px)}
+ .v-org-groups.v-org-single:before{display:none}
  .v-org-divisions{display:flex;gap:9px;align-items:flex-start}
  .v-org-division{min-width:104px;display:flex;flex-direction:column;align-items:center;gap:8px}
  .v-org-members{display:flex;flex-direction:column;gap:8px;width:100%}
@@ -181,8 +185,20 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
   const role=roles[effectiveRole(n)]||'',subtitle=String(n.subtitle||'').trim();
   const sub=subtitle&&subtitle.replace(/\s+/g,'')!==role?'<small>'+safe(subtitle)+'</small>':'';
   const date=join(n);
-  return '<div class="v-org-card '+safe(n.type||'')+'" style="background:'+colors[0]+';color:'+colors[1]+';border-color:'+colors[2]+'"><strong>'+safe(n.label||'이름 미입력')+'</strong>'+(role?'<small>'+safe(role)+'</small>':'')+sub+(date?'<small>입사 '+safe(date)+'</small>':'')+'</div>';
+  return '<div class="v-org-card '+safe(n.type||'')+'" style="background:'+colors[0]+';color:'+colors[1]+';border-color:'+colors[2]+'"><strong>'+safe(n.label||'이름 미입력')+'</strong>'+(role?'<small class="v-org-role">'+safe(role)+'</small>':'')+sub+(date?'<small class="v-org-date">입사 '+safe(date)+'</small>':'')+'</div>';
  }
+ function alignOrgConnectors(){
+  el('v-org-canvas').querySelectorAll('.v-org-groups').forEach(row=>{
+   const groups=[...row.children].filter(child=>child.classList.contains('v-org-group'));
+   row.classList.toggle('v-org-single',groups.length<2);
+   if(groups.length<2)return;
+   const bounds=row.getBoundingClientRect(),first=groups[0].getBoundingClientRect(),last=groups[groups.length-1].getBoundingClientRect();
+   if(!bounds.width)return;
+   row.style.setProperty('--org-line-left',(first.left+first.width/2-bounds.left)+'px');
+   row.style.setProperty('--org-line-right',(bounds.right-last.left-last.width/2)+'px');
+  });
+ }
+ window.addEventListener('resize',()=>{if(active==='org')alignOrgConnectors()});
  function renderOrg(){
   if(!orgLoaded){el('v-org-note').textContent='조직도 데이터를 불러오는 중…';return;}
   el('v-org-note').textContent=orgMessage||'부산권역 전체 조직도 · 읽기 전용';
@@ -191,6 +207,7 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
   const group=n=>'<div class="v-org-group">'+card(n)+'<div class="v-org-divisions">'+children(n.id).map(division).join('')+'</div></div>';
   const root=n=>'<div class="v-org-root">'+card(n)+'<div class="v-org-groups">'+children(n.id).map(group).join('')+'</div></div>';
   el('v-org-canvas').innerHTML=children(null).map(root).join('')||'<p class="v-note">등록된 조직도가 없습니다.</p>';
+  alignOrgConnectors();
   const counts={regional:0,branch:0,division:0,manager:0};
   for(const n of orgNodes){
    const name=String(n.label||'').trim();
