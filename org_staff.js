@@ -7,7 +7,7 @@ const orgApi=window.PLK_ORG;
 if(!orgApi)throw new Error('조직관리 연결을 초기화하지 못했습니다.');
 const safe=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
 const roles={regional:'권역대표',branch:'지사장',division:'본부장',manager:'매니저'};
-const branches=['부산 1지사','부산 2지사','부산 3지사','부산 4지사'];
+const branches=['부산권역','부산 1지사','부산 2지사','부산 3지사','부산 4지사'];
 const placeholders=new Set(['구성원','새 구성원','이름 미입력','최상위 조직','새 지사 / 부서','새 본부 / 팀','지사장 / 담당자 입력']);
 let contacts=new Map(),loaded=false,available=false,loading=null,editingId=null,staffSaving=false,showExcluded=false;
 const style=document.createElement('style');
@@ -83,6 +83,7 @@ function branchOf(node){
  let p=node,branch='',division='',guard=0;
  while(p&&guard++<12){
   if(p.type==='group')branch=orgApi.branchHeading(p)||branch;
+  if(p.type==='root'&&!branch)branch=p.label||'부산권역';
   if(p.type==='division')division=p.label||division;
   p=p.parent?orgApi.nodes.find(n=>n.id===p.parent):null;
  }
@@ -146,9 +147,8 @@ async function loadContacts(){
  return loading;
 }
 function divisionOptions(branch,value){
- const branchGroups=orgApi.nodes.filter(n=>n.type==='group'&&orgApi.branchHeading(n)===branch);
- const divs=branchGroups.flatMap(g=>[g,...orgApi.children(g.id).filter(n=>n.type==='division')]);
- $('staffDivision').innerHTML=divs.map(d=>'<option value="'+safe(d.id)+'">'+safe(d.type==='group'?'지사 직속 (지사장 등)':d.label)+'</option>').join('');
+ const divs=branch==='부산권역'?orgApi.nodes.filter(n=>n.type==='root'):orgApi.nodes.filter(n=>n.type==='group'&&orgApi.branchHeading(n)===branch).flatMap(g=>[g,...orgApi.children(g.id).filter(n=>n.type==='division')]);
+ $('staffDivision').innerHTML=divs.map(d=>'<option value="'+safe(d.id)+'">'+safe(d.type==='root'?'권역 직속 (권역대표 등)':d.type==='group'?'지사 직속 (지사장 등)':d.label)+'</option>').join('');
  if(value&&divs.some(d=>d.id===value))$('staffDivision').value=value;
 }
 function openForm(id=null){
@@ -186,7 +186,7 @@ $('staffForm').addEventListener('submit',async e=>{
  if(staffSaving||!orgApi.canEdit())return;
  const name=$('staffName').value.trim(),role=$('staffRole').value,division=$('staffDivision').value;
  if(!name||!role){message('성명과 직급을 입력하세요.',true);return;}
- const parent=orgApi.nodes.find(n=>n.id===division&&['group','division'].includes(n.type));
+ const parent=orgApi.nodes.find(n=>n.id===division&&['root','group','division'].includes(n.type));
  if(!editingId&&!parent){message('추가할 지사와 본부를 선택하세요.',true);return;}
  const date=$('staffHired').value.trim();
  if(date&&!/^[0-9]{2}[.](0[1-9]|1[0-2])$/.test(date)){message('입사년월은 26.09 형식으로 입력하세요.',true);return;}
