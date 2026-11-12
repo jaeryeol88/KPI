@@ -1024,7 +1024,8 @@ function orgNormalizeBranches(nodes){
   const isPerson=name&&name!=='지사장 / 담당자 입력'&&name!=='새 지사 / 부서'&&
    name.replace(/\s+/g,'')!==branch.replace(/\s+/g,'');
   if(isPerson){
-   const leader={id:orgNewId(),parent:group.id,type:'person',label:name,
+   const cleanName=name.replace(/부산\s*[1-4]\s*지사/g,'').replace(/지사장/g,'').trim()||name;
+   const leader={id:orgNewId(),parent:group.id,type:'person',label:cleanName,
     subtitle:group.subtitle||'',headcountRole:orgEffectiveRole(group)||'branch',
     joinDate:group.joinDate||'',color:group.color==='default'?'white':(group.color||'white'),
     order:-1,staffHidden:group.staffHidden===true,staffContactId:String(group.id)};
@@ -1133,7 +1134,7 @@ async function orgLoad(){
   orgLoaded=true;
   orgDraw();
   if(window.renderOrgStaff)window.renderOrgStaff();
-  orgStatus(orgDirty?'기본 조직도입니다. 원하는 내용을 수정하고 저장하세요.':'온라인 조직도를 불러왔습니다.');
+  orgStatus(orgDirty?'조직도 표시 구조를 정리했습니다. 상단 저장 버튼을 눌러 변경 내용을 확정하세요.':'온라인 조직도를 불러왔습니다.');
  }catch(e){
   orgDbReady=false;
   orgLoaded=true;orgNodes=orgDefaultNodes();orgNormalizeBranches(orgNodes);orgDirty=true;orgDraw();
