@@ -43,14 +43,14 @@
  function card(slide,pptx,node,x,y,w,h,opts={}){
   const palette=palettes[node.color]||palettes.default;
   const c=node.color==='default'&&node.type==='root'?palettes.blue:
-   node.color==='default'&&node.type==='group'?palettes.navy:
+   node.color==='default'&&node.type==='group'?palettes.default:
    node.color==='default'&&node.type==='division'?palettes.blue:palette;
   boxes(slide,pptx,x,y,w,h,c[0],c[1],c[2]);
   const role=roles[orgApi.effectiveRole(node)]||'';
   const subtitle=String(node.subtitle||'').trim();
   const date=orgApi.joinYearMonth(node.joinDate);
   const more=[role,subtitle.replace(/\s+/g,'')===role?'':subtitle,date?'입사 '+date:''].filter(Boolean);
-  const main=clamp(node.label||'이름 미입력',opts.maxLabel||36);
+  const main=clamp(node.type==='group'?orgApi.branchLeaderName(node):(node.label||'이름 미입력'),opts.maxLabel||36);
   const titleH=more.length?Math.max(.23,h*.52):h-.06;
   text(slide,main,x+.08,y+.04,w-.16,titleH,{size:opts.fontSize||13,bold:true,color:c[1]});
   if(more.length){
@@ -69,6 +69,7 @@
  }
  function slice(list,size){const result=[];for(let i=0;i<list.length;i+=size)result.push(list.slice(i,i+size));return result;}
  function getDirect(id){return orgApi.children(id);}
+ function branchTitle(group){return {type:'branchTitle',label:orgApi.branchHeading(group),color:'navy',subtitle:''};}
  function countSummary(){
   const counts={regional:0,branch:0,division:0,manager:0};
   for(const node of orgApi.nodes){
@@ -103,13 +104,15 @@
     part.forEach(group=>{
      const x=start+part.indexOf(group)*(boxW+gap),cx=x+boxW/2;
      line(slide,pptx,cx,2.38,cx,top);
-     card(slide,pptx,group,x,top,boxW,.7,{fontSize:14});
-     const divisions=getDirect(group.id);
+     card(slide,pptx,branchTitle(group),x,top,boxW,.65,{fontSize:14});
+     line(slide,pptx,cx,top+.65,cx,top+.83);
+     card(slide,pptx,group,x+.2,top+.83,boxW-.4,.52,{fontSize:12,subSize:9});
+     const divisions=getDirect(group.id).filter(n=>n.type==='division');
      for(let j=0;j<Math.min(divisions.length,4);j++){
-      const yy=3.63+j*.59;
-      line(slide,pptx,cx,j===0?top+.7:3.63+(j-1)*.59+.47,cx,yy);
+      const yy=4.24+j*.51;
+      line(slide,pptx,cx,j===0?top+1.35:4.24+(j-1)*.51+.40,cx,yy);
       const division=divisions[j];
-      card(slide,pptx,division,x+.18,yy,boxW-.36,.47,{fontSize:11});
+      card(slide,pptx,division,x+.18,yy,boxW-.36,.40,{fontSize:10});
      }
      if(divisions.length>4)text(slide,'외 '+(divisions.length-4)+'개 본부 / 팀',x+.2,6.1,boxW-.4,.26,{size:9,color:'657990'});
     });
@@ -118,33 +121,35 @@
   }
  }
  function detail(pptx,group,root,pageCounter){
-  const divisions=getDirect(group.id),divisionChunks=slice(divisions,3);
+  const divisions=getDirect(group.id).filter(n=>n.type==='division'),divisionChunks=slice(divisions,3);
   if(!divisionChunks.length)divisionChunks.push([]);
   for(const divisionChunk of divisionChunks){
    const pages=Math.max(1,...divisionChunk.map(d=>Math.ceil(getDirect(d.id).length/6)));
    for(let chunkIndex=0;chunkIndex<pages;chunkIndex++){
     const slide=pptx.addSlide();
-    base(slide,pptx,group.label+' · 조직 상세',root.label+'  |  '+group.label+(pages>1?'  ('+(chunkIndex+1)+'/'+pages+')':''),++pageCounter.value);
-    card(slide,pptx,group,4.78,1.24,3.77,.68,{fontSize:16});
+    base(slide,pptx,orgApi.branchHeading(group)+' · 조직 상세',root.label+'  |  '+orgApi.branchHeading(group)+(pages>1?'  ('+(chunkIndex+1)+'/'+pages+')':''),++pageCounter.value);
+    card(slide,pptx,branchTitle(group),4.78,1.19,3.77,.60,{fontSize:16});
+    line(slide,pptx,W/2,1.79,W/2,1.92);
+    card(slide,pptx,group,5.13,1.92,3.07,.54,{fontSize:13,subSize:9});
     const width=3.75,gap=.34,total=divisionChunk.length*width+(divisionChunk.length-1)*gap,start=(W-total)/2;
     if(divisionChunk.length){
      const center= (d)=>start+divisionChunk.indexOf(d)*(width+gap)+width/2;
-     const top=2.46;
-     line(slide,pptx,W/2,1.92,W/2,2.18);
-     if(divisionChunk.length>1)line(slide,pptx,center(divisionChunk[0]),2.18,center(divisionChunk[divisionChunk.length-1]),2.18);
+     const top=3.1;
+     line(slide,pptx,W/2,2.46,W/2,2.8);
+     if(divisionChunk.length>1)line(slide,pptx,center(divisionChunk[0]),2.8,center(divisionChunk[divisionChunk.length-1]),2.8);
      divisionChunk.forEach(d=>{
       const x=start+divisionChunk.indexOf(d)*(width+gap),cx=x+width/2;
-      line(slide,pptx,cx,2.18,cx,top);
+      line(slide,pptx,cx,2.8,cx,top);
       card(slide,pptx,d,x,top,width,.62,{fontSize:14});
       const members=getDirect(d.id).slice(chunkIndex*6,(chunkIndex+1)*6);
       members.forEach((person,j)=>{
-       const yy=3.34+j*.55;
+       const yy=3.95+j*.48;
        if(j===0)line(slide,pptx,cx,top+.62,cx,yy);
        else line(slide,pptx,cx,yy-.07,cx,yy);
-       card(slide,pptx,person,x+.17,yy,width-.34,.48,{fontSize:12,subSize:9,maxSub:65});
+       card(slide,pptx,person,x+.17,yy,width-.34,.43,{fontSize:11,subSize:9,maxSub:65});
       });
       if(!members.length&&chunkIndex===0)
-       text(slide,'등록된 구성원이 없습니다',x+.14,3.52,width-.28,.38,{size:10,color:'8997AA'});
+       text(slide,'등록된 구성원이 없습니다',x+.14,4.1,width-.28,.38,{size:10,color:'8997AA'});
      });
     }
    }
