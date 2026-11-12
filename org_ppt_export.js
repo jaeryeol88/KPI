@@ -50,7 +50,7 @@
   const subtitle=String(node.subtitle||'').trim();
   const date=orgApi.joinYearMonth(node.joinDate);
   const more=[role,subtitle.replace(/\s+/g,'')===role?'':subtitle,date?'입사 '+date:''].filter(Boolean);
-  const main=clamp(node.type==='group'?orgApi.branchLeaderName(node):(node.label||'이름 미입력'),opts.maxLabel||36);
+  const main=clamp(node.label||'이름 미입력',opts.maxLabel||36);
   const titleH=more.length?Math.max(.23,h*.52):h-.06;
   text(slide,main,x+.08,y+.04,w-.16,titleH,{size:opts.fontSize||13,bold:true,color:c[1]});
   if(more.length){
@@ -105,12 +105,13 @@
      const x=start+part.indexOf(group)*(boxW+gap),cx=x+boxW/2;
      line(slide,pptx,cx,2.38,cx,top);
      card(slide,pptx,branchTitle(group),x,top,boxW,.65,{fontSize:14});
-     line(slide,pptx,cx,top+.65,cx,top+.83);
-     card(slide,pptx,group,x+.2,top+.83,boxW-.4,.52,{fontSize:12,subSize:9});
+     const direct=getDirect(group.id).filter(n=>n.type==='person');
+     line(slide,pptx,cx,top+.65,cx,direct.length?top+.83:4.24);
+     if(direct.length)card(slide,pptx,direct[0],x+.2,top+.83,boxW-.4,.52,{fontSize:12,subSize:9});
      const divisions=getDirect(group.id).filter(n=>n.type==='division');
      for(let j=0;j<Math.min(divisions.length,4);j++){
       const yy=4.24+j*.51;
-      line(slide,pptx,cx,j===0?top+1.35:4.24+(j-1)*.51+.40,cx,yy);
+      line(slide,pptx,cx,j===0?(direct.length?top+1.35:top+.65):4.24+(j-1)*.51+.40,cx,yy);
       const division=divisions[j];
       card(slide,pptx,division,x+.18,yy,boxW-.36,.40,{fontSize:10});
      }
@@ -129,13 +130,16 @@
     const slide=pptx.addSlide();
     base(slide,pptx,orgApi.branchHeading(group)+' · 조직 상세',root.label+'  |  '+orgApi.branchHeading(group)+(pages>1?'  ('+(chunkIndex+1)+'/'+pages+')':''),++pageCounter.value);
     card(slide,pptx,branchTitle(group),4.78,1.19,3.77,.60,{fontSize:16});
-    line(slide,pptx,W/2,1.79,W/2,1.92);
-    card(slide,pptx,group,5.13,1.92,3.07,.54,{fontSize:13,subSize:9});
+    const branchMembers=getDirect(group.id).filter(n=>n.type==='person');
+    if(branchMembers.length){
+     line(slide,pptx,W/2,1.79,W/2,1.92);
+     card(slide,pptx,branchMembers[0],5.13,1.92,3.07,.54,{fontSize:13,subSize:9});
+    }
     const width=3.75,gap=.34,total=divisionChunk.length*width+(divisionChunk.length-1)*gap,start=(W-total)/2;
     if(divisionChunk.length){
      const center= (d)=>start+divisionChunk.indexOf(d)*(width+gap)+width/2;
      const top=3.1;
-     line(slide,pptx,W/2,2.46,W/2,2.8);
+     line(slide,pptx,W/2,branchMembers.length?2.46:1.79,W/2,2.8);
      if(divisionChunk.length>1)line(slide,pptx,center(divisionChunk[0]),2.8,center(divisionChunk[divisionChunk.length-1]),2.8);
      divisionChunk.forEach(d=>{
       const x=start+divisionChunk.indexOf(d)*(width+gap),cx=x+width/2;
