@@ -39,6 +39,9 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
  .v-org-scroll{background:#fafcff;border:1px solid #dce5f2;border-radius:14px;overflow-x:auto;padding:22px 14px}
  .v-org-canvas{width:max-content;min-width:100%;display:flex;flex-direction:column;align-items:center;gap:30px;padding:12px 0 28px}
  .v-org-root{display:flex;flex-direction:column;align-items:center;gap:30px}
+ .v-org-region-members{display:flex;flex-direction:column;align-items:center;gap:8px;position:relative}
+ .v-org-region-members:before{content:'';position:absolute;top:-30px;left:50%;height:30px;border-left:2px solid #cad6e8}
+ .v-org-region-members .v-org-card.person{min-width:180px;min-height:67px}
  .v-org-groups{display:flex;gap:24px;justify-content:center;align-items:flex-start;position:relative;--org-line-left:50%;--org-line-right:50%}
  .v-org-group{min-width:240px;display:flex;flex-direction:column;align-items:center;gap:26px;position:relative}
  .v-org-branch-heading{display:flex;align-items:center;justify-content:center;min-width:210px;min-height:74px;padding:12px 9px;border:1px solid #263859;border-radius:11px;background:#111d36;color:white;font-size:16px;font-weight:800;text-align:center;box-shadow:0 2px 6px rgba(21,39,64,.06)}
@@ -247,14 +250,14 @@ el('v-months').addEventListener('change',e=>{
   const person=n=>card(n);
   const division=n=>'<div class="v-org-division">'+card(n)+'<div class="v-org-members">'+children(n.id).map(person).join('')+'</div></div>';
   const group=n=>'<div class="v-org-group"><div class="v-org-branch-heading">'+safe(branchHeading(n))+'</div>'+(children(n.id).some(x=>x.type==='person')?'<div class="v-org-direct-members">'+children(n.id).filter(x=>x.type==='person').map(person).join('')+'</div>':'')+'<div class="v-org-divisions v-org-branch-units">'+children(n.id).filter(x=>x.type==='division').map(division).join('')+'</div></div>';
-  const root=n=>'<div class="v-org-root">'+card(n)+'<div class="v-org-groups">'+children(n.id).map(group).join('')+'</div></div>';
+  const root=n=>'<div class="v-org-root">'+card(n)+(children(n.id).some(x=>x.type==='person')?'<div class="v-org-region-members">'+children(n.id).filter(x=>x.type==='person').map(person).join('')+'</div>':'')+'<div class="v-org-groups">'+children(n.id).filter(x=>x.type==='group').map(group).join('')+'</div></div>';
   el('v-org-canvas').innerHTML=children(null).map(root).join('')||'<p class="v-note">등록된 조직도가 없습니다.</p>';
   alignOrgConnectors();
   const counts={regional:0,branch:0,division:0,manager:0};
   for(const n of orgNodes){
    const name=String(n.label||'').trim();
    if(!name||['구성원','새 구성원','이름 미입력','최상위 조직','새 지사 / 부서','새 본부 / 팀','지사장 / 담당자 입력'].includes(name))continue;
-   if(n.type==='group'||(n.type!=='person'&&!Object.prototype.hasOwnProperty.call(n,'headcountRole')))continue;
+   if(['group','root'].includes(n.type)||(n.type!=='person'&&!Object.prototype.hasOwnProperty.call(n,'headcountRole')))continue;
    const r=effectiveRole(n);if(Object.prototype.hasOwnProperty.call(counts,r))counts[r]++;
   }
   const total=Object.values(counts).reduce((sum,v)=>sum+v,0);
