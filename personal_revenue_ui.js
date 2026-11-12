@@ -33,6 +33,7 @@ function init(){
  dialog.onclick=e=>{if(e.target===dialog)dialog.close()};
  document.body.appendChild(dialog);return dialog;
 }
+init();
 export function showRevenueDetail(name,period,seats,r){
  const d=init(),data=r||emptyRevenue(),totalMissing=data.missingSale+data.missingFee;
  d.querySelector('#prTitle').textContent=name+' · '+period;
