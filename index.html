@@ -109,11 +109,14 @@
 .personal-matrix{min-width:1294px}
 .personal-matrix thead th{background:#edf2f8}
 .personal-matrix th,.personal-matrix td{text-align:center}
-.personal-matrix .personal-affiliation{text-align:left;white-space:normal}
-.personal-matrix .personal-name{font-weight:800;text-align:left}
+.personal-matrix .personal-affiliation{text-align:center;white-space:normal}
+.personal-matrix .personal-name{font-weight:800;text-align:center}
 .personal-matrix .personal-rank{color:#7486a0}
 .personal-matrix .personal-annual{background:#eff4ff;color:#245ee4;font-weight:800}
 .personal-matrix .personal-unassigned{color:#8b98aa}
+.personal-matrix .perf-active-month{background:transparent!important}
+.personal-matrix .perf-region .perf-active-month{background:#dfe8fa!important}
+.personal-matrix th,.personal-matrix td,.personal-matrix .perf-division,.personal-matrix .perf-branch{text-align:center!important;vertical-align:middle}
 @media(max-width:1100px){.sidebar-nav{align-items:stretch}.sidebar-subnav{flex-direction:row;flex-wrap:wrap;padding-left:0}.sidebar .sidebar-nav .nav-parent{display:flex}.sidebar .sidebar-nav .nav-child{display:block}}
 @media(max-width:650px){.sidebar-subnav{flex-direction:column}.sidebar-nav{flex-direction:column}}
 </style>
@@ -999,7 +1002,7 @@ function renderPersonalYearboard(){
  el('personalMonthButtons').innerHTML='<button type="button" data-personal-month="0" class="'+(personalHighlightedMonth===0?'active':'')+'">전체(1~12월)</button>'+
   months.map(m=>'<button type="button" data-personal-month="'+m+'" class="'+(personalHighlightedMonth===m?'active':'')+'">'+m+'월</button>').join('');
  el('personalYearHead').innerHTML='<tr><th>No.</th><th>소속 지사</th><th>본부</th><th>성명</th>'+
-  visibleMonths.map(m=>'<th class="'+(personalHighlightedMonth===m?'perf-active-month':'')+'">'+m+'월</th>').join('')+(personalHighlightedMonth===0?'<th>연간 합계</th>':'')+'</tr>';
+  visibleMonths.map(m=>'<th>'+m+'월</th>').join('')+(personalHighlightedMonth===0?'<th>연간 합계</th>':'')+'</tr>';
  const entries=new Map();
  let excludedLegacy=0,unassignedSeats=0;
  function add(b,d,manager,month,seats){
@@ -1032,12 +1035,12 @@ function renderPersonalYearboard(){
   const missing=row.manager==='담당자 미지정';
   row.monthly.forEach((v,m)=>total[m]+=v);
   tbody+='<tr><td class="personal-rank">'+(i+1)+'</td><td class="personal-affiliation">'+esc(row.branch)+'</td><td>'+esc(row.division||'본부 미지정')+'</td><td class="personal-name'+(missing?' personal-unassigned':'')+'">'+esc(row.manager)+'</td>'+
-   visibleMonths.map(m=>{const v=row.monthly[m-1];return '<td class="'+(personalHighlightedMonth===m?'perf-active-month ':'')+(v?'perf-actual':'perf-zero')+'">'+fmt(v)+'</td>';}).join('')+
+   visibleMonths.map(m=>{const v=row.monthly[m-1];return '<td class="'+(v?'perf-actual':'perf-zero')+'">'+fmt(v)+'구좌</td>';}).join('')+
    (personalHighlightedMonth===0?'<td class="personal-annual">'+fmt(row.total)+'구좌</td>':'')+'</tr>';
  });
  const sum=visibleMonths.reduce((a,m)=>a+total[m-1],0);
  tbody+='<tr class="perf-region"><td colspan="4" style="text-align:center">합계</td>'+
-  visibleMonths.map(m=>'<td class="'+(personalHighlightedMonth===m?'perf-active-month':'')+'">'+fmt(total[m-1])+'</td>').join('')+
+  visibleMonths.map(m=>'<td>'+fmt(total[m-1])+'구좌</td>').join('')+
   (personalHighlightedMonth===0?'<td>'+fmt(sum)+'구좌</td>':'')+'</tr>';
  el('personalYearBody').innerHTML=rows.length?tbody:'<tr><td colspan="'+(visibleMonths.length+4)+'">선택한 기간과 소속에 등록된 가입 실적이 없습니다.</td></tr>';
  el('personalYearNote').textContent=personalSelectedYear+'년 '+(personalHighlightedMonth===0?'전체(1~12월)':personalHighlightedMonth+'월')+' · 총 '+rows.length+'개 담당자/소속 조합 · '+fmt(sum)+'구좌'+
