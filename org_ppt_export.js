@@ -2,6 +2,7 @@
    Uses PptxGenJS browser bundle on demand; no event or chart data is uploaded. */
 (function(){
  'use strict';
+ const orgApi=window.PLK_ORG;
  const SCRIPT_URL='https://cdn.jsdelivr.net/gh/gitbrent/pptxgenjs@3.12.0/dist/pptxgen.bundle.js';
  const W=13.333,H=7.5, FONT='Malgun Gothic';
  let loadPromise=null;
@@ -45,9 +46,9 @@
    node.color==='default'&&node.type==='group'?palettes.navy:
    node.color==='default'&&node.type==='division'?palettes.blue:palette;
   boxes(slide,pptx,x,y,w,h,c[0],c[1],c[2]);
-  const role=roles[orgEffectiveRole(node)]||'';
+  const role=roles[orgApi.effectiveRole(node)]||'';
   const subtitle=String(node.subtitle||'').trim();
-  const date=orgJoinYearMonth(node.joinDate);
+  const date=orgApi.joinYearMonth(node.joinDate);
   const more=[role,subtitle.replace(/\s+/g,'')===role?'':subtitle,date?'입사 '+date:''].filter(Boolean);
   const main=clamp(node.label||'이름 미입력',opts.maxLabel||36);
   const titleH=more.length?Math.max(.23,h*.52):h-.06;
@@ -67,12 +68,12 @@
   text(slide,String(page).padStart(2,'0'),12.1,7.19,.64,.16,{size:8,color:'7B8CA3',align:'right'});
  }
  function slice(list,size){const result=[];for(let i=0;i<list.length;i+=size)result.push(list.slice(i,i+size));return result;}
- function getDirect(id){return orgChildren(id);}
+ function getDirect(id){return orgApi.children(id);}
  function countSummary(){
   const counts={regional:0,branch:0,division:0,manager:0};
-  for(const node of orgNodes){
-   const role=orgEffectiveRole(node);
-   if(counts.hasOwnProperty(role)&&orgCountable(node))counts[role]++;
+  for(const node of orgApi.nodes){
+   const role=orgApi.effectiveRole(node);
+   if(counts.hasOwnProperty(role)&&orgApi.countable(node))counts[role]++;
   }
   return counts;
  }
@@ -150,7 +151,7 @@
   }
  }
  async function doExport(){
-  if(!Array.isArray(orgNodes)||!orgNodes.length){orgStatus('다운로드할 조직도가 없습니다.',true);return;}
+  if(!Array.isArray(orgApi.nodes)||!orgApi.nodes.length){orgApi.status('다운로드할 조직도가 없습니다.',true);return;}
   const button=document.getElementById('orgExportPpt');
   if(button.disabled)return;
   button.disabled=true;const old=button.textContent;button.textContent='PPT 생성 중…';
@@ -159,7 +160,7 @@
    const pptx=new Ctor();pptx.layout='LAYOUT_WIDE';pptx.author='PLK KPI';pptx.subject='조직도';pptx.title='PLK 조직도';pptx.lang='ko-KR';
    pptx.theme={headFontFace:FONT,bodyFontFace:FONT,lang:'ko-KR'};
    const pageCounter={value:0};
-   const roots=orgChildren(null);
+   const roots=orgApi.children(null);
    for(const root of roots){
     const groups=getDirect(root.id);
     overview(pptx,root,groups,pageCounter);
@@ -169,8 +170,8 @@
    const title=String(roots[0].label||'PLK').replace(/[\\/:*?"<>|]/g,'_').slice(0,36);
    const name=title+'_조직도.pptx';
    await pptx.writeFile({fileName:name});
-   orgStatus('조직도 PPT 다운로드를 완료했습니다. 현재 화면의 카드 정보가 반영되어 있습니다.');
-  }catch(err){console.error(err);orgStatus('PPT 다운로드 오류: '+(err.message||String(err)),true);}
+   orgApi.status('조직도 PPT 다운로드를 완료했습니다. 현재 화면의 카드 정보가 반영되어 있습니다.');
+  }catch(err){console.error(err);orgApi.status('PPT 다운로드 오류: '+(err.message||String(err)),true);}
   finally{button.disabled=false;button.textContent=old;}
  }
  const button=document.getElementById('orgExportPpt');
