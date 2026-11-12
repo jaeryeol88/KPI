@@ -82,11 +82,11 @@ const message=(v,error=false)=>{$('staffMessage').textContent=v;$('staffMessage'
 function branchOf(node){
  let p=node,branch='',division='',guard=0;
  while(p&&guard++<12){
-  if(p.type==='group')branch=p.label||branch;
+  if(p.type==='group')branch=orgApi.branchHeading(p)||branch;
   if(p.type==='division')division=p.label||division;
   p=p.parent?orgApi.nodes.find(n=>n.id===p.parent):null;
  }
- if(node.type==='group')branch=node.label;
+ if(node.type==='group')branch=orgApi.branchHeading(node);
  if(node.type==='division')division=node.label;
  return {branch,division};
 }
@@ -146,7 +146,7 @@ async function loadContacts(){
  return loading;
 }
 function divisionOptions(branch,value){
- const branchGroups=orgApi.nodes.filter(n=>n.type==='group'&&n.label===branch);
+ const branchGroups=orgApi.nodes.filter(n=>n.type==='group'&&orgApi.branchHeading(n)===branch);
  const divs=branchGroups.flatMap(g=>orgApi.children(g.id).filter(n=>n.type==='division'));
  $('staffDivision').innerHTML=divs.map(d=>'<option value="'+safe(d.id)+'">'+safe(d.label)+'</option>').join('');
  if(value&&divs.some(d=>d.id===value))$('staffDivision').value=value;
