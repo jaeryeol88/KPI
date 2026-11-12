@@ -77,7 +77,7 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
   <p class="v-note" id="v-person-note"></p>
  </section>
  <section id="v-org" class="v-extra" hidden>
-  <div class="v-extra-head"><div><h2>조직관리 <span style="font-size:12px;color:#7b8ca4">조회 전용</span></h2><p>부산권역 조직도와 직책별 인원 현황입니다.</p></div></div>
+  <div class="v-extra-head"><div><h2>조직도 <span style="font-size:12px;color:#7b8ca4">조회 전용</span></h2><p>부산권역 조직도와 직책별 인원 현황입니다.</p></div></div>
   <p class="v-note" id="v-org-note">조직도를 불러오는 중…</p>
   <div class="v-org-scroll"><div id="v-org-canvas" class="v-org-canvas"></div></div>
   <div class="v-headcount"><h3>조직 인원 현황</h3><div id="v-headcount-grid" class="v-headcount-grid"></div><p class="v-note">이름과 집계 직책이 등록된 카드만 포함합니다.</p></div>
