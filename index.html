@@ -195,6 +195,11 @@
 .org-edit-buttons{grid-column:1/-1;justify-content:flex-start;margin-top:4px}
 .org-danger{color:#c53d41!important}
 @media(max-width:720px){#orgEditForm{grid-template-columns:1fr}.org-toolbar{align-items:flex-start}.org-actions .btn{font-size:12px}}
+/* Individual report month multi-select (shared styling with viewer) */
+#personalMonthButtons{align-items:center;flex-wrap:wrap;white-space:normal;overflow-x:visible}
+#personalMonthButtons .personal-month-check{display:inline-flex;align-items:center;gap:5px;border:1px solid #d9e3f0;background:#f6f8fc;border-radius:8px;padding:6px 9px;color:#637187;cursor:pointer;font-size:12px;user-select:none;white-space:nowrap}
+#personalMonthButtons .personal-month-check.checked{border-color:#2e63c5;background:#eaf1ff;color:#2152a9;font-weight:800}
+#personalMonthButtons .personal-month-check input{width:14px;height:14px;margin:0;accent-color:#2e63c5;cursor:pointer}
 </style>
 </head><body>
 <section class="auth-screen" id="authScreen">
@@ -1293,7 +1298,7 @@ el('perfMonthButtons').addEventListener('click',e=>{const b=e.target.closest('bu
 let personalSelectedYear=new Date().getFullYear();
 let personalSelectedBranch='all';
 let personalSelectedDivision='all';
-let personalHighlightedMonth=0;
+let personalSelectedMonths=new Set(); // Empty selection means the full year.
 function renderPersonalYearboard(){
  const yearSelect=el('personalYearSelect'),branchSelect=el('personalBranchSelect'),divisionSelect=el('personalDivisionSelect');
  if(!yearSelect||!branchSelect||!divisionSelect)return;
@@ -1309,15 +1314,17 @@ function renderPersonalYearboard(){
  divisionSelect.innerHTML='<option value="all">전체 본부</option>'+monthlyDivisions.map(d=>'<option value="'+esc(d)+'">'+esc(d)+'</option>').join('');
  divisionSelect.value=personalSelectedDivision;
  const months=Array.from({length:12},(_,i)=>i+1);
- const visibleMonths=personalHighlightedMonth===0?months:[personalHighlightedMonth];
+ const visibleMonths=personalSelectedMonths.size?months.filter(m=>personalSelectedMonths.has(m)):months;
+ const showTotal=visibleMonths.length>1;
+ const fullYear=personalSelectedMonths.size===0;
  const personalTable=el('personalYearHead').closest('table');
- personalTable.style.minWidth=personalHighlightedMonth===0?'1294px':'520px';
+ personalTable.style.minWidth=(444+visibleMonths.length*80+(showTotal?88:0))+'px';
  personalTable.querySelector('colgroup').innerHTML='<col style="width:49px"><col style="width:151px"><col style="width:106px"><col style="width:126px">'+
-  visibleMonths.map(()=>'<col style="width:80px">').join('')+(personalHighlightedMonth===0?'<col style="width:88px">':'');
- el('personalMonthButtons').innerHTML='<button type="button" data-personal-month="0" class="'+(personalHighlightedMonth===0?'active':'')+'">전체(1~12월)</button>'+
-  months.map(m=>'<button type="button" data-personal-month="'+m+'" class="'+(personalHighlightedMonth===m?'active':'')+'">'+m+'월</button>').join('');
+  visibleMonths.map(()=>'<col style="width:80px">').join('')+(showTotal?'<col style="width:88px">':'');
+ el('personalMonthButtons').innerHTML='<button type="button" data-personal-all class="'+(fullYear?'active':'')+'">전체(1~12월)</button>'+
+  months.map(m=>'<label class="personal-month-check'+(personalSelectedMonths.has(m)?' checked':'')+'"><input type="checkbox" value="'+m+'" data-personal-month-check '+(personalSelectedMonths.has(m)?'checked ':'')+'aria-label="'+m+'월 선택">'+m+'월</label>').join('');
  el('personalYearHead').innerHTML='<tr><th>No.</th><th>소속 지사</th><th>본부</th><th>성명</th>'+
-  visibleMonths.map(m=>'<th>'+m+'월</th>').join('')+(personalHighlightedMonth===0?'<th>연간 합계</th>':'')+'</tr>';
+  visibleMonths.map(m=>'<th>'+m+'월</th>').join('')+(showTotal?'<th>'+(fullYear?'연간 합계':'선택 월 합계')+'</th>':'')+'</tr>';
  const entries=new Map();
  let excludedLegacy=0,unassignedSeats=0;
  function add(b,d,manager,month,seats){
@@ -1327,7 +1334,7 @@ function renderPersonalYearboard(){
  }
  for(const event of items){
   const date=String(event.date||''),year=Number(date.slice(0,4)),month=Number(date.slice(5,7));
-  if(year!==personalSelectedYear||month<1||month>12||(personalHighlightedMonth!==0&&month!==personalHighlightedMonth))continue;
+  if(year!==personalSelectedYear||month<1||month>12||!visibleMonths.includes(month))continue;
   const validRows=Array.isArray(event.signupEntries)?event.signupEntries.filter(row=>row&&['corporate','individual'].includes(row.group)&&Number.isSafeInteger(row.seats)&&row.seats>=0):[];
   if(validRows.length){
    for(const signup of validRows){
@@ -1351,14 +1358,14 @@ function renderPersonalYearboard(){
   row.monthly.forEach((v,m)=>total[m]+=v);
   tbody+='<tr><td class="personal-rank">'+(i+1)+'</td><td class="personal-affiliation">'+esc(row.branch)+'</td><td>'+esc(row.division||'본부 미지정')+'</td><td class="personal-name'+(missing?' personal-unassigned':'')+'">'+esc(row.manager)+'</td>'+
    visibleMonths.map(m=>{const v=row.monthly[m-1];return '<td class="'+(v?'perf-actual':'perf-zero')+'">'+fmt(v)+'구좌</td>';}).join('')+
-   (personalHighlightedMonth===0?'<td class="personal-annual">'+fmt(row.total)+'구좌</td>':'')+'</tr>';
+   (showTotal?'<td class="personal-annual">'+fmt(row.total)+'구좌</td>':'')+'</tr>';
  });
  const sum=visibleMonths.reduce((a,m)=>a+total[m-1],0);
  tbody+='<tr class="perf-region"><td colspan="4" style="text-align:center">합계</td>'+
   visibleMonths.map(m=>'<td>'+fmt(total[m-1])+'구좌</td>').join('')+
-  (personalHighlightedMonth===0?'<td>'+fmt(sum)+'구좌</td>':'')+'</tr>';
- el('personalYearBody').innerHTML=rows.length?tbody:'<tr><td colspan="'+(visibleMonths.length+4)+'">선택한 기간과 소속에 등록된 가입 실적이 없습니다.</td></tr>';
- el('personalYearNote').textContent=personalSelectedYear+'년 '+(personalHighlightedMonth===0?'전체(1~12월)':personalHighlightedMonth+'월')+' · 총 '+rows.length+'개 담당자/소속 조합 · '+fmt(sum)+'구좌'+
+  (showTotal?'<td>'+fmt(sum)+'구좌</td>':'')+'</tr>';
+ el('personalYearBody').innerHTML=rows.length?tbody:'<tr><td colspan="'+(visibleMonths.length+4+(showTotal?1:0))+'">선택한 기간과 소속에 등록된 가입 실적이 없습니다.</td></tr>';
+ el('personalYearNote').textContent=personalSelectedYear+'년 '+(fullYear?'전체(1~12월)':visibleMonths.map(m=>m+'월').join('·'))+' · 총 '+rows.length+'개 담당자/소속 조합 · '+fmt(sum)+'구좌'+
   (unassignedSeats?' · 담당자 미지정 '+fmt(unassignedSeats)+'구좌 (기존 기록 포함)':'')+
   (excludedLegacy?' · 가입 건별 정보가 없는 기존 실적 '+fmt(excludedLegacy)+'구좌는 담당자 미지정으로 표시':'')+
   ' · 동일 성명이라도 소속 지사·본부가 다르면 별도 집계합니다.';
@@ -1366,7 +1373,17 @@ function renderPersonalYearboard(){
 el('personalYearSelect').addEventListener('change',e=>{personalSelectedYear=Number(e.target.value);renderPersonalYearboard();});
 el('personalBranchSelect').addEventListener('change',e=>{personalSelectedBranch=e.target.value;renderPersonalYearboard();});
 el('personalDivisionSelect').addEventListener('change',e=>{personalSelectedDivision=e.target.value;renderPersonalYearboard();});
-el('personalMonthButtons').addEventListener('click',e=>{const b=e.target.closest('button[data-personal-month]');if(!b)return;personalHighlightedMonth=Number(b.dataset.personalMonth);renderPersonalYearboard();});
+el('personalMonthButtons').addEventListener('click',e=>{
+ if(!e.target.closest('button[data-personal-all]'))return;
+ personalSelectedMonths.clear();renderPersonalYearboard();
+});
+el('personalMonthButtons').addEventListener('change',e=>{
+ const input=e.target.closest('input[data-personal-month-check]');if(!input)return;
+ const month=Number(input.value);
+ if(input.checked)personalSelectedMonths.add(month);else personalSelectedMonths.delete(month);
+ if(personalSelectedMonths.size===12)personalSelectedMonths.clear();
+ renderPersonalYearboard();
+});
 
 function monthlyFillEditor(){
  const b=el('goalInputBranch').value,y=Number(el('goalInputYear').value),m=Number(el('goalInputMonth').value);
