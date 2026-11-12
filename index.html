@@ -327,6 +327,7 @@
   }, true);
 </script>
 <script type="module">
+import { drawOrgConnectorLines } from './org_connector_lines.js';
 let createClient;
 try {
   ({ createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'));
@@ -1104,19 +1105,9 @@ function orgDraw(){
  canvas.querySelectorAll('[data-org-node]').forEach(button=>button.addEventListener('click',()=>orgSelect(button.dataset.orgNode)));
 }
 function orgAlignConnectors(){
- const canvas=el('orgCanvas');if(!canvas)return;
- canvas.querySelectorAll('.org-group-row').forEach(row=>{
-  const groups=[...row.children].filter(child=>child.classList.contains('org-group-wrap'));
-  row.classList.toggle('org-single',groups.length<2);
-  if(!groups.length){row.style.setProperty('--org-line-left','50%');row.style.setProperty('--org-line-right','50%');return;}
-  const first=groups[0],last=groups[groups.length-1];
-  const rowRect=row.getBoundingClientRect(),firstRect=first.getBoundingClientRect(),lastRect=last.getBoundingClientRect();
-  if(!rowRect.width)return;
-  const left=firstRect.left+firstRect.width/2-rowRect.left;
-  const right=rowRect.right-(lastRect.left+lastRect.width/2);
-  row.style.setProperty('--org-line-left',Math.max(0,left)+'px');
-  row.style.setProperty('--org-line-right',Math.max(0,right)+'px');
- });
+ const canvas=el('orgCanvas');
+ if(!canvas)return;
+ requestAnimationFrame(()=>drawOrgConnectorLines(canvas,'admin'));
 }
 window.addEventListener('resize',()=>{if(activeKpiPage==='org')orgAlignConnectors();});
 function orgSelect(id){
