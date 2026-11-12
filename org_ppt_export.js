@@ -48,7 +48,7 @@
   const role=roles[orgEffectiveRole(node)]||'';
   const subtitle=String(node.subtitle||'').trim();
   const date=orgJoinYearMonth(node.joinDate);
-  const more=[role,subtitle.replace(/\\s+/g,'')===role?'':subtitle,date?'입사 '+date:''].filter(Boolean);
+  const more=[role,subtitle.replace(/\s+/g,'')===role?'':subtitle,date?'입사 '+date:''].filter(Boolean);
   const main=clamp(node.label||'이름 미입력',opts.maxLabel||36);
   const titleH=more.length?Math.max(.23,h*.52):h-.06;
   text(slide,main,x+.08,y+.04,w-.16,titleH,{size:opts.fontSize||13,bold:true,color:c[1]});
