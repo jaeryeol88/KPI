@@ -328,6 +328,7 @@
 </script>
 <script type="module">
 import { drawOrgConnectorLines } from './org_connector_lines.js';
+import { emptyRevenue,recordRevenue,oldRevenue,addRevenue,clickableSeats,revenueLabel,showRevenueDetail } from './personal_revenue_ui.js';
 let createClient;
 try {
   ({ createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'));
@@ -1386,6 +1387,7 @@ let personalSelectedYear=new Date().getFullYear();
 let personalSelectedBranch='all';
 let personalSelectedDivision='all';
 let personalSelectedMonths=new Set(); // Empty selection means the full year.
+let personalRevenueActions=new Map();
 function renderPersonalYearboard(){
  const yearSelect=el('personalYearSelect'),branchSelect=el('personalBranchSelect'),divisionSelect=el('personalDivisionSelect');
  if(!yearSelect||!branchSelect||!divisionSelect)return;
@@ -1402,22 +1404,24 @@ function renderPersonalYearboard(){
  divisionSelect.value=personalSelectedDivision;
  const months=Array.from({length:12},(_,i)=>i+1);
  const visibleMonths=personalSelectedMonths.size?months.filter(m=>personalSelectedMonths.has(m)):months;
- const showTotal=visibleMonths.length>1;
+ const showTotal=visibleMonths.length>1,oneMonth=visibleMonths.length===1;
+ personalRevenueActions.clear();
  const fullYear=personalSelectedMonths.size===0;
  const personalTable=el('personalYearHead').closest('table');
- personalTable.style.minWidth=(444+visibleMonths.length*80+(showTotal?88:0))+'px';
+ personalTable.style.minWidth=(444+visibleMonths.length*80+(showTotal?88:0)+(oneMonth?450:0))+'px';
  personalTable.querySelector('colgroup').innerHTML='<col style="width:49px"><col style="width:151px"><col style="width:106px"><col style="width:126px">'+
-  visibleMonths.map(()=>'<col style="width:80px">').join('')+(showTotal?'<col style="width:88px">':'');
+  visibleMonths.map(()=>'<col style="width:80px">').join('')+(showTotal?'<col style="width:88px">':'')+(oneMonth?'<col style="width:150px"><col style="width:150px"><col style="width:150px">':'');
  el('personalMonthButtons').innerHTML='<button type="button" data-personal-all class="'+(fullYear?'active':'')+'">전체(1~12월)</button>'+
   months.map(m=>'<label class="personal-month-check'+(personalSelectedMonths.has(m)?' checked':'')+'"><input type="checkbox" value="'+m+'" data-personal-month-check '+(personalSelectedMonths.has(m)?'checked ':'')+'aria-label="'+m+'월 선택">'+m+'월</label>').join('');
  el('personalYearHead').innerHTML='<tr><th>No.</th><th>소속 지사</th><th>본부</th><th>성명</th>'+
-  visibleMonths.map(m=>'<th>'+m+'월</th>').join('')+(showTotal?'<th>'+(fullYear?'연간 합계':'선택 월 합계')+'</th>':'')+'</tr>';
+  visibleMonths.map(m=>'<th>'+m+'월</th>').join('')+(showTotal?'<th>'+(fullYear?'연간 합계':'선택 월 합계')+'</th>':'')+(oneMonth?'<th>가입구좌 매출</th><th>연회비 매출</th><th>총매출</th>':'')+'</tr>';
  const entries=new Map();
  let excludedLegacy=0,unassignedSeats=0;
- function add(b,d,manager,month,seats){
+ function add(b,d,manager,month,seats,amount){
   const key=JSON.stringify([b,d,manager]);
-  if(!entries.has(key))entries.set(key,{branch:b,division:d,manager,monthly:Array(12).fill(0)});
+  if(!entries.has(key))entries.set(key,{branch:b,division:d,manager,monthly:Array(12).fill(0),sales:Array.from({length:12},emptyRevenue)});
   entries.get(key).monthly[month-1]+=seats;
+  entries.get(key).sales[month-1]=addRevenue(entries.get(key).sales[month-1],amount);
  }
  for(const event of items){
   const date=String(event.date||''),year=Number(date.slice(0,4)),month=Number(date.slice(5,7));
@@ -1427,36 +1431,43 @@ function renderPersonalYearboard(){
    for(const signup of validRows){
     const b=signup.branch||event.branch,d=normalizeDivision(signup.division||event.division),manager=String(signup.manager||'').trim()||'담당자 미지정';
     if(!allowed.includes(b)||personalSelectedBranch!=='all'&&personalSelectedBranch!==b||personalSelectedDivision!=='all'&&personalSelectedDivision!==d)continue;
-    add(b,d,manager,month,signup.seats);
+    add(b,d,manager,month,signup.seats,recordRevenue(signup));
     if(manager==='담당자 미지정')unassignedSeats+=signup.seats;
    }
   }else{
    const b=event.branch,d=normalizeDivision(event.division),seats=Number(event.done);
    if(!allowed.includes(b)||personalSelectedBranch!=='all'&&personalSelectedBranch!==b||personalSelectedDivision!=='all'&&personalSelectedDivision!==d)continue;
-   if(Number.isSafeInteger(seats)&&seats>0){add(b,d,'담당자 미지정',month,seats);excludedLegacy+=seats;unassignedSeats+=seats;}
+   if(Number.isSafeInteger(seats)&&seats>0){add(b,d,'담당자 미지정',month,seats,oldRevenue(event));excludedLegacy+=seats;unassignedSeats+=seats;}
   }
  }
  const rows=[...entries.values()].map(x=>({...x,total:visibleMonths.reduce((a,m)=>a+x.monthly[m-1],0)}))
   .filter(x=>x.total>0).sort((a,b)=>b.total-a.total||a.branch.localeCompare(b.branch,'ko')||a.division.localeCompare(b.division,'ko')||a.manager.localeCompare(b.manager,'ko'));
- const total=Array(12).fill(0);
+ const total=Array(12).fill(0),salesTotals=Array.from({length:12},emptyRevenue);
  let tbody='';
+ const action=(name,period,seats,sales)=>{const id=personalRevenueActions.size+1;personalRevenueActions.set(String(id),{name,period,seats,revenue:sales});return clickableSeats(seats,id)};
+ const salesFor=(row,monthList)=>monthList.reduce((v,m)=>addRevenue(v,row.sales[m-1]),emptyRevenue());
+ const inline=(amount,missing)=>'<td class="personal-revenue-single">'+esc(revenueLabel(amount,missing))+'</td>';
  rows.forEach((row,i)=>{
   const missing=row.manager==='담당자 미지정';
-  row.monthly.forEach((v,m)=>total[m]+=v);
+  row.monthly.forEach((v,m)=>{total[m]+=v;salesTotals[m]=addRevenue(salesTotals[m],row.sales[m]);});
   tbody+='<tr><td class="personal-rank">'+(i+1)+'</td><td class="personal-affiliation">'+esc(row.branch)+'</td><td>'+esc(row.division||'본부 미지정')+'</td><td class="personal-name'+(missing?' personal-unassigned':'')+'">'+esc(row.manager)+'</td>'+
-   visibleMonths.map(m=>{const v=row.monthly[m-1];return '<td class="'+(v?'perf-actual':'perf-zero')+'">'+fmt(v)+'구좌</td>';}).join('')+
-   (showTotal?'<td class="personal-annual">'+fmt(row.total)+'구좌</td>':'')+'</tr>';
+   visibleMonths.map(m=>{const v=row.monthly[m-1];return '<td class="'+(v?'perf-actual':'perf-zero')+'">'+action(row.manager,m+'월',v,row.sales[m-1])+'</td>';}).join('')+
+   (showTotal?'<td class="personal-annual">'+action(row.manager,fullYear?'연간 합계':'선택 월 합계',row.total,salesFor(row,visibleMonths))+'</td>':'')+
+   (oneMonth?(()=>{const r=row.sales[visibleMonths[0]-1];return inline(r.sale,r.missingSale)+inline(r.fee,r.missingFee)+inline(r.sale+r.fee,r.missingSale+r.missingFee)})():'')+'</tr>';
  });
  const sum=visibleMonths.reduce((a,m)=>a+total[m-1],0);
+ const totalRevenue=visibleMonths.reduce((r,m)=>addRevenue(r,salesTotals[m-1]),emptyRevenue());
  tbody+='<tr class="perf-region"><td colspan="4" style="text-align:center">합계</td>'+
-  visibleMonths.map(m=>'<td>'+fmt(total[m-1])+'구좌</td>').join('')+
-  (showTotal?'<td>'+fmt(sum)+'구좌</td>':'')+'</tr>';
- el('personalYearBody').innerHTML=rows.length?tbody:'<tr><td colspan="'+(visibleMonths.length+4+(showTotal?1:0))+'">선택한 기간과 소속에 등록된 가입 실적이 없습니다.</td></tr>';
+  visibleMonths.map(m=>'<td>'+action('전체 합계',m+'월',total[m-1],salesTotals[m-1])+'</td>').join('')+
+  (showTotal?'<td>'+action('전체 합계',fullYear?'연간 합계':'선택 월 합계',sum,totalRevenue)+'</td>':'')+
+  (oneMonth?inline(totalRevenue.sale,totalRevenue.missingSale)+inline(totalRevenue.fee,totalRevenue.missingFee)+inline(totalRevenue.sale+totalRevenue.fee,totalRevenue.missingSale+totalRevenue.missingFee):'')+'</tr>';
+ el('personalYearBody').innerHTML=rows.length?tbody:'<tr><td colspan="'+(visibleMonths.length+4+(showTotal?1:0)+(oneMonth?3:0))+'">선택한 기간과 소속에 등록된 가입 실적이 없습니다.</td></tr>';
  el('personalYearNote').textContent=personalSelectedYear+'년 '+(fullYear?'전체(1~12월)':visibleMonths.map(m=>m+'월').join('·'))+' · 총 '+rows.length+'개 담당자/소속 조합 · '+fmt(sum)+'구좌'+
   (unassignedSeats?' · 담당자 미지정 '+fmt(unassignedSeats)+'구좌 (기존 기록 포함)':'')+
   (excludedLegacy?' · 가입 건별 정보가 없는 기존 실적 '+fmt(excludedLegacy)+'구좌는 담당자 미지정으로 표시':'')+
   ' · 동일 성명이라도 소속 지사·본부가 다르면 별도 집계합니다.';
 }
+el('personalYearBody').addEventListener('click',e=>{const button=e.target.closest('[data-personal-revenue]');if(!button)return;const info=personalRevenueActions.get(button.dataset.personalRevenue);if(info)showRevenueDetail(info.name,info.period,info.seats,info.revenue);});
 el('personalYearSelect').addEventListener('change',e=>{personalSelectedYear=Number(e.target.value);renderPersonalYearboard();});
 el('personalBranchSelect').addEventListener('change',e=>{personalSelectedBranch=e.target.value;renderPersonalYearboard();});
 el('personalDivisionSelect').addEventListener('change',e=>{personalSelectedDivision=e.target.value;renderPersonalYearboard();});
