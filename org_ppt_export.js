@@ -96,24 +96,26 @@
    const slide=pptx.addSlide(),part=chunks[i]||[];
    base(slide,pptx,'PLK 조직도 · 전체 현황','권역 · 지사 · 본부 구조  |  지사별 상세 구성은 다음 슬라이드에서 확인할 수 있습니다.',++pageCounter.value);
    card(slide,pptx,root,4.78,1.33,3.77,.74,{fontSize:17});
+   const representatives=getDirect(root.id).filter(n=>n.type==='person');
+   if(representatives.length){line(slide,pptx,W/2,2.07,W/2,2.23);card(slide,pptx,representatives[0],5.13,2.23,3.07,.47,{fontSize:12,subSize:9});}
    if(part.length){
-    const boxW=2.92,gap=.19,total=part.length*boxW+(part.length-1)*gap,start=(W-total)/2,top=2.69;
+    const boxW=2.92,gap=.19,total=part.length*boxW+(part.length-1)*gap,start=(W-total)/2,top=3.12;
     const center= (node)=>start+part.indexOf(node)*(boxW+gap)+boxW/2;
-    if(part.length>1)line(slide,pptx,center(part[0]),2.38,center(part[part.length-1]),2.38);
-    line(slide,pptx,W/2,2.07,W/2,2.38);
+    if(part.length>1)line(slide,pptx,center(part[0]),2.95,center(part[part.length-1]),2.95);
+    line(slide,pptx,W/2,representatives.length?2.70:2.07,W/2,2.95);
     part.forEach(group=>{
      const x=start+part.indexOf(group)*(boxW+gap),cx=x+boxW/2;
-     line(slide,pptx,cx,2.38,cx,top);
+     line(slide,pptx,cx,2.95,cx,top);
      card(slide,pptx,branchTitle(group),x,top,boxW,.65,{fontSize:14});
      const direct=getDirect(group.id).filter(n=>n.type==='person');
      line(slide,pptx,cx,top+.65,cx,direct.length?top+.83:4.24);
      if(direct.length)card(slide,pptx,direct[0],x+.2,top+.83,boxW-.4,.52,{fontSize:12,subSize:9});
      const divisions=getDirect(group.id).filter(n=>n.type==='division');
      for(let j=0;j<Math.min(divisions.length,4);j++){
-      const yy=4.24+j*.51;
-      line(slide,pptx,cx,j===0?(direct.length?top+1.35:top+.65):4.24+(j-1)*.51+.40,cx,yy);
+      const yy=4.57+j*.43;
+      line(slide,pptx,cx,j===0?(direct.length?top+1.35:top+.65):4.57+(j-1)*.43+.36,cx,yy);
       const division=divisions[j];
-      card(slide,pptx,division,x+.18,yy,boxW-.36,.40,{fontSize:10});
+      card(slide,pptx,division,x+.18,yy,boxW-.36,.36,{fontSize:10});
      }
      if(divisions.length>4)text(slide,'외 '+(divisions.length-4)+'개 본부 / 팀',x+.2,6.1,boxW-.4,.26,{size:9,color:'657990'});
     });
