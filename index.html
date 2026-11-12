@@ -964,7 +964,7 @@ function orgEffectiveRole(node){
  if(Object.prototype.hasOwnProperty.call(node,'headcountRole'))return valid.includes(node.headcountRole)?node.headcountRole:'';
  // Older saved member cards can be classified from their existing job-title text.
  if(node.type!=='person')return '';
- const title=String(node.subtitle||'').trim().replace(/\\s+/g,'');
+ const title=String(node.subtitle||'').trim().replace(/\s+/g,'');
  if(/권역대표/.test(title))return 'regional';
  if(/지사장/.test(title))return 'branch';
  if(/본부장/.test(title))return 'division';
@@ -973,7 +973,7 @@ function orgEffectiveRole(node){
 }
 function orgCountable(node){
  const name=String(node.label||'').trim();
- if(!name||/^(구성원|새 구성원|이름 미입력|최상위 조직|새 지사 \\/ 부서|새 본부 \\/ 팀)$/.test(name))return false;
+ if(!name||['구성원','새 구성원','이름 미입력','최상위 조직','새 지사 / 부서','새 본부 / 팀'].includes(name))return false;
  // Organizational headings are not counted unless explicitly assigned a role.
  if(node.type!=='person'&&!Object.prototype.hasOwnProperty.call(node,'headcountRole'))return false;
  return true;
