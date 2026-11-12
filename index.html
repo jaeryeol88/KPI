@@ -316,6 +316,7 @@ const lock = flag => { loading=flag; ['add','backup','restore','logout'].forEach
 // 로그인 폼 이벤트를 먼저 연결한 뒤 초기 세션을 확인합니다.
 async function enter(user) {
   if (!db) return;
+  orgLoaded=false;orgDbReady=false;orgNodes=[];orgSelectedId=null;el('orgEditor').hidden=true;
   const {data,error}=await db.rpc('kpi_my_access');
   if(error){
     // 이전 단일 최고관리자 정책과의 호환: 새 권한 SQL 적용 전에도 기존 소유자 로그인 유지
@@ -907,8 +908,8 @@ let orgNodes=[],orgSelectedId=null,orgDirty=false,orgLoaded=false,orgDbReady=fal
 function orgDefaultNodes(){
  const nodes=[];let seq=0;
  const make=(parent,type,label)=>{const id='sample-'+(++seq);nodes.push({id,parent,type,label,subtitle:'',color:'default',order:seq});return id;};
- const root=make(null,'root','호남권역');
- for(const [group,divisions] of [['지사 1',['1본부','2본부','3본부']],['지사 2',['1본부','2본부','3본부']],['지사 3',['1본부','2본부']],['제휴 / 지원 / 예약',['제휴팀','지원팀','예약팀']]]){
+ const root=make(null,'root','부산권역');
+ for(const [group,divisions] of [['부산 1지사',['1본부','2본부','3본부']],['부산 2지사',['1본부','2본부','3본부']],['부산 3지사',['1본부','2본부','3본부']],['부산 4지사',['1본부','2본부','3본부']]]){
   const gid=make(root,'group',group);
   for(const division of divisions)make(gid,'division',division);
  }
@@ -1746,7 +1747,7 @@ if (!isConfigured) {
   try {
     db = createClient(cfg.supabaseUrl,cfg.supabaseAnonKey,{auth:{autoRefreshToken:true,persistSession:true,detectSessionInUrl:false}});
     db.auth.onAuthStateChange((event,session)=>{
-      if (event==='SIGNED_OUT') {currentUser=null;items=[];eventOwners={};access={role:'none',branch:null};showAuth('');}
+      if (event==='SIGNED_OUT') {currentUser=null;items=[];eventOwners={};orgNodes=[];orgLoaded=false;orgDbReady=false;orgSelectedId=null;access={role:'none',branch:null};showAuth('');}
     });
     db.auth.getSession().then(async ({data,error})=>{
       if (error) { showAuth('세션 확인 실패: '+errText(error)); return; }
