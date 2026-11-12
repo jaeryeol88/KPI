@@ -3,6 +3,8 @@
 'use strict';
 const host=document.getElementById('orgStaffPage');
 if(!host)return;
+const orgApi=window.PLK_ORG;
+if(!orgApi)throw new Error('조직관리 연결을 초기화하지 못했습니다.');
 const safe=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
 const roles={regional:'권역대표',branch:'지사장',division:'본부장',manager:'매니저'};
 const branches=['부산 1지사','부산 2지사','부산 3지사','부산 4지사'];
@@ -77,23 +79,23 @@ function branchOf(node){
  while(p&&guard++<12){
   if(p.type==='group')branch=p.label||branch;
   if(p.type==='division')division=p.label||division;
-  p=p.parent?orgNodes.find(n=>n.id===p.parent):null;
+  p=p.parent?orgApi.nodes.find(n=>n.id===p.parent):null;
  }
  if(node.type==='group')branch=node.label;
  if(node.type==='division')division=node.label;
  return {branch,division};
 }
 function staffEntries(){
- return orgNodes.filter(n=>{
+ return orgApi.nodes.filter(n=>{
   if(!n||!['person','root','group','division'].includes(n.type))return false;
   const name=String(n.label||'').trim();
   if(!name||placeholders.has(name))return false;
-  return n.type==='person'||Boolean(orgEffectiveRole(n));
+  return n.type==='person'||Boolean(orgApi.effectiveRole(n));
  }).map(n=>{
   const hierarchy=branchOf(n),record=contacts.get(String(n.id))||{};
-  const role=orgEffectiveRole(n);
+  const role=orgApi.effectiveRole(n);
   return {node:n,name:String(n.label||''),role,branch:hierarchy.branch,division:hierarchy.division,phone:record.phone||'',
-   status:record.employment_status||'재직',hire:orgJoinYearMonth(n.joinDate)};
+   status:record.employment_status||'재직',hire:orgApi.joinYearMonth(n.joinDate)};
  }).sort((a,b)=>branches.indexOf(a.branch)-branches.indexOf(b.branch)||a.division.localeCompare(b.division,'ko')||a.name.localeCompare(b.name,'ko'));
 }
 function refreshTable(){
@@ -102,7 +104,7 @@ function refreshTable(){
  const query=$('staffSearch').value.trim().toLocaleLowerCase('ko');
  const filter=$('staffBranchFilter').value,status=$('staffStatusFilter').value;
  const visible=entries.filter(r=>(filter==='all'||r.branch===filter)&&(status==='all'||status===r.status)&&(!query||[r.name,roles[r.role]||r.node.subtitle,r.branch,r.division].join(' ').toLocaleLowerCase('ko').includes(query)));
- const can=orgCanEdit();
+ const can=orgApi.canEdit();
  $('staffAdd').hidden=!can;
  $('staffTableBody').innerHTML=visible.map((r,i)=>{
   const id=safe(r.node.id),st=r.status==='휴직'?'leave':r.status==='퇴사'?'left':'';
@@ -121,9 +123,9 @@ async function loadContacts(){
  if(loading)return loading;
  loading=(async()=>{
   try{
-   if(!db||!currentUser)return;
-   if(!orgCanEdit()){available=false;loaded=true;refreshTable();return;}
-   const {data,error}=await db.from('kpi_org_staff_contacts').select('node_id,phone,employment_status');
+   if(!orgApi.db||!orgApi.currentUser)return;
+   if(!orgApi.canEdit()){available=false;loaded=true;refreshTable();return;}
+   const {data,error}=await orgApi.db.from('kpi_org_staff_contacts').select('node_id,phone,employment_status');
    if(error)throw error;
    contacts=new Map((data||[]).map(row=>[String(row.node_id),row]));
    available=true;
@@ -133,21 +135,21 @@ async function loadContacts(){
  return loading;
 }
 function divisionOptions(branch,value){
- const branchGroups=orgNodes.filter(n=>n.type==='group'&&n.label===branch);
- const divs=branchGroups.flatMap(g=>orgChildren(g.id).filter(n=>n.type==='division'));
+ const branchGroups=orgApi.nodes.filter(n=>n.type==='group'&&n.label===branch);
+ const divs=branchGroups.flatMap(g=>orgApi.children(g.id).filter(n=>n.type==='division'));
  $('staffDivision').innerHTML=divs.map(d=>'<option value="'+safe(d.id)+'">'+safe(d.label)+'</option>').join('');
  if(value&&divs.some(d=>d.id===value))$('staffDivision').value=value;
 }
 function openForm(id=null){
- if(!orgCanEdit())return;
- const node=id?orgNodes.find(x=>String(x.id)===String(id)):null;
+ if(!orgApi.canEdit())return;
+ const node=id?orgApi.nodes.find(x=>String(x.id)===String(id)):null;
  editingId=node?String(node.id):null;
  $('orgStaffDialog').hidden=false;
  $('staffFormTitle').textContent=node?'조직원 정보 수정':'조직원 추가';
  $('staffName').value=node?node.label:'';
- $('staffRole').value=node?orgEffectiveRole(node):'manager';
+ $('staffRole').value=node?orgApi.effectiveRole(node):'manager';
  $('staffPhone').value=node?(contacts.get(String(node.id))?.phone||''):'';
- $('staffHired').value=node?orgJoinYearMonth(node.joinDate):'';
+ $('staffHired').value=node?orgApi.joinYearMonth(node.joinDate):'';
  $('staffStatus').value=node?(contacts.get(String(node.id))?.employment_status||'재직'):'재직';
  const grp=node?branchOf(node):{branch:'부산 1지사'};
  $('staffBranch').innerHTML=branches.map(b=>'<option value="'+safe(b)+'">'+safe(b)+'</option>').join('');
@@ -159,58 +161,58 @@ function openForm(id=null){
  $('orgStaffDialog').scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 async function saveNodeAndContact(node,record){
- if(!orgDbReady)throw new Error('조직도 저장 DB를 연결할 수 없습니다. org_chart_setup.sql 설정을 확인하세요.');
+ if(!orgApi.dbReady)throw new Error('조직도 저장 DB를 연결할 수 없습니다. org_chart_setup.sql 설정을 확인하세요.');
  if(!available)throw new Error('연락처 저장 DB를 연결할 수 없습니다. org_staff_setup.sql을 먼저 실행하세요.');
- const {error}=await db.from('kpi_org_chart').upsert({id:1,nodes:orgNodes,updated_at:new Date().toISOString()},{onConflict:'id'});
+ const {error}=await orgApi.db.from('kpi_org_chart').upsert({id:1,nodes:orgApi.nodes,updated_at:new Date().toISOString()},{onConflict:'id'});
  if(error)throw error;
- orgDirty=false;
- const {error:contactError}=await db.from('kpi_org_staff_contacts').upsert({node_id:String(node.id),phone:record.phone,employment_status:record.employment_status,updated_at:new Date().toISOString()},{onConflict:'node_id'});
+ orgApi.dirty=false;
+ const {error:contactError}=await orgApi.db.from('kpi_org_staff_contacts').upsert({node_id:String(node.id),phone:record.phone,employment_status:record.employment_status,updated_at:new Date().toISOString()},{onConflict:'node_id'});
  if(contactError)throw contactError;
  contacts.set(String(node.id),{node_id:String(node.id),...record});
 }
 $('staffForm').addEventListener('submit',async e=>{
  e.preventDefault();
- if(staffSaving||!orgCanEdit())return;
+ if(staffSaving||!orgApi.canEdit())return;
  const name=$('staffName').value.trim(),role=$('staffRole').value,division=$('staffDivision').value;
  if(!name||!role){message('성명과 직급을 입력하세요.',true);return;}
- const parent=orgNodes.find(n=>n.id===division&&n.type==='division');
+ const parent=orgApi.nodes.find(n=>n.id===division&&n.type==='division');
  if(!editingId&&!parent){message('추가할 지사와 본부를 선택하세요.',true);return;}
  const date=$('staffHired').value.trim();
  if(date&&!/^[0-9]{2}[.](0[1-9]|1[0-2])$/.test(date)){message('입사년월은 26.09 형식으로 입력하세요.',true);return;}
- const oldNodes=JSON.stringify(orgNodes);
- let node=editingId?orgNodes.find(n=>String(n.id)===editingId):null;
+ const oldNodes=JSON.stringify(orgApi.nodes);
+ let node=editingId?orgApi.nodes.find(n=>String(n.id)===editingId):null;
  if(editingId&&!node){message('해당 구성원을 찾을 수 없습니다.',true);return;}
- if(!node){node={id:orgNewId(),parent:parent.id,type:'person',order:orgNodes.length+1,color:'default',label:name,subtitle:'',headcountRole:role,joinDate:date};orgNodes.push(node);}
+ if(!node){node={id:orgApi.newId(),parent:parent.id,type:'person',order:orgApi.nodes.length+1,color:'default',label:name,subtitle:'',headcountRole:role,joinDate:date};orgApi.nodes.push(node);}
  else{node.label=name;node.headcountRole=role;node.joinDate=date;if(node.type==='person')node.parent=parent?.id||node.parent;}
  staffSaving=true;$('staffSubmit').disabled=true;
  try{
   await saveNodeAndContact(node,{phone:$('staffPhone').value.trim(),employment_status:$('staffStatus').value});
   $('orgStaffDialog').hidden=true;editingId=null;
-  orgDraw();refreshTable();message('조직원 정보가 온라인에 저장되었습니다.');
+  orgApi.draw();refreshTable();message('조직원 정보가 온라인에 저장되었습니다.');
  }catch(err){
   // Avoid deleting an organization node that was saved but whose contact update failed.
-  if(!String(err.message||'').includes('연락처')){orgNodes=JSON.parse(oldNodes);}
+  if(!String(err.message||'').includes('연락처')){orgApi.nodes=JSON.parse(oldNodes);}
   refreshTable();message('저장에 실패했습니다: '+(err.message||String(err)),true);
  }finally{staffSaving=false;$('staffSubmit').disabled=false;}
 });
 $('staffTableBody').addEventListener('click',async e=>{
  const edit=e.target.closest('[data-staff-edit]'),del=e.target.closest('[data-staff-delete]');
  if(edit){openForm(edit.dataset.staffEdit);return;}
- if(!del||!orgCanEdit())return;
- const node=orgNodes.find(x=>String(x.id)===del.dataset.staffDelete);
+ if(!del||!orgApi.canEdit())return;
+ const node=orgApi.nodes.find(x=>String(x.id)===del.dataset.staffDelete);
  if(!node)return;
  if(node.type!=='person'){message('상위 조직 카드는 조직도 화면에서 삭제해 주세요.',true);return;}
  if(!confirm(node.label+' 조직원을 삭제할까요? 조직도에서도 삭제됩니다.'))return;
- if(!available||!orgDbReady){message('먼저 조직도/조직원 DB 설정을 완료해 주세요.',true);return;}
- const previous=orgNodes.slice();orgNodes=orgNodes.filter(n=>n.id!==node.id);
+ if(!available||!orgApi.dbReady){message('먼저 조직도/조직원 DB 설정을 완료해 주세요.',true);return;}
+ const previous=orgApi.nodes.slice();orgApi.nodes=orgApi.nodes.filter(n=>n.id!==node.id);
  try{
-  const {error}=await db.from('kpi_org_chart').upsert({id:1,nodes:orgNodes,updated_at:new Date().toISOString()},{onConflict:'id'});
+  const {error}=await orgApi.db.from('kpi_org_chart').upsert({id:1,nodes:orgApi.nodes,updated_at:new Date().toISOString()},{onConflict:'id'});
   if(error)throw error;
-  orgDirty=false;
-  const {error:contactError}=await db.from('kpi_org_staff_contacts').delete().eq('node_id',String(node.id));
+  orgApi.dirty=false;
+  const {error:contactError}=await orgApi.db.from('kpi_org_staff_contacts').delete().eq('node_id',String(node.id));
   if(contactError)throw contactError;
-  contacts.delete(String(node.id));orgDraw();refreshTable();message('조직원을 삭제했습니다.');
- }catch(err){orgNodes=previous;orgDraw();message('삭제 실패: '+(err.message||String(err)),true);}
+  contacts.delete(String(node.id));orgApi.draw();refreshTable();message('조직원을 삭제했습니다.');
+ }catch(err){orgApi.nodes=previous;orgApi.draw();message('삭제 실패: '+(err.message||String(err)),true);}
 });
 $('staffAdd').onclick=()=>openForm();
 $('staffCancel').onclick=()=>{$('orgStaffDialog').hidden=true;editingId=null};
@@ -218,7 +220,7 @@ $('staffBranch').onchange=()=>divisionOptions($('staffBranch').value,null);
 for(const id of ['staffSearch','staffBranchFilter','staffStatusFilter'])$(id).addEventListener(id==='staffSearch'?'input':'change',refreshTable);
 options();
 window.renderOrgStaff=function(){
- if(!orgLoaded){orgLoad().then(()=>{if(!loaded)loadContacts();refreshTable()});}
+ if(!orgApi.loaded){orgApi.load().then(()=>{if(!loaded)loadContacts();refreshTable()});}
  else if(!loaded)loadContacts();
  else refreshTable();
 };
