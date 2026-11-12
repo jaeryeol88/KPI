@@ -211,8 +211,8 @@ el('v-months').addEventListener('change',e=>{
  };
  function branchHeading(n){
   const explicit=String(n.branchName||'').trim();if(explicit)return explicit;
-  const match=String(n.label||'').match(/부산\\s*[1-4]\\s*지사/);
-  if(match)return match[0].replace(/\\s+/g,' ').replace(/부산 ([1-4]) 지사/,'부산 $1지사').replace(/부산([1-4])지사/,'부산 $1지사');
+  const match=String(n.label||'').match(/부산\s*[1-4]\s*지사/);
+  if(match)return match[0].replace(/\s+/g,' ').replace(/부산 ([1-4]) 지사/,'부산 $1지사').replace(/부산([1-4])지사/,'부산 $1지사');
   const siblings=children(n.parent).filter(x=>x.type==='group'),index=siblings.findIndex(x=>x.id===n.id);
   return index>=0&&index<4?'부산 '+(index+1)+'지사':'지사 / 부서';
  }
@@ -246,7 +246,7 @@ el('v-months').addEventListener('change',e=>{
   el('v-org-note').textContent=orgMessage||'부산권역 전체 조직도 · 읽기 전용';
   const person=n=>card(n);
   const division=n=>'<div class="v-org-division">'+card(n)+'<div class="v-org-members">'+children(n.id).map(person).join('')+'</div></div>';
-  const group=n=>'<div class="v-org-group"><div class="v-org-branch-heading">'+safe(branchHeading(n))+'</div><div class="v-org-branch-leader">'+card(n)+'</div>'+(children(n.id).some(x=>x.type==='person')?'<div class="v-org-direct-members">'+children(n.id).filter(x=>x.type==='person').map(person).join('')+'</div>':'')+'<div class="v-org-divisions v-org-branch-units">'+children(n.id).filter(x=>x.type==='division').map(division).join('')+'</div></div>';
+  const group=n=>'<div class="v-org-group"><div class="v-org-branch-heading">'+safe(branchHeading(n))+'</div>'+(children(n.id).some(x=>x.type==='person')?'<div class="v-org-direct-members">'+children(n.id).filter(x=>x.type==='person').map(person).join('')+'</div>':'')+'<div class="v-org-divisions v-org-branch-units">'+children(n.id).filter(x=>x.type==='division').map(division).join('')+'</div></div>';
   const root=n=>'<div class="v-org-root">'+card(n)+'<div class="v-org-groups">'+children(n.id).map(group).join('')+'</div></div>';
   el('v-org-canvas').innerHTML=children(null).map(root).join('')||'<p class="v-note">등록된 조직도가 없습니다.</p>';
   alignOrgConnectors();
