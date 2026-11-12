@@ -855,7 +855,8 @@ function renderPerformanceYearboard(){
   yearInput.dataset.options=years.join(',');
  }
  yearInput.value=String(perfSelectedYear);
- const allowed=monthlyAllowedBranches();
+ // This overview covers the four Busan branches only; exclude separately recorded 부산권역 entries.
+ const allowed=monthlyAllowedBranches().filter(branch=>['부산 1지사','부산 2지사','부산 3지사','부산 4지사'].includes(branch));
  if(perfSelectedBranch!=='all'&&!allowed.includes(perfSelectedBranch))perfSelectedBranch='all';
  const branchKey=allowed.join('|');
  if(branchInput.dataset.options!==branchKey){
