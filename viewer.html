@@ -1097,7 +1097,7 @@ async function fetchViewerPublicData(silent){
 }
 let viewerExtras={refresh:()=>{},refreshOrganization:async()=>{},setHistoricalSeats:()=>{},setCompetitionData:()=>{}};
 try{
- const {installViewerExtras}=await import('./viewer_extra.js?v=competition-leaderboard-20261114');
+ const {installViewerExtras}=await import('./viewer_extra.js?v=competition-leaderboard-syntaxfix-20261114');
  viewerExtras=installViewerExtras({
  assignedBranch,
  getAllEvents:()=>allViewerEvents,
