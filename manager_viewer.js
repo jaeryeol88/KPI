@@ -101,7 +101,7 @@ function drawOrg(){
   if(!['person','division'].includes(n.type)||n.type==='division'&&!Object.prototype.hasOwnProperty.call(n,'headcountRole'))continue;
   const name=String(n.label||'').trim(),role=roleOf(n);
   if(!name||ignored.has(name)||!role)continue;
-  if(/\\(\\s*겸직\\s*\\)/.test(String(n.label||'')+' '+String(n.subtitle||'')))counts.dual++;
+  if(/\(\s*겸직\s*\)/.test(String(n.label||'')+' '+String(n.subtitle||'')))counts.dual++;
   else counts[role]++;
  }
  const countedTotal=Object.values(counts).reduce((a,b)=>a+b,0);
