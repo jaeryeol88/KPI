@@ -4,7 +4,7 @@ import {historicalActualSeats,historicValue} from './historical_seats.js?v=auto-
 import {timedSignupRows} from './signup_date_utils.js';
 import {rosterPerformancePeople} from './personal_roster.js';
 import {drawOrgConnectorLines} from './org_connector_lines.js';
-import {ORG_ROLE_LABELS,orgEffectiveRoleShared,countOrgHeadcount,isDualStaff} from './org_headcount.js?v=shared-dual-role-20261113';
+import {ORG_ROLE_LABELS,orgEffectiveRoleShared,countOrgHeadcount,isDualStaff} from './org_headcount.js?v=division-dual-20261113';
 
 const el=id=>document.getElementById(id);
 const safe=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -164,7 +164,7 @@ function drawOrg(){
  const roles=ORG_ROLE_LABELS;
  const roleOf=orgEffectiveRoleShared;
  const counts=countOrgHeadcount(orgNodes);
- const dualHelp=el('orgDualViewerHelp');if(dualHelp)dualHelp.textContent=counts.dual===0?'겸직 0명: 관리자에서 겸직으로 지정하여 저장한 구성원이 아직 확인되지 않습니다.':'';
+ const dualHelp=el('orgDualViewerHelp');if(dualHelp)dualHelp.textContent=counts.dual===0?'겸직 0명: 관리자에서 ‘본부장 겸직’으로 지정하여 저장한 구성원이 아직 확인되지 않습니다.':'';
  el('orgCount').textContent='조직도 카드 기준 · 자동 집계';
  el('orgHeadcount').innerHTML=[...['regional','branch','division','manager','dual'].map(k=>[roles[k],counts[k]]),['총인원',counts.total]]
   .map(([label,n])=>'<div class="org-headcount-stat'+(label==='총인원'?' org-headcount-total':'')+'"><span>'+safe(label)+'</span><strong>'+fmt(n)+'명</strong></div>').join('');
