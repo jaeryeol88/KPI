@@ -1,5 +1,4 @@
 import { historicalPast } from './historical_seats.js';
-import { createHistoricalBulkImport } from './historical_bulk_import.js';
 /* Separate administrator-only, seat-only historical records editor. */
 export function createHistoricalEditor({getDb,getRole,onRecords}){
  const el=id=>document.getElementById(id);
@@ -104,6 +103,5 @@ export function createHistoricalEditor({getDb,getRole,onRecords}){
  el('histForm').addEventListener('submit',save);
  el('histDelete').addEventListener('click',remove);
  el('histReload').addEventListener('click',load);
- createHistoricalBulkImport({section,getDb,getRole,afterSave:load});
  return {load,show(){section.hidden=!['owner','shared'].includes(getRole());}};
 }
