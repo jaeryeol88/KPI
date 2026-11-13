@@ -3,7 +3,7 @@ export function cancellationPanel(host,opts={}){
  const safe=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const panel=document.createElement('section');
  panel.style.cssText='margin-top:16px;padding:14px;border:1px solid #e1e7ef;border-radius:10px;background:#fff';
- panel.innerHTML='<h3 style="font-size:15px;margin:0 0 8px">계약해지 · 별도 현황</h3><p style="margin:0 0 10px;font-size:12px;color:#68788b">정상 실적·매출·달성률에 합산하지 않습니다. 엑셀에 지사/본부 정보가 없는 계약해지자는 별도로 구분합니다.</p><div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr><th style="padding:8px;background:#f3f6fb">성명</th><th style="padding:8px;background:#f3f6fb">월</th><th style="padding:8px;background:#f3f6fb">계약해지 구좌</th><th style="padding:8px;background:#f3f6fb">구분</th></tr></thead><tbody></tbody></table></div>';
+ panel.innerHTML='<h3 style="font-size:15px;margin:0 0 8px">이전 등록 계약해지 기록 (소속 미지정)</h3><p style="margin:0 0 10px;font-size:12px;color:#68788b">기존 소속 미지정 기록만 별도로 표시합니다. 새로 입력하는 계약해지 실적은 과거 실적 입력란에서 소속 지사·본부와 함께 등록하며 정상 구좌에 합산됩니다.</p><div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr><th style="padding:8px;background:#f3f6fb">성명</th><th style="padding:8px;background:#f3f6fb">월</th><th style="padding:8px;background:#f3f6fb">계약해지 구좌</th><th style="padding:8px;background:#f3f6fb">구분</th></tr></thead><tbody></tbody></table></div>';
  host.append(panel);
  const tbody=panel.querySelector('tbody');
  let rows=[];
