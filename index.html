@@ -922,7 +922,8 @@ function renderMonthlyGoals(){
  };
  const total=rollup(branches,ys,months,divisions);
  el('monthlyRate').textContent=total.rate;
- el('monthlySummary').textContent=monthlyCaption(total);
+ const missingDates=undatedSignupStats(items);
+ el('monthlySummary').textContent=monthlyCaption(total)+(missingDates.records?' · 가입일 미입력 '+fmt(missingDates.records)+'건 / '+fmt(missingDates.seats)+'구좌 집계 제외':'')+(missingDates.legacyEvents?' · 가입건별 정보 없는 기존 행사 '+fmt(missingDates.legacyEvents)+'건 집계 제외':'');
  el('annualRate').textContent=fmt(total.done)+'구좌';
  el('annualSummary').textContent='회사 배정 목표 '+fmt(total.goal)+'구좌 · '+ys.length+'개 연도 · '+months.length+'개 월';
  el('monthlyRows').innerHTML=ys.flatMap(y=>months.map(m=>{
