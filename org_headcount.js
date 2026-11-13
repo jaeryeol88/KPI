@@ -35,37 +35,30 @@ export function isDualStaff(node){
 }
 export function countOrgHeadcount(nodes){
  const counts={regional:0,branch:0,division:0,manager:0,dual:0};
- const people=new Map();
- const excluded=new Set(['박영우','안선경']);
- for(const n of nodes){
-  if(!n||n.staffHidden===true)continue;
-  const raw=String(n.label||'').trim();
+ const dualNames=new Set();
+ const regularNames=new Map();
+ for(const node of nodes){
+  if(!node||node.staffHidden===true)continue;
+  const raw=String(node.label||'').trim();
   if(!raw||PLACEHOLDERS.has(raw))continue;
-  if(['group','root'].includes(n.type)&&!Object.prototype.hasOwnProperty.call(n,'headcountRole'))continue;
-  if(n.type!=='person'&&!Object.prototype.hasOwnProperty.call(n,'headcountRole'))continue;
+  if(['root','group'].includes(node.type)&&!Object.prototype.hasOwnProperty.call(node,'headcountRole'))continue;
   const name=orgIdentityName(raw);
   if(!name||/^(구성원|새구성원|이름미입력|새본부팀)$/.test(name))continue;
-  const role=orgEffectiveRoleShared(n);
-  if(!Object.prototype.hasOwnProperty.call(counts,role))continue;
-  if(!people.has(name))people.set(name,{roles:new Set(),explicitDual:false});
-  const person=people.get(name);
-  person.roles.add(role);
-  if(isDualStaff(n))person.explicitDual=true;
- }
- // A person listed in more than one position is counted once as dual-duty,
- // except the two branch managers whose primary branch role must be retained.
- for(const [name,person] of people){
-  const roles=person.roles;
-  const branchException=excluded.has(name)&&roles.has('branch');
-  const automaticallyDual=roles.size>1&&!branchException;
-  if(person.explicitDual||automaticallyDual){
-   counts.dual++;
-   // Explicit dual-only cards do not add a second person to the total.
-   // For duplicate assignments, keep the person's primary role once.
-   if(roles.size===1&&roles.has('dual'))continue;
+  // The explicitly selected headcount role takes precedence over title text.
+  const role=node.headcountRole==='dual'?'dual':orgEffectiveRoleShared(node);
+  if(role==='dual'){
+   dualNames.add(name);
+   continue;
   }
-  const primary=['regional','branch','division','manager'].find(role=>roles.has(role));
-  if(primary)counts[primary]++;
+  if(['regional','branch','division','manager'].includes(role)&&!regularNames.has(name))
+   regularNames.set(name,role);
+ }
+ // Explicit '본부장 겸직' assignments appear only in the dual counter,
+ // never in the regular headcount or total. Keep ordinary role cards intact.
+ counts.dual=dualNames.size;
+ for(const [name,role] of regularNames){
+  if(dualNames.has(name))continue;
+  counts[role]++;
  }
  return {...counts,total:counts.regional+counts.branch+counts.division+counts.manager};
 }
