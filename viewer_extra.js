@@ -64,7 +64,7 @@ function projectAdminOrgChart(original){
  return nodes;
 }
 /* Read-only supplemental KPI views, shared by all public viewers. */
-export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTarget,countSeats,normalizeDivision,loadOrganization}) {
+export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTarget,countSeats,normalizeDivision,loadOrganization,loadStaffStatuses}) {
  const el=id=>document.getElementById(id);
  const safe=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const fmt=x=>Number(x||0).toLocaleString('ko-KR');
@@ -492,12 +492,7 @@ el('v-months').addEventListener('change',e=>{
   // Anonymous viewers can read ONLY the safe status projection; phone numbers remain protected.
   staffStatuses=new Map();staffStatusLoaded=false;staffStatusError='';
   try{
-   const settings=window.PLK_CONFIG||{};
-   if(!/^https:\/\/[^/]+\.supabase\.co\/?$/.test(settings.supabaseUrl||'')||!settings.supabaseAnonKey)throw new Error('공개 조회 연결이 설정되지 않았습니다.');
-   const address=settings.supabaseUrl.replace(/\/$/,'')+'/rest/v1/kpi_org_staff_public_status?select=node_id,employment_status';
-   const response=await fetch(address,{headers:{apikey:settings.supabaseAnonKey,Authorization:'Bearer '+settings.supabaseAnonKey},cache:'no-store'});
-   if(!response.ok)throw new Error('공개 재직상태 DB 설정이 필요합니다. ('+response.status+')');
-   const data=await response.json();
+   const data=await loadStaffStatuses();
    if(!Array.isArray(data))throw new Error('재직상태 응답 형식 오류');
    staffStatuses=new Map(data.filter(row=>row&&row.node_id&&['재직','휴직','퇴사'].includes(row.employment_status))
     .map(row=>[String(row.node_id),row.employment_status]));
