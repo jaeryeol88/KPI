@@ -96,7 +96,7 @@ BEGIN
  ELSIF p_source='kpi_historical_seats' THEN
    SELECT coalesce(jsonb_agg(to_jsonb(x)),'[]'::jsonb) INTO v_rows FROM public.kpi_historical_seats x
    WHERE v_branch IS NULL OR x.branch=v_branch;
- ELSIF p_source='kpi_historical_cancellations' AND a.role IN ('all','branch') THEN
+ ELSIF p_source='kpi_historical_cancellations' AND a.role='all' THEN
    SELECT coalesce(jsonb_agg(to_jsonb(x)),'[]'::jsonb) INTO v_rows FROM public.kpi_historical_cancellations x;
  ELSIF p_source='kpi_org_chart' THEN
    SELECT coalesce(jsonb_agg(to_jsonb(x)),'[]'::jsonb) INTO v_rows FROM public.kpi_org_chart x WHERE x.id=1;
@@ -116,21 +116,18 @@ GRANT EXECUTE ON FUNCTION public.kpi_viewer_login(text,text),
 REVOKE SELECT ON public.kpi_public_events,public.kpi_monthly_targets,
  public.kpi_monthly_division_targets,public.kpi_historical_seats,
  public.kpi_historical_cancellations,public.kpi_org_chart,
- public.kpi_org_staff_public_status FROM anon;
--- Remove public anonymous read access through RLS policies, if present.
-DO $$
-DECLARE r record;
+ public.kpi_org_staff_public_status FROM PUBLIC,anon;
+-- Keep existing authenticated administrator RLS policies intact; anonymous SELECT is revoked above.
+-- Block the old manager performance RPC and the public branch phone RPC.
+REVOKE EXECUTE ON FUNCTION public.kpi_manager_performance_signups() FROM PUBLIC,anon;
+DO $revoke$
+DECLARE f record;
 BEGIN
- FOR r IN SELECT schemaname,tablename,policyname FROM pg_policies
- WHERE schemaname='public' AND tablename IN
- ('kpi_public_events','kpi_monthly_targets','kpi_monthly_division_targets',
-  'kpi_historical_seats','kpi_historical_cancellations','kpi_org_chart',
-  'kpi_org_staff_public_status')
- AND (roles @> ARRAY['anon']::name[] OR roles @> ARRAY['public']::name[])
- AND cmd IN ('SELECT','ALL')
+ FOR f IN SELECT p.oid::regprocedure AS signature FROM pg_proc p
+ JOIN pg_namespace n ON n.oid=p.pronamespace
+ WHERE n.nspname='public' AND p.proname='kpi_public_branch_staff_phones'
  LOOP
-  EXECUTE format('DROP POLICY %I ON %I.%I',r.policyname,r.schemaname,r.tablename);
+  EXECUTE format('REVOKE EXECUTE ON FUNCTION %s FROM PUBLIC,anon',f.signature);
  END LOOP;
-END $$;
-REVOKE EXECUTE ON FUNCTION public.kpi_manager_performance_signups() FROM anon;
+END $revoke$;
 COMMIT;
