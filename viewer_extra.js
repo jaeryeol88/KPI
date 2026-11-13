@@ -269,7 +269,7 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
    for(const row of Array.isArray(event.signupEntries)?event.signupEntries:[]){
     if(!row||row.withdrawn||!['corporate','individual'].includes(row.group))continue;
     const date=String(row.signupDate||'').trim();
-    if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(date))continue;
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(date))continue;
     const branch=row.branch||event.branch||'',division=normalizeDivision(row.division||event.division)||'';
     if(assignedBranch&&branch!==assignedBranch)continue;
     const y=Number(date.slice(0,4)),m=Number(date.slice(5,7));
