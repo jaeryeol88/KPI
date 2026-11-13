@@ -20,11 +20,11 @@ ALTER TABLE public.kpi_viewer_login_attempts ENABLE ROW LEVEL SECURITY;
 
 -- Invalidate previously issued viewer sessions after a password, role or status change.
 CREATE OR REPLACE FUNCTION public.kpi_viewer_invalidate_sessions()
-RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $viewer_trigger$
 BEGIN
  DELETE FROM public.kpi_viewer_sessions WHERE account_id=NEW.id;
  RETURN NEW;
-END;$;
+END;$viewer_trigger$;
 DROP TRIGGER IF EXISTS kpi_viewer_account_changed ON public.kpi_viewer_accounts;
 CREATE TRIGGER kpi_viewer_account_changed
 AFTER UPDATE OF password_hash,role,branch,enabled ON public.kpi_viewer_accounts
