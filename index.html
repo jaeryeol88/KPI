@@ -1033,9 +1033,9 @@ function orgRenderHeadcount(){
  const counts={regional:0,branch:0,division:0,manager:0,dual:0};
  // 겸직 표기는 직원 카드뿐 아니라 이전 데이터의 지사장/본부 제목 카드에도
  // 들어갈 수 있으므로 모든 조직 카드에서 먼저 확인합니다.
- const marked=/[（(]\\s*겸\\s*직\\s*[)）]/;
- const cleanName=value=>String(value||'').replace(/[（(]\\s*겸\\s*직\\s*[)）]/g,'')
-  .replace(/부산\\s*[1-4]\\s*지사|권역대표|지사장|본부장|매니저/g,'')
+ const marked=/[（(]\s*겸\s*직\s*[)）]/;
+ const cleanName=value=>String(value||'').replace(/[（(]\s*겸\s*직\s*[)）]/g,'')
+  .replace(/부산\s*[1-4]\s*지사|권역대표|지사장|본부장|매니저/g,'')
   .replace(/[^가-힣a-zA-Z]/g,'').trim();
  const dualNames=new Set();
  const dualIds=new Set();
