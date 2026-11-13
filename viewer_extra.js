@@ -79,6 +79,8 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
  let historicalSeats=[];
  let active='dashboard',year=new Date().getFullYear(),yearBranch='all',highlightedYearMonth=0,pyear=year,pmonths=new Set(),pbranch='all',pdivision='all',orgNodes=[],orgLoaded=false,orgMessage='',staffStatuses=new Map(),staffStatusLoaded=false,staffStatusError='';
  const css=`
+.v-multi-slot{display:inline-block;vertical-align:middle}.v-signup-multi{position:relative;min-width:100px}.v-signup-multi>summary{list-style:none;cursor:pointer;border:1px solid #dce6f2;border-radius:8px;padding:9px 12px;background:#fff;color:#172840;font-weight:650;white-space:nowrap}.v-signup-multi>summary::-webkit-details-marker{display:none}.v-signup-multi>summary:after{content:'⌄';margin-left:9px;color:#64748b}.v-signup-multi-menu{position:absolute;top:calc(100% + 5px);right:0;z-index:90;min-width:150px;max-height:280px;overflow:auto;padding:6px;background:#fff;border:1px solid #dce6f2;border-radius:10px;box-shadow:0 8px 22px #0b204022}.v-signup-multi-menu label{display:flex!important;align-items:center;gap:7px;white-space:nowrap;padding:8px 10px;cursor:pointer;font-size:12px}.v-signup-multi-menu label:hover{background:#f1f6ff}.v-signup-multi-menu input{accent-color:#145dc5}.v-signup-locked{pointer-events:none;opacity:.85}
+
  .v-nav{display:flex;flex-direction:column;gap:8px}
  .v-nav button{border:0;border-radius:11px;background:transparent;color:#dce9ff;text-align:left;font:inherit;font-size:13px;padding:12px 12px;cursor:pointer;line-height:1.5}
  .v-nav button:hover{background:#17345d}.v-nav button.active{background:#1c3b68;color:#fff;font-weight:800}
@@ -223,7 +225,7 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
   <p class="v-note" id="v-person-note"></p>
  </section>
  <section id="v-monthlysignups" class="v-extra" hidden>
- <div class="v-extra-head"><div><h2>월별 입회 현황 <span class="v-linked">가입 건별 등록 연동</span></h2><p>실제 가입일 기준 신규 입회만 표시하며, 이전 가입자의 해당 월 분납금은 아래 별도 표에 표시합니다.</p></div><div class="v-filters"><label>조회 연도 <select id="v-syear"></select></label><label>조회 월 <select id="v-smonth"></select></label><label>소속지사 <select id="v-sbranch"></select></label><label>소속본부 <select id="v-sdivision"></select></label></div></div>
+ <div class="v-extra-head"><div><h2>월별 입회 현황 <span class="v-linked">가입 건별 등록 연동</span></h2><p>실제 가입일 기준 신규 입회만 표시하며, 이전 가입자의 해당 월 분납금은 아래 별도 표에 표시합니다.</p></div><div class="v-filters"><label>조회 연도 <span id="v-syear" class="v-multi-slot"></span></label><label>조회 월 <span id="v-smonth" class="v-multi-slot"></span></label><label>소속지사 <span id="v-sbranch" class="v-multi-slot"></span></label><label>소속본부 <span id="v-sdivision" class="v-multi-slot"></span></label></div></div>
  <div id="v-ssummary" class="v-signup-summary"></div>
  <div class="v-table-scroll"><table class="v-table v-signup-table"><thead><tr><th>가입 일자</th><th>소속지사</th><th>소속본부</th><th>가입 담당 매니저</th><th>가입상품</th><th>구좌</th><th>입회금</th><th>연회비</th><th>총 매출</th><th>입회자 성함</th></tr></thead><tbody id="v-snew"></tbody></table></div><p class="v-note" id="v-snewnote"></p>
  <div class="v-signup-prior"><h3>전월 이전 가입자 분납금</h3><strong id="v-spriortotal"></strong></div>
@@ -262,7 +264,32 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
   if(page==='orgstaff')renderStaff();
  }
  nav.addEventListener('click',event=>{const b=event.target.closest('button[data-vpage]');if(b)show(b.dataset.vpage)});
- let sy=new Date().getFullYear(),sm=new Date().getMonth()+1,sb=assignedBranch||'all',sd='all';
+ const signupSelections={year:new Set([String(new Date().getFullYear())]),month:new Set([String(new Date().getMonth()+1)]),branch:new Set(),division:new Set()};
+ const signupFilterDefs={year:'전체 연도',month:'전체 월',branch:'전체 지사',division:'전체 본부'};
+ function renderSignupMulti(key,opts){
+  const root=el('v-s'+key),selected=signupSelections[key];
+  if(!root)return;
+  const valid=new Set(opts.map(x=>String(x[0])));
+  for(const value of [...selected])if(!valid.has(value))selected.delete(value);
+  if(key==='branch'&&assignedBranch){selected.clear();selected.add(assignedBranch);}
+  const prev=root.querySelector('details'),open=!!prev?.open;
+  const all=!selected.size;
+  const names=opts.filter(([value])=>selected.has(String(value))).map(([,label])=>label);
+  const title=all?signupFilterDefs[key]:names.length===1?names[0]:names.length+'개 선택';
+  root.innerHTML='<details class="v-signup-multi"'+(open?' open':'')+'><summary>'+safe(title)+'</summary><div class="v-signup-multi-menu"><label><input type="checkbox" data-all="1" '+(all?'checked':'')+'> '+signupFilterDefs[key]+'</label>'+opts.map(([value,label])=>'<label><input type="checkbox" data-value="'+safe(value)+'" '+(selected.has(String(value))?'checked':'')+'> '+safe(label)+'</label>').join('')+'</div></details>';
+  if(key==='branch'&&assignedBranch)root.querySelector('details').classList.add('v-signup-locked');
+ }
+ document.addEventListener('change',e=>{
+  const input=e.target.closest('.v-signup-multi input');if(!input)return;
+  const root=input.closest('.v-multi-slot');if(!root)return;
+  const key=root.id.slice(3),selected=signupSelections[key];
+  if(key==='branch'&&assignedBranch)return;
+  if(input.dataset.all){selected.clear();}
+  else{const v=input.dataset.value;if(input.checked)selected.add(v);else selected.delete(v);}
+  if(key==='branch')signupSelections.division.clear();
+  renderSignupReport();
+ });
+ document.addEventListener('click',e=>{if(e.target.closest('.v-signup-multi'))return;document.querySelectorAll('.v-signup-multi[open]').forEach(d=>d.open=false)});
  function renderSignupReport(){
   const all=[],prior=[];
   for(const event of getAllEvents()){
@@ -281,18 +308,14 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
    }
   }
   const ys=[...new Set([new Date().getFullYear(),...all.map(r=>r.y),...prior.map(r=>r.y)])].sort((a,b)=>b-a);
-  if(!ys.includes(sy))sy=ys[0];
-  selectOptions(el('v-syear'),ys.map(y=>[y,y+'년']),sy);
-  selectOptions(el('v-smonth'),Array.from({length:12},(_,i)=>[i+1,(i+1)+'월']),sm);
+  renderSignupMulti('year',ys.map(y=>[String(y),y+'년']));
+  renderSignupMulti('month',Array.from({length:12},(_,i)=>[String(i+1),(i+1)+'월']));
   const branches=[...new Set([...all,...prior].map(x=>x.branch).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko'));
-  if(assignedBranch)sb=assignedBranch;
-  else if(sb!=='all'&&!branches.includes(sb))sb='all';
-  selectOptions(el('v-sbranch'),assignedBranch?[[assignedBranch,assignedBranch]]:[['all','전체 지사'],...branches.map(b=>[b,b])],sb);
-  el('v-sbranch').disabled=!!assignedBranch;
-  const divs=[...new Set([...all,...prior].filter(x=>sb==='all'||x.branch===sb).map(x=>x.division).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko'));
-  if(sd!=='all'&&!divs.includes(sd))sd='all';
-  selectOptions(el('v-sdivision'),[['all','전체 본부'],...divs.map(d=>[d,d])],sd);
-  const matching=x=>x.y===sy&&x.m===sm&&(sb==='all'||x.branch===sb)&&(sd==='all'||x.division===sd);
+  renderSignupMulti('branch',assignedBranch?[[assignedBranch,assignedBranch]]:branches.map(b=>[b,b]));
+  const selectedBranches=signupSelections.branch;
+  const divs=[...new Set([...all,...prior].filter(x=>!selectedBranches.size||selectedBranches.has(x.branch)).map(x=>x.division).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko'));
+  renderSignupMulti('division',divs.map(d=>[d,d]));
+  const matching=x=>(!signupSelections.year.size||signupSelections.year.has(String(x.y)))&&(!signupSelections.month.size||signupSelections.month.has(String(x.m)))&&(!signupSelections.branch.size||signupSelections.branch.has(x.branch))&&(!signupSelections.division.size||signupSelections.division.has(x.division));
   const news=all.filter(matching).sort((a,b)=>b.date.localeCompare(a.date));
   const prev=prior.filter(matching).sort((a,b)=>b.date.localeCompare(a.date));
   const sum=(arr,key)=>arr.reduce((n,x)=>n+x[key],0);
@@ -304,7 +327,6 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
   el('v-snewnote').textContent='총 '+fmt(news.length)+'건 · 해당 월 실제 가입일 기준';
   el('v-spriornote').textContent='총 '+fmt(prev.length)+'건 · 신규 구좌 및 연회비와 중복 집계하지 않습니다.';
  }
- [['v-syear',v=>sy=Number(v)],['v-smonth',v=>sm=Number(v)],['v-sbranch',v=>{sb=v;sd='all'}],['v-sdivision',v=>sd=v]].forEach(([id,fn])=>el(id).addEventListener('change',e=>{fn(e.target.value);renderSignupReport()}));
  const selectOptions=(node,opts,value)=>{node.innerHTML=opts.map(([v,t])=>'<option value="'+safe(v)+'">'+safe(t)+'</option>').join('');node.value=String(value)};
  const years=()=>[...new Set([...getYears(),...historicalSeats.map(x=>Number(x.goal_year)),...getAllEvents().map(e=>Number(String(e.date||'').slice(0,4))),new Date().getFullYear()])].filter(y=>Number.isInteger(y)&&y>=2020&&y<=2100).sort((a,b)=>b-a);
  const actual=(branch,y,m,div='all')=>historicalActualSeats({history:historicalSeats,events:getAllEvents(),branch,year:y,month:m,division:div,normalizeDivision,timedSignupRows});
