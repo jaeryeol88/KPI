@@ -2354,8 +2354,58 @@ el('rows').onclick=async e=>{const b=e.target.closest('button');if(!b){const row
 el('rows').addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.matches('tr[data-record-id]')){e.preventDefault();const entry=items.find(x=>x.id===e.target.dataset.recordId);if(entry&&(access.role!=='branch'||entry.branch===access.branch))showEventDetail(entry);}});
 el('search').addEventListener('input',render);
 function dl(name,content,type){const blob=new Blob([content],{type}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}
-el('exportCsv').onclick=()=>{const headers=['제목/이름','담당 지사/권역','담당 본부','진행일','행사유형','장소','참가인원 합계','PLK회원 인원','비회원 인원','행사비용(원)','판촉물 포인트(원)','본사 지원(원)','대관료(원)','식음료비(원)','시상품비(원)','기타비용(원)','법인매출(원)','개인매출(원)','총가입매출(원)','행사수입(원)','총수입(원)','수입-행사비 차액(원)','목표구좌','달성구좌 합계','법인구좌','개인구좌','법인 가입상품','개인 가입상품','연회비 금액(원)','달성률(%)','구좌당비용(원)','메모'];
-const lines=filtered().map(x=>[x.name,x.branch||'미지정',x.division||'본부 미지정',x.date,x.type,x.place,x.attendees,known(x.members)?x.members:'미분류',known(x.nonMembers)?x.nonMembers:'미분류',x.cost,...fundingFields.map(k=>known(x[k])?x[k]:'미분류'),...costFields.map(k=>known(x[k])?x[k]:'미분류'),...revenueFields.map(k=>known(x[k])?x[k]:'미입력'),complete(x,revenueFields)?x.corporateRevenue+x.individualRevenue:'미입력',known(x.eventIncome)?x.eventIncome:'미입력',complete(x,revenueFields)?x.corporateRevenue+x.individualRevenue+(known(x.eventIncome)?x.eventIncome:0):'미입력',complete(x,revenueFields)?x.corporateRevenue+x.individualRevenue+(known(x.eventIncome)?x.eventIncome:0)-x.cost:'미입력',x.goal,x.done,known(x.corporate)?x.corporate:'미분류',known(x.individual)?x.individual:'미분류',Array.isArray(x.corporateProducts)?x.corporateProducts.join(' / '):'',Array.isArray(x.individualProducts)?x.individualProducts.join(' / '):'',known(x.annualFee)?x.annualFee:'',x.goal?Math.round(x.done/x.goal*1000)/10:'',x.done?Math.round(x.cost/x.done):'',x.memo]);const csv='\ufeff'+[headers,...lines].map(row=>row.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(',')).join('\r\n');dl('PLK_행사_KPI_'+new Date().toISOString().slice(0,10)+'.csv',csv,'text/csv;charset=utf-8');};
+function loadExcelLibrary(){
+ if(window.XLSX)return Promise.resolve(window.XLSX);
+ if(window._plkExcelPromise)return window._plkExcelPromise;
+ window._plkExcelPromise=new Promise((resolve,reject)=>{
+  const script=document.createElement('script');script.src='https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+  script.onload=()=>window.XLSX?resolve(window.XLSX):reject(new Error('엑셀 모듈을 불러오지 못했습니다.'));
+  script.onerror=()=>reject(new Error('엑셀 모듈 다운로드 실패'));document.head.appendChild(script);
+ }).catch(e=>{window._plkExcelPromise=null;throw e});
+ return window._plkExcelPromise;
+}
+function visibleExcelTable(table,name,book){
+ const matrix=[...table.querySelectorAll('tr')].filter(tr=>tr.offsetParent!==null).map(tr=>[...tr.querySelectorAll('th,td')].map(cell=>{
+  const raw=cell.innerText.trim().replace(/\s*\n\s*/g,' · ');
+  if(cell.classList.contains('num')||cell.classList.contains('strong')){
+   const normalized=raw.replace(/,/g,'').replace(/원|구좌|%/g,'').trim();
+   if(/^[-+]?\d+(?:\.\d+)?$/.test(normalized))return Number(normalized);
+  }
+  return raw;
+ }));
+ const ws=XLSX.utils.aoa_to_sheet(matrix);
+ ws['!cols']=(matrix[0]||[]).map((_,i)=>({wch:Math.min(34,Math.max(12,...matrix.slice(0,50).map(row=>String(row[i]??'').length+2)))}));
+ for(const key of Object.keys(ws))if(!key.startsWith('!')&&ws[key].t==='n')ws[key].z='#,##0.##';
+ XLSX.utils.book_append_sheet(book,ws,name);
+}
+async function exportCurrentPageExcel(){
+ const btn=el('exportCsv');btn.disabled=true;const oldLabel=btn.textContent;btn.textContent='엑셀 준비 중…';
+ try{
+  await loadExcelLibrary();
+  const wb=XLSX.utils.book_new(),today=new Date().toISOString().slice(0,10);
+  const page=activeKpiPage;
+  if(page==='monthlysignups'){
+   renderMonthlySignupReport();
+   const tables=el('monthlySignupBoard').querySelectorAll('.signup-report-table');
+   visibleExcelTable(tables[0],'신규 입회 현황',wb);
+   visibleExcelTable(tables[1],'전월 이전 분납금',wb);
+  }else if(page==='yearboard'){
+   visibleExcelTable(el('perfYearHead').closest('table'),'지사 본부 실적',wb);
+  }else if(page==='personal'){
+   visibleExcelTable(el('personalYearHead').closest('table'),'개인별 실적',wb);
+  }else if(page==='dashboard'){
+   const headers=['제목/이름','담당 지사/권역','담당 본부','진행일','행사유형','장소','참가인원 합계','PLK회원 인원','비회원 인원','행사비용(원)','판촉물 포인트(원)','본사 지원(원)','대관료(원)','식음료비(원)','시상품비(원)','기타비용(원)','법인매출(원)','개인매출(원)','총가입매출(원)','행사수입(원)','총수입(원)','수입-행사비 차액(원)','목표구좌','달성구좌 합계','법인구좌','개인구좌','법인 가입상품','개인 가입상품','연회비 금액(원)','달성률(%)','구좌당비용(원)','메모'];
+   const lines=filtered().map(x=>[x.name,x.branch||'미지정',x.division||'본부 미지정',x.date,x.type,x.place,x.attendees,known(x.members)?x.members:'미분류',known(x.nonMembers)?x.nonMembers:'미분류',x.cost,...fundingFields.map(k=>known(x[k])?x[k]:'미분류'),...costFields.map(k=>known(x[k])?x[k]:'미분류'),...revenueFields.map(k=>known(x[k])?x[k]:'미입력'),complete(x,revenueFields)?x.corporateRevenue+x.individualRevenue:'미입력',known(x.eventIncome)?x.eventIncome:'미입력',complete(x,revenueFields)?x.corporateRevenue+x.individualRevenue+(known(x.eventIncome)?x.eventIncome:0):'미입력',complete(x,revenueFields)?x.corporateRevenue+x.individualRevenue+(known(x.eventIncome)?x.eventIncome:0)-x.cost:'미입력',x.goal,x.done,known(x.corporate)?x.corporate:'미분류',known(x.individual)?x.individual:'미분류',Array.isArray(x.corporateProducts)?x.corporateProducts.join(' / '):'',Array.isArray(x.individualProducts)?x.individualProducts.join(' / '):'',known(x.annualFee)?x.annualFee:'',x.goal?Math.round(x.done/x.goal*1000)/10:'',x.done?Math.round(x.cost/x.done):'',x.memo]);
+   const ws=XLSX.utils.aoa_to_sheet([headers,...lines]);ws['!cols']=headers.map(h=>({wch:Math.max(15,Math.min(28,h.length+6))}));
+   for(const key of Object.keys(ws))if(!key.startsWith('!')&&ws[key].t==='n')ws[key].z='#,##0.##';
+   XLSX.utils.book_append_sheet(wb,ws,'행사 KPI');
+  }else{alert('현재 페이지는 엑셀 내보내기를 지원하지 않습니다.');return;}
+  XLSX.writeFile(wb,'PLK_'+({monthlysignups:'월별_입회_현황',yearboard:'지사_본부_실적',personal:'개인별_실적',dashboard:'행사_KPI'}[page]||'실적')+'_'+today+'.xlsx');
+ }catch(e){alert('엑셀 다운로드에 실패했습니다. 인터넷 연결을 확인해 주세요. '+(e.message||e));}
+ finally{btn.disabled=false;btn.textContent=oldLabel;}
+}
+el('exportCsv').textContent='↓ 엑셀 다운로드';
+el('exportCsv').onclick=exportCurrentPageExcel;
 el('backup').onclick=()=>dl('PLK_KPI_백업_'+new Date().toISOString().slice(0,10)+'.json',JSON.stringify({app:'PLK KPI',version:2,items},null,2),'application/json');
 el('restore').onclick=()=>el('file').click();
 el('file').onchange=async e=>{const f=e.target.files[0];if(!f)return;if(access.role!=='owner'){alert('데이터 복원은 최고관리자만 가능합니다.');e.target.value='';return;}try{const j=JSON.parse(await f.text()),data=Array.isArray(j)?j:j.items;if(!Array.isArray(data)||!data.every(x=>x&&typeof x.id==='string'&&typeof x.date==='string'&&typeof x.name==='string'&&['attendees','cost','goal','done'].every(k=>Number.isSafeInteger(x[k])&&x[k]>=0))||new Set(data.map(x=>x.id)).size!==data.length)throw Error('형식 오류');if(!confirm('현재 온라인 데이터가 백업 파일 내용으로 교체됩니다. 계속할까요?'))return;lock(true);status('온라인 데이터 복원 중…');const oldIds=new Set(items.map(x=>x.id)),newIds=new Set(data.map(x=>x.id));for(let i=0;i<data.length;i+=100){const rows=data.slice(i,i+100).map(x=>({id:x.id,user_id:currentUser.id,event_data:x}));const {error}=await db.from('kpi_events').upsert(rows,{onConflict:'user_id,id'});if(error)throw error;}const removed=[...oldIds].filter(id=>!newIds.has(id));for(let i=0;i<removed.length;i+=100){const {error}=await db.from('kpi_events').delete().eq('user_id',currentUser.id).in('id',removed.slice(i,i+100));if(error)throw error;}await loadEvents();alert('온라인 복원이 완료되었습니다.');}catch(err){status('복원 실패: '+errText(err),true);alert('복원 실패: '+errText(err)+'\n일부 변경이 적용되었을 수 있으므로 새로고침 후 확인하세요.');}finally{lock(false);e.target.value='';}};
