@@ -976,7 +976,7 @@ async function loadPublic(){
     }
     viewerExtras.refresh();
     await viewerExtras.refreshOrganization();
-    status((assignedBranch?assignedBranch+' 전용 · ':'')+'공개 KPI 데이터 조회 완료 · '+fmt(items.length)+'건 · 읽기 전용');
+    if(!el('status').classList.contains('error'))status((assignedBranch?assignedBranch+' 전용 · ':'')+'공개 KPI 데이터 조회 완료 · '+fmt(items.length)+'건 · 읽기 전용');
   }catch(error){
     status('공개 데이터 설정이 완료되지 않았거나 조회에 실패했습니다. 관리자에게 Supabase viewer_setup.sql 실행 여부를 확인해 주세요. ('+(error?.message||'연결 오류')+')',true);
   }
