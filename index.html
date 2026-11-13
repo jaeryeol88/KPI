@@ -286,10 +286,11 @@
 <div class="month-card"><span>선택 기간 목표 달성률</span><strong id="monthlyRate">—</strong><small id="monthlySummary">목표 미입력</small></div>
 <div class="month-card"><span>선택 기간 달성구좌</span><strong id="annualRate">0구좌</strong><small id="annualSummary">선택한 연도·월 기준</small></div>
 </div>
-<section class="plk-trend" aria-label="월별 목표 대비 실적 그래프"><div class="plk-trend-head"><div><h3>월별 실적 추이</h3><p>실선: 실적 · 점선: 목표 · 월을 터치하면 상세 수치를 확인할 수 있습니다.</p></div><div id="plkTrendYear"></div></div><div id="plkTrendStats" class="plk-trend-stats"></div><div id="plkTrendGraph" class="plk-trend-graph"></div><div id="plkTrendDetail" class="plk-trend-detail" aria-live="polite"></div></section>
+
 <div class="month-scroll"><table><thead><tr><th>조회 월</th><th>목표구좌</th><th>달성구좌</th><th>달성률</th></tr></thead><tbody id="monthlyRows"></tbody></table></div>
 <div class="month-scroll"><table><thead><tr><th>선택 기간 지사별 현황 (클릭하면 본부별 펼침)</th><th>목표구좌</th><th>달성구좌</th><th>달성률</th></tr></thead><tbody id="monthlyBranchRows"></tbody></table></div>
 <p class="month-status" id="monthlyStatus">월 목표 데이터 확인 중…</p>
+<section class="plk-trend" aria-label="월별 목표 대비 실적 그래프"><div class="plk-trend-head"><div><h3>월별 실적 추이</h3><p>실선: 실적 · 점선: 목표 · 월을 터치하면 상세 수치를 확인할 수 있습니다.</p></div><div id="plkTrendYear"></div></div><div id="plkTrendStats" class="plk-trend-stats"></div><div id="plkTrendGraph" class="plk-trend-graph"></div><div id="plkTrendDetail" class="plk-trend-detail" aria-live="polite"></div></section>
 <details class="month-goal-editor" id="monthlyEditor" hidden><summary>회사 배정 지사 · 본부별 월 목표구좌 등록 · 수정</summary>
 <form id="monthlyGoalForm">
 <div class="month-controls"><label>배정 연도 <input id="goalInputYear" type="number" min="2020" max="2100" required></label><label>배정 지사 <select id="goalInputBranch" required></select></label><label>배정 월 <select id="goalInputMonth" required></select></label></div>
