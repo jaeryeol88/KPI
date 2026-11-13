@@ -1092,6 +1092,7 @@ try{
 }catch(error){console.error('뷰어 메뉴 초기화 오류',error);status('실적 메뉴 로딩 오류: '+(error?.message||error),true);}
 loadPublic();
 window.setInterval(()=>{if(!document.hidden)void loadPublic({silent:true});},20000);
+window.setInterval(()=>{if(!document.hidden)void viewerExtras.refreshOrganization();},20000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)void loadPublic({silent:true});});
 window.addEventListener('focus',()=>void loadPublic({silent:true}));
 </script></body></html>
