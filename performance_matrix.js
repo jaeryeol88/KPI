@@ -4,11 +4,21 @@ export function renderPerformanceMatrix({branches,year,highlight=0,getGoal,getAc
  const months=Array.from({length:12},(_,i)=>i+1);
  const formatNumber=n=>Number(n||0).toLocaleString('ko-KR');
  const formatRate=(goal,actual,defined)=>!defined||goal===0?'—':(actual/goal*100).toFixed(1)+'%';
- const heading='<tr><th colspan="3">구분</th><th>합계(평균)</th>'+months.map(m=>'<th class="'+(highlight===m?'perf-active-month':'')+'">'+m+'월</th>').join('')+'</tr>';
+ // Full-year totals include January–December. The year-to-date column is
+ // limited to the current calendar month for this year (all 12 for past years).
+ const now=new Date(),yearNumber=Number(year);
+ const throughMonth=yearNumber<now.getFullYear()?12:yearNumber===now.getFullYear()?now.getMonth()+1:0;
+ const currentMonths=months.filter(m=>m<=throughMonth);
+ const heading='<tr><th colspan="3">구분</th><th title="1월~12월 전체 기간">합계(평균)<small style="display:block;font-size:10px;font-weight:500">1~12월</small></th><th title="조회 연도의 현재 월까지 집계">현재 월까지<br>합계(평균)<small style="display:block;font-size:10px;font-weight:500">1~'+(throughMonth||0)+'월</small></th>'+months.map(m=>'<th class="'+(highlight===m?'perf-active-month':'')+'">'+m+'월</th>').join('')+'</tr>';
   const cols=(goals,actuals,kind)=>{
   const defined=goals.some(v=>v!==null);
   const sumGoal=goals.reduce((n,v)=>n+(v===null?0:v),0);
   const sumActual=actuals.reduce((n,v)=>n+v,0);
+  const ytdGoal=goals.slice(0,throughMonth);
+  const ytdActual=actuals.slice(0,throughMonth);
+  const ytdDefined=ytdGoal.some(v=>v!==null);
+  const ytdSumGoal=ytdGoal.reduce((n,v)=>n+(v??0),0);
+  const ytdSumActual=ytdActual.reduce((n,v)=>n+v,0);
   const format=(g,a,has)=>{
    if(kind==='목표')return has?formatNumber(g):'—';
    if(kind==='실적')return formatNumber(a);
@@ -21,7 +31,9 @@ export function renderPerformanceMatrix({branches,year,highlight=0,getGoal,getAc
   };
   const totalText=format(sumGoal,sumActual,defined);
   const totalCls=className(sumGoal,sumActual,defined);
-  return '<td class="'+totalCls+'">'+totalText+'</td>'+months.map((m,i)=>{
+  const ytdText=throughMonth?format(ytdSumGoal,ytdSumActual,ytdDefined):'—';
+  const ytdCls=throughMonth?className(ytdSumGoal,ytdSumActual,ytdDefined):'perf-missing';
+  return '<td class="'+totalCls+'">'+totalText+'</td><td class="'+ytdCls+'">'+ytdText+'</td>'+months.map((m,i)=>{
    const exists=goals[i]!==null;
    const value=format(goals[i]??0,actuals[i],exists);
    return '<td class="'+className(goals[i]??0,actuals[i],exists)+(highlight===m?' perf-active-month':'')+'">'+value+'</td>';
@@ -55,5 +67,5 @@ export function renderPerformanceMatrix({branches,year,highlight=0,getGoal,getAc
   html+=makeRows('권역','all','권역 합계','perf-region',true,3,goals,regionActuals);
  }
 
- return {heading,body:html||'<tr><td colspan="16">조회 가능한 지사 데이터가 없습니다.</td></tr>'};
+ return {heading,body:html||'<tr><td colspan="17">조회 가능한 지사 데이터가 없습니다.</td></tr>',throughMonth};
 }
