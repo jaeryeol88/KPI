@@ -1,4 +1,5 @@
 import {createClient} from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+import {startViewerGate,installViewerLogout} from './viewer_gate.js?v=pin-login-20261114';
 import {renderPerformanceMatrix} from './performance_matrix.js?v=year-to-date-totals-20261113';
 import {historicalActualSeats,historicValue} from './historical_seats.js?v=auto-person-rollup-20261113';
 import {timedSignupRows} from './signup_date_utils.js';
@@ -394,7 +395,8 @@ async function main(){
  try{
   const cfg=window.PLK_CONFIG||{};
   if(!/^https:\/\/[^/]+\.supabase\.co\/?$/.test(cfg.supabaseUrl||'')||!cfg.supabaseAnonKey)throw Error('Supabase 공개 연결 설정이 없습니다.');
-  const db=createClient(cfg.supabaseUrl,cfg.supabaseAnonKey,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});
+  const db=await startViewerGate('manager');
+  installViewerLogout();
   viewerDb=db;
   phoneDb=createClient(cfg.supabaseUrl,cfg.supabaseAnonKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
   await refreshPhoneAccess();
