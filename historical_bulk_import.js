@@ -106,6 +106,7 @@ export function createHistoricalBulkImport({section,getDb,getRole,afterSave}){
    const cancelRows=cancelled.flatMap(p=>p.months.flatMap((v,i)=>v===null?[]:[{manager:p.name,goal_year:year,goal_month:i+1,cancelled_seats:v}]));
    if(cancelRows.length){const {error}=await db.from('kpi_historical_cancellations').upsert(cancelRows,{onConflict:'manager,goal_year,goal_month'});if(error)throw error;}
    await afterSave();
+   window.dispatchEvent(new Event('plk-historical-bulk-saved'));
    el('histBulkStatus').textContent='등록 완료 · '+year+'년 개인 '+count+'건 · 지사/본부 월 합계 '+(rows.length-count)+'건 · 계약해지 '+cancelRows.length+'건. 정상 실적과 해지 실적은 분리됩니다.';
   }catch(error){el('histBulkStatus').textContent='등록 중 오류: '+error.message+' (일부 데이터가 저장됐을 수 있습니다. 확인 후 다시 실행하세요.)';}
   finally{button.disabled=false;}
