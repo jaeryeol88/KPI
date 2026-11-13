@@ -18,6 +18,7 @@ const cache=new Map();
 let phoneDb=null,phoneAuthenticated=false;
 let staffStatuses=new Map(),staffStatusAvailable=false;
 let viewerDb=null,orgFingerprint='',orgSyncBusy=false,lastOrgSync=0;
+let performanceSyncBusy=false,lastPerformanceSync=0;
 const phoneCache=new Map(),revealedPhones=new Set();
 const choices=(node,options,value)=>{node.innerHTML=options.map(([id,label])=>'<option value="'+safe(id)+'">'+safe(label)+'</option>').join('');node.value=String(value);};
 const allYears=()=>[...new Set([new Date().getFullYear(),...signedRows.map(r=>Number(r.goal_year)),...history.map(r=>Number(r.goal_year)),...branchTargets.map(r=>Number(r.goal_year)),...divisionTargets.map(r=>Number(r.goal_year))])].filter(y=>y>=2020&&y<=2100).sort((a,b)=>b-a);
@@ -320,7 +321,7 @@ el('personalMonthButtons').addEventListener('click',e=>{if(e.target.closest('[da
 el('personalMonthButtons').addEventListener('change',e=>{const input=e.target.closest('input[data-personal-month]');if(!input)return;const m=Number(input.dataset.personalMonth);if(input.checked)individualSelectedMonths.add(m);else individualSelectedMonths.delete(m);if(individualSelectedMonths.size===12)individualSelectedMonths.clear();drawPersonal();});
 window.addEventListener('resize',()=>{if(!el('org').classList.contains('hidden'))requestAnimationFrame(()=>drawOrgConnectorLines(el('orgTree'),'admin'));});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)void syncOrganization(true);});
-window.addEventListener('focus',()=>void syncOrganization());
+window.addEventListener('focus',()=>{void syncOrganization();void syncPerformance();});
 
 async function readPages(query,fields){
  const all=[];
@@ -330,6 +331,28 @@ async function readPages(query,fields){
   all.push(...(data||[]));if((data||[]).length<1000)break;
  }
  return all;
+}
+async function syncPerformance(){
+ if(!viewerDb||performanceSyncBusy||document.hidden||Date.now()-lastPerformanceSync<25000)return;
+ performanceSyncBusy=true;
+ lastPerformanceSync=Date.now();
+ try{
+  const [signups,historic,targets,divisionGoals]=await Promise.all([
+   readPages((from,to)=>viewerDb.rpc('kpi_manager_performance_signups').range(from,to)),
+   readPages((from,to)=>viewerDb.from('kpi_historical_seats').select('branch,division,manager,goal_year,goal_month,target_seats,actual_seats,employment_status').range(from,to)),
+   readPages((from,to)=>viewerDb.from('kpi_monthly_targets').select('branch,goal_year,goal_month,target_seats').range(from,to)),
+   readPages((from,to)=>viewerDb.from('kpi_monthly_division_targets').select('branch,division,goal_year,goal_month,target_seats').range(from,to))
+  ]);
+  signedRows=signups;history=historic;branchTargets=targets;divisionTargets=divisionGoals;
+  events=signedRows.map(r=>({branch:r.branch,division:normalizeDivision(r.division),signupEntries:[{
+   group:'individual',manager:r.manager,seats:Number(r.seats),branch:r.branch,division:normalizeDivision(r.division),
+   signupDate:String(r.goal_year)+'-'+String(r.goal_month).padStart(2,'0')+'-01'
+  }]}));
+  cache.clear();
+  if(!el('year').classList.contains('hidden'))drawYear();
+  if(!el('personal').classList.contains('hidden'))drawPersonal();
+ }catch(error){console.warn('실적 자동 갱신 실패 · 다음 주기에 재시도',error);}
+ finally{performanceSyncBusy=false;}
 }
 async function main(){
  try{
@@ -356,9 +379,10 @@ async function main(){
   if(organization.error)throw organization.error;
   signedRows=signups;history=historic;branchTargets=targets;divisionTargets=divisionGoals;
   orgNodes=Array.isArray(organization.data?.[0]?.nodes)?organization.data[0].nodes:[];
-  orgFingerprint=JSON.stringify(orgNodes);lastOrgSync=Date.now();
+  orgFingerprint=JSON.stringify(orgNodes);lastOrgSync=Date.now();lastPerformanceSync=Date.now();
   // Re-check the saved organization regularly while this viewer is open.
   window.setInterval(()=>void syncOrganization(),15000);
+  window.setInterval(()=>void syncPerformance(),60000);
   // Reconstitute only non-financial signup attribution fields for shared seat aggregation.
   events=signedRows.map(r=>({branch:r.branch,division:normalizeDivision(r.division),signupEntries:[{
    group:'individual',manager:r.manager,seats:Number(r.seats),branch:r.branch,division:normalizeDivision(r.division),
