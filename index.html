@@ -333,6 +333,7 @@ import { rosterPerformancePeople,regionalRepresentativeNames } from './personal_
 import { renderPerformanceMatrix } from './performance_matrix.js';
 import { historicValue,historicalPast } from './historical_seats.js';
 import { createHistoricalEditor } from './historical_editor.js';
+import { cancellationPanel } from './historical_cancellations_ui.js';
 import { validSignupDate,timedSignupRows,signupSeatsForPeriod,undatedSignupStats } from './signup_date_utils.js';
 let createClient;
 try {
@@ -690,6 +691,8 @@ const monthlyMainDivisions=['1본부','2본부','3본부'];
 const monthlyBranches=['부산 1지사','부산 2지사','부산 3지사','부산 4지사','부산권역'];
 let monthlyTargets=[],monthlyDivisionTargets=[],monthlyReady=false,expandedMonthlyBranch=null;
 let historicalSeats=[],historicalReady=false;
+let historicalCancellationRows=[];
+let historicalCancellationPanel=null;
 const expandedMonthlyDivisions=new Set();
 const expandedMonthlyManagers=new Set();
 const monthlyDivisions=['1본부','2본부','3본부','지사장','기타'];
@@ -1354,6 +1357,7 @@ let personalSelectedDivision='all';
 let personalSelectedMonths=new Set(); // Empty selection means the full year.
 let personalRevenueActions=new Map();
 function renderPersonalYearboard(){
+ if(historicalCancellationPanel)historicalCancellationPanel.render(personalSelectedYear,personalSelectedMonths.size?[...personalSelectedMonths]:null);
  const yearSelect=el('personalYearSelect'),branchSelect=el('personalBranchSelect'),divisionSelect=el('personalDivisionSelect');
  if(!yearSelect||!branchSelect||!divisionSelect)return;
  const years=monthlyYearList();
@@ -1492,6 +1496,18 @@ async function loadMonthlyTargets(){
   }
   monthlyTargets=all;monthlyReady=true;
   await historicalEditor.load();
+  try {
+   const cancellations=[];
+   for(let from=0;;from+=1000){
+    const {data,error}=await client.from('kpi_historical_cancellations').select('manager,goal_year,goal_month,cancelled_seats').range(from,from+999);
+    if(error)throw error;
+    cancellations.push(...(data||[]));if((data||[]).length<1000)break;
+   }
+   historicalCancellationRows=cancellations;
+   historicalCancellationPanel?.setRows(cancellations);
+   historicalCancellationPanel?.render(personalSelectedYear,personalSelectedMonths.size?[...personalSelectedMonths]:null);
+  } catch(error){console.warn('계약해지 별도 DB 확인 필요',error);}
+
   let divisionMessage='';
   try {
    const divisions=[];
@@ -1543,6 +1559,7 @@ async function monthlySaveGoal(event){
  finally{button.disabled=false;}
 }
 monthlySetup();
+historicalCancellationPanel=cancellationPanel(el('personalYearBoard'));
 const historicalEditor=createHistoricalEditor({getDb:()=>db,getRole:()=>access.role,onRecords:records=>{historicalSeats=records;renderPerformanceYearboard();renderPersonalYearboard();}});
 const productBranchExpanded=new Set();
 function renderProductBranchStats(events){
