@@ -1,3 +1,4 @@
+import {createClient} from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 import {countOrgHeadcount} from './org_headcount.js?v=unified-20261113';
 import { drawOrgConnectorLines } from './org_connector_lines.js';
 import { emptyRevenue,recordRevenue,oldRevenue,addRevenue,clickableSeats,revenueLabel,showRevenueDetail } from './personal_revenue_ui.js';
@@ -16,6 +17,8 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
  const roles={regional:'권역대표',branch:'지사장',division:'본부장',manager:'매니저'};
  // Only district-specific viewers hide other branches' personal revenue.
  const revenueBranch=assignedBranch&&assignedBranch!=='부산권역'?assignedBranch:null;
+ let staffPhoneDb=null,staffPhoneAllowed=false;
+ const staffPhoneCache=new Map(),staffPhoneShown=new Set();
  let historicalSeats=[];
  let active='dashboard',year=new Date().getFullYear(),yearBranch='all',highlightedYearMonth=0,pyear=year,pmonths=new Set(),pbranch='all',pdivision='all',orgNodes=[],orgLoaded=false,orgMessage='',staffStatuses=new Map(),staffStatusLoaded=false,staffStatusError='';
  const css=`
@@ -168,11 +171,11 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
   <div class="v-headcount"><h3>조직 인원 현황</h3><div id="v-headcount-grid" class="v-headcount-grid"></div><p class="v-note">이름과 집계 직책이 등록된 카드만 포함합니다.</p></div>
  </section>
  <section id="v-orgstaff" class="v-extra" hidden>
-  <div class="v-extra-head"><div><h2>PACIFIC 부산권역 임직원 명단</h2><p>조직도에 등록된 전체 조직원 목록입니다. 개인정보 보호를 위해 연락처는 공개하지 않습니다.</p></div>
+  <div class="v-extra-head"><div><h2>PACIFIC 부산권역 임직원 명단</h2><p>조직도에 등록된 전체 조직원 목록입니다. 연락처는 권한이 확인된 사용자만 더블클릭하여 조회할 수 있습니다.</p></div>
   <strong id="v-staff-count" style="background:#e9f1ff;color:#215ddd;border-radius:7px;padding:6px 10px;font-size:13px">총 0명</strong></div>
   <div class="v-filters v-staff-filters"><input id="v-staff-search" placeholder="성명·직급·소속 검색" aria-label="조직원 검색" type="search"><select id="v-staff-branch" aria-label="지사별 검색"><option value="all">전체 지사</option></select><select id="v-staff-status" aria-label="재직상태"><option value="all">전체 재직상태</option><option value="재직">재직</option><option value="휴직">휴직</option><option value="퇴사">퇴사</option></select></div>
   <div class="v-table-scroll"><table class="v-table v-staff-table" style="min-width:1150px"><thead><tr><th>No.</th><th>성명</th><th>직급</th><th>소속 지사</th><th>소속 본부/부서</th><th>연락처</th><th>입사년월</th><th>재직상태</th><th>관리</th></tr></thead><tbody id="v-staff-body"></tbody></table></div>
-  <p class="v-note">재직상태는 관리자 등록 정보를 조회 전용으로 표시합니다. 연락처는 비공개이며 수정 권한은 관리자에게만 있습니다.</p><p class="v-note" id="v-staff-status-note" role="status"></p>
+  <p class="v-note">재직상태는 관리자 등록 정보를 조회 전용으로 표시합니다. 연락처는 기존 관리자 로그인 권한이 확인된 경우에만 더블클릭하여 표시됩니다.</p><p class="v-note" id="v-staff-status-note" role="status"></p>
  </section>`;
  main.appendChild(wrapper);
  // The source spreadsheet has no branch for cancellations; do not disclose unassigned names in individual district viewers.
@@ -392,7 +395,7 @@ el('v-months').addEventListener('change',e=>{
   };
   const data=orgNodes.filter(n=>n&&n.staffHidden!==true&&['person','root','group','division'].includes(n.type)&&String(n.label||'').trim()&&!placeholder.includes(n.label)&&(n.type==='person'||(n.type!=='group'&&n.type!=='root'&&effectiveRole(n)))).map(n=>{
    const loc=tree(n);const status=staffStatuses.get(String(n.staffContactId||n.id))|| (staffStatusLoaded?'재직':'—');
-   return {name:n.label,role:roles[effectiveRole(n)]||n.subtitle||'미지정',branch:loc.b,division:loc.d,hire:join(n),status};
+   return {id:String(n.id),name:n.label,role:roles[effectiveRole(n)]||n.subtitle||'미지정',branch:loc.b,division:loc.d,hire:join(n),status};
   }).sort((a,b)=>a.branch.localeCompare(b.branch,'ko')||a.division.localeCompare(b.division,'ko')||a.name.localeCompare(b.name,'ko'));
   el('v-staff-count').textContent='총 '+data.length+'명';
   const query=el('v-staff-search').value.trim().toLocaleLowerCase('ko');
@@ -401,6 +404,41 @@ el('v-months').addEventListener('change',e=>{
   el('v-staff-status-note').textContent=staffStatusError?'재직상태 표시를 위해 Supabase에서 org_staff_status_public.sql을 실행해야 합니다. '+staffStatusError:staffStatusLoaded?'재직상태는 관리자 등록 DB와 연동됩니다.':'';
   el('v-staff-body').innerHTML=filtered.map((r,i)=>'<tr><td>'+(i+1)+'</td><td class="v-staff-name">'+safe(r.name)+'</td><td><span class="v-staff-pill">'+safe(r.role)+'</span></td><td>'+safe(r.branch||'—')+'</td><td>'+safe(r.division||'—')+'</td><td>비공개</td><td>'+safe(r.hire||'—')+'</td><td><span class="v-staff-status '+(r.status==='휴직'?'leave':r.status==='퇴사'?'left':'')+'">'+safe(r.status)+'</span></td><td>조회 전용</td></tr>').join('')||'<tr><td colspan="9">조직원 정보가 없습니다.</td></tr>';
  }
+ async function checkStaffPhoneAccess(){
+  const cfg=window.PLK_CONFIG||{};
+  if(!/^https:\/\/[^/]+\.supabase\.co\/?$/.test(cfg.supabaseUrl||'')||!cfg.supabaseAnonKey)return false;
+  if(!staffPhoneDb)staffPhoneDb=createClient(cfg.supabaseUrl,cfg.supabaseAnonKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
+  const {data:{session},error:sessionError}=await staffPhoneDb.auth.getSession();
+  if(sessionError||!session?.access_token){staffPhoneAllowed=false;staffPhoneCache.clear();staffPhoneShown.clear();return false;}
+  const {data,error}=await staffPhoneDb.rpc('kpi_my_access');
+  staffPhoneAllowed=!error&&['owner','shared','branch'].includes(data?.role);
+  if(!staffPhoneAllowed){staffPhoneCache.clear();staffPhoneShown.clear();}
+  return staffPhoneAllowed;
+ }
+ async function showStaffPhone(nodeId){
+  const note=el('v-staff-status-note');
+  if(!await checkStaffPhoneAccess()){
+   renderStaff();
+   note.textContent='연락처 조회 권한이 없습니다. 관리자 홈페이지에 권한 있는 계정으로 로그인하면 별도 로그인창 없이 조회할 수 있습니다.';
+   return;
+  }
+  if(!staffPhoneCache.has(nodeId)){
+   const {data,error}=await staffPhoneDb.rpc('kpi_manager_staff_phone',{p_node_id:nodeId});
+   if(error)throw error;
+   staffPhoneCache.set(nodeId,typeof data==='string'?data:'');
+  }
+  staffPhoneShown.add(nodeId);
+  renderStaff();
+ }
+ el('v-staff-body').addEventListener('dblclick',async event=>{
+  const cell=event.target.closest('[data-v-staff-phone]');if(!cell)return;
+  try{await showStaffPhone(cell.dataset.vStaffPhone);}catch(error){el('v-staff-status-note').textContent='연락처 조회 실패: '+(error.message||'권한 확인 필요');}
+ });
+ el('v-staff-body').addEventListener('mouseup',async event=>{
+  const cell=event.target.closest('[data-v-staff-phone]');if(!cell||!window.getSelection()?.toString().trim())return;
+  try{await showStaffPhone(cell.dataset.vStaffPhone);}catch(error){el('v-staff-status-note').textContent='연락처 조회 실패: '+(error.message||'권한 확인 필요');}
+ });
+ checkStaffPhoneAccess().then(()=>{if(active==='orgstaff')renderStaff();}).catch(()=>{});
  el('v-staff-search').addEventListener('input',renderStaff);
  const branchSelector=el('v-staff-branch');
  branchSelector.innerHTML='<option value="all">전체 지사</option>'+['부산권역',...branches].map(b=>'<option value="'+safe(b)+'">'+safe(b)+'</option>').join('');
