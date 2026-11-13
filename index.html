@@ -456,6 +456,8 @@ function syncLegacyTypes(){
  oldTypes.forEach(t=>{const option=document.createElement('option');option.value=t;option.textContent='기존 분류 · '+t;option.dataset.legacyType='true';select.append(option);});
 }
 const multiValues=Object.fromEntries(['branch','division','year','month','type'].map(id=>[id,new Set()]));
+// 기본 조회 연도는 접속 시점의 현재 연도이며 사용자가 이후 변경할 수 있습니다.
+multiValues.year.add(String(new Date().getFullYear()));
 const multiNames={branch:'지사선택',division:'본부선택',year:'연도',month:'월',type:'행사 유형'};
 const divisionBranches=['1본부','2본부','3본부','지사장','기타'];
 function normalizeDivision(value){
