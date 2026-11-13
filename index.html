@@ -1405,32 +1405,44 @@ function renderPersonalYearboard(){
    }
   } // Old event totals and undated signup rows stay excluded from monthly attribution.
  }
+ // Apply historic personal seats as REPLACEMENTS only for an exact person and month.
+ for(const h of historicalSeats){
+  if(!h.manager||Number(h.goal_year)!==personalSelectedYear||!visibleMonths.includes(Number(h.goal_month)))continue;
+  if(!allowed.includes(h.branch)||personalSelectedBranch!=='all'&&personalSelectedBranch!==h.branch||personalSelectedDivision!=='all'&&personalSelectedDivision!==h.division)continue;
+  const key=JSON.stringify([h.branch,h.division,h.manager]);
+  if(!entries.has(key))entries.set(key,{branch:h.branch,division:h.division,manager:h.manager,monthly:Array(12).fill(0),sales:Array.from({length:12},emptyRevenue)});
+  if(h.actual_seats!==null&&h.actual_seats!==undefined){
+   const row=entries.get(key);row.monthly[Number(h.goal_month)-1]=Number(h.actual_seats);
+   (row.manualMonths??=new Set()).add(Number(h.goal_month));
+  }
+ }
  const rows=[...entries.values()].map(x=>({...x,total:visibleMonths.reduce((a,m)=>a+x.monthly[m-1],0)}))
   .sort((a,b)=>b.total-a.total||a.branch.localeCompare(b.branch,'ko')||a.division.localeCompare(b.division,'ko')||a.manager.localeCompare(b.manager,'ko'));
  const total=Array(12).fill(0),salesTotals=Array.from({length:12},emptyRevenue);
  let tbody='';
- const action=(name,period,seats,sales)=>{const id=personalRevenueActions.size+1;personalRevenueActions.set(String(id),{name,period,seats,revenue:sales});return clickableSeats(seats,id)};
+ const action=(name,period,seats,sales,manual=false)=>{if(manual)return '<span title="수동 등록 구좌 · 매출 미등록">'+fmt(seats)+'구좌*</span>';const id=personalRevenueActions.size+1;personalRevenueActions.set(String(id),{name,period,seats,revenue:sales});return clickableSeats(seats,id)};
  const salesFor=(row,monthList)=>monthList.reduce((v,m)=>addRevenue(v,row.sales[m-1]),emptyRevenue());
  const inline=(amount,missing)=>'<td class="personal-revenue-single">'+esc(revenueLabel(amount,missing))+'</td>';
  rows.forEach((row,i)=>{
   const missing=row.manager==='담당자 미지정';
   row.monthly.forEach((v,m)=>{total[m]+=v;salesTotals[m]=addRevenue(salesTotals[m],row.sales[m]);});
   tbody+='<tr><td class="personal-rank">'+(i+1)+'</td><td class="personal-affiliation">'+esc(row.branch)+'</td><td>'+esc(row.division||'본부 미지정')+'</td><td class="personal-name'+(missing?' personal-unassigned':'')+'">'+esc(row.manager)+'</td>'+
-   visibleMonths.map(m=>{const v=row.monthly[m-1];return '<td class="'+(v?'perf-actual':'perf-zero')+'">'+action(row.manager,m+'월',v,row.sales[m-1])+'</td>';}).join('')+
-   (showTotal?'<td class="personal-annual">'+action(row.manager,fullYear?'연간 합계':'선택 월 합계',row.total,salesFor(row,visibleMonths))+'</td>':'')+
-   (oneMonth?(()=>{const r=row.sales[visibleMonths[0]-1];return inline(r.sale,r.missingSale)+inline(r.fee,r.missingFee)+inline(r.sale+r.fee,r.missingSale+r.missingFee)})():'')+'</tr>';
+   visibleMonths.map(m=>{const v=row.monthly[m-1];return '<td class="'+(v?'perf-actual':'perf-zero')+'">'+action(row.manager,m+'월',v,row.sales[m-1],row.manualMonths?.has(m))+'</td>';}).join('')+
+   (showTotal?'<td class="personal-annual">'+action(row.manager,fullYear?'연간 합계':'선택 월 합계',row.total,salesFor(row,visibleMonths),visibleMonths.some(m=>row.manualMonths?.has(m)))+'</td>':'')+
+   (oneMonth?(()=>{const r=row.sales[visibleMonths[0]-1];return row.manualMonths?.has(visibleMonths[0])?'<td>미등록</td><td>미등록</td><td>미등록</td>':inline(r.sale,r.missingSale)+inline(r.fee,r.missingFee)+inline(r.sale+r.fee,r.missingSale+r.missingFee)})():'')+'</tr>';
  });
  const sum=visibleMonths.reduce((a,m)=>a+total[m-1],0);
  const totalRevenue=visibleMonths.reduce((r,m)=>addRevenue(r,salesTotals[m-1]),emptyRevenue());
- tbody+='<tr class="perf-region"><td colspan="4" style="text-align:center">합계</td>'+
-  visibleMonths.map(m=>'<td>'+action('전체 합계',m+'월',total[m-1],salesTotals[m-1])+'</td>').join('')+
-  (showTotal?'<td>'+action('전체 합계',fullYear?'연간 합계':'선택 월 합계',sum,totalRevenue)+'</td>':'')+
-  (oneMonth?inline(totalRevenue.sale,totalRevenue.missingSale)+inline(totalRevenue.fee,totalRevenue.missingFee)+inline(totalRevenue.sale+totalRevenue.fee,totalRevenue.missingSale+totalRevenue.missingFee):'')+'</tr>';
+ const manualInSelection=rows.some(row=>visibleMonths.some(m=>row.manualMonths?.has(m)));
+ tbody+='<tr class="perf-region"><td colspan="4" style="text-align:center">합계</td>'+ 
+  visibleMonths.map(m=>'<td>'+action('전체 합계',m+'월',total[m-1],salesTotals[m-1],rows.some(row=>row.manualMonths?.has(m)))+'</td>').join('')+
+  (showTotal?'<td>'+action('전체 합계',fullYear?'연간 합계':'선택 월 합계',sum,totalRevenue,manualInSelection)+'</td>':'')+
+  (oneMonth?(manualInSelection?'<td>일부 미등록</td><td>일부 미등록</td><td>일부 미등록</td>':inline(totalRevenue.sale,totalRevenue.missingSale)+inline(totalRevenue.fee,totalRevenue.missingFee)+inline(totalRevenue.sale+totalRevenue.fee,totalRevenue.missingSale+totalRevenue.missingFee)):'')+'</tr>';
  el('personalYearBody').innerHTML=rows.length?tbody:'<tr><td colspan="'+(visibleMonths.length+4+(showTotal?1:0)+(oneMonth?3:0))+'">선택한 기간과 소속에 등록된 가입 실적이 없습니다.</td></tr>';
  el('personalYearNote').textContent=personalSelectedYear+'년 '+(fullYear?'전체(1~12월)':visibleMonths.map(m=>m+'월').join('·'))+' · 총 '+rows.length+'개 담당자/소속 조합 · '+fmt(sum)+'구좌'+
   (unassignedSeats?' · 담당자 미지정 '+fmt(unassignedSeats)+'구좌 (기존 기록 포함)':'')+
   (excludedLegacy?' · 가입 건별 정보가 없는 기존 실적 '+fmt(excludedLegacy)+'구좌는 담당자 미지정으로 표시':'')+
-  ' · 가입일자 기준 집계 · 동일 성명이라도 소속 지사·본부가 다르면 별도 집계합니다.'+
+  ' · * 과거 직접 입력 구좌(매출 미등록) · 입력 월은 자동 집계 대체 · 동일 성명이라도 소속 지사·본부가 다르면 별도 집계합니다.'+
   (undatedSignupStats(items).records?' · 가입일 미입력 '+undatedSignupStats(items).records+'건 ('+fmt(undatedSignupStats(items).seats)+'구좌) 월별 집계 제외':'');
 }
 el('personalYearBody').addEventListener('click',e=>{const button=e.target.closest('[data-personal-revenue]');if(!button)return;const info=personalRevenueActions.get(button.dataset.personalRevenue);if(info)showRevenueDetail(info.name,info.period,info.seats,info.revenue);});
