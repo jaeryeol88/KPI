@@ -1050,7 +1050,7 @@ function renderMonthlyGoals(){
   const t=rollup(branches,[y],[m],divisions);
   return '<tr><td>'+y+'년 '+m+'월</td><td>'+fmt(t.goal)+'구좌</td><td>'+fmt(t.done)+'구좌</td><td>'+t.rate+'</td></tr>';
  })).join('');
- el('monthlyBranchRows').innerHTML=branches.map(br=>{
+ el('monthlyBranchRows').innerHTML=branches.filter(br=>br!=='부산권역').map(br=>{
   const t=rollup([br],ys,months,divisions);
   const opened=expandedMonthlyBranch===br;
   const main='<tr><td><button type="button" class="monthly-branch-toggle" data-expand-monthly-branch="'+br+'" aria-expanded="'+opened+'" aria-label="'+br+' 본부별 선택 기간 현황 '+(opened?'접기':'펼치기')+'"><span aria-hidden="true">'+(opened?'▾':'▸')+'</span> '+br+'</button></td><td>'+fmt(t.goal)+'구좌</td><td>'+fmt(t.done)+'구좌</td><td>'+t.rate+'</td></tr>';
