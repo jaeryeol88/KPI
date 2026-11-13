@@ -977,7 +977,7 @@ function showEventDetail(x){
   }).join('');
   return '<div style="padding:8px 0"><small>'+esc(r.product||'가입상품')+' · '+esc(r.memberName||'입회자')+'</small>'+rows+'</div>';
  }).join('');
- return '<details style="border-bottom:1px solid #e2e8f0"><summary class="detail-row" style="cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between"><span>입회금</span><span style="display:flex;flex-direction:column;align-items:flex-end;gap:3px"><strong>'+amount+'</strong><small style="color:#2563eb;font-size:11px;font-weight:500">분납 내역 보기 ▾</small></span></summary><div style="padding:4px 12px 12px">'+detail+'</div></details>';
+ return '<details style="border-bottom:1px solid #e2e8f0"><summary class="detail-row" style="cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between"><span>입회금</span><span style="display:flex;flex-direction:column;align-items:flex-end;gap:3px"><strong>'+amount+'</strong><span class="viewer-installment-toggle" style="color:#2563eb;font-size:12px;font-weight:650;border:1px solid #b8d2f5;border-radius:6px;padding:4px 9px;background:#f2f7ff">분납금 확인 ▾</span></span></summary><div style="padding:4px 12px 12px">'+detail+'</div></details>';
  })()+
  line('연회비',value(x.annualFee))+
  line('행사 수입',value(x.eventIncome))+
