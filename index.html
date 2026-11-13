@@ -293,7 +293,7 @@
  <section class="org-headcount" aria-label="조직 인원 현황">
  <div class="org-headcount-top"><h3>조직 인원 현황</h3><span>조직도 카드 기준 · 자동 집계</span></div>
  <div id="orgHeadcountGrid" class="org-headcount-grid" aria-live="polite"></div>
- <p class="org-headcount-note">이름·직급의 (겸직) 표시 또는 카드 편집의 ‘인원 집계 직책 → 겸직’ 지정으로 별도 집계합니다. 겸직은 총인원에서 제외하며 변경 후 조직도 저장이 필요합니다.</p><p id="orgDualHelp" class="org-headcount-note" aria-live="polite"></p>
+ <p class="org-headcount-note">이름·직급의 (겸직) 표시 또는 카드 편집의 ‘인원 집계 직책 → 본부장 겸직’ 지정으로 겸직에만 집계합니다. 겸직은 총인원에서 제외하며 변경 후 조직도 저장이 필요합니다.</p><p id="orgDualHelp" class="org-headcount-note" aria-live="polite"></p>
  </section>
  <p class="org-help">위계: 최상위 → 지사 / 부서 → 본부 / 팀 → 구성원. 카드 클릭 시 이름·직급·직책 구분 수정, 하위 카드 추가, 순서 변경, 삭제가 가능합니다.</p>
  <div id="orgEditor" class="org-editor" hidden>
@@ -328,7 +328,7 @@
 </script>
 <script type="module">
 import { drawOrgConnectorLines } from './org_connector_lines.js';
-import {ORG_ROLE_LABELS,orgEffectiveRoleShared,countOrgHeadcount,isDualStaff} from './org_headcount.js?v=shared-dual-role-20261113';
+import {ORG_ROLE_LABELS,orgEffectiveRoleShared,countOrgHeadcount,isDualStaff} from './org_headcount.js?v=division-dual-20261113';
 import { emptyRevenue,recordRevenue,oldRevenue,addRevenue,clickableSeats,revenueLabel,showRevenueDetail } from './personal_revenue_ui.js';
 import { rosterPerformancePeople,regionalRepresentativeNames } from './personal_roster.js';
 import { renderPerformanceMatrix } from './performance_matrix.js?v=year-to-date-totals-20261113';
@@ -1020,7 +1020,7 @@ function orgCountable(node){
 function orgRenderHeadcount(){
  const target=el('orgHeadcountGrid');if(!target)return;
  const counts=countOrgHeadcount(orgNodes);
- const help=el('orgDualHelp');if(help)help.textContent=counts.dual===0?'겸직 0명: 현재 조직도에서 겸직으로 지정된 구성원이 없습니다. 해당 카드 클릭 → 인원 집계 직책 ‘겸직’ 선택 → 변경 적용 → 조직도 저장 순서로 등록하세요.':'';
+ const help=el('orgDualHelp');if(help)help.textContent=counts.dual===0?'겸직 0명: 현재 조직도에서 겸직으로 지정된 구성원이 없습니다. 해당 카드 클릭 → 인원 집계 직책 ‘본부장 겸직’ 선택 → 변경 적용 → 조직도 저장 순서로 등록하세요.':'';
  const labels=[['regional','권역대표'],['branch','지사장'],['division','본부장'],['manager','매니저'],['dual','겸직']];
  target.innerHTML=labels.map(([key,label])=>'<div class="org-headcount-stat"><span>'+label+'</span><strong>'+fmt(counts[key])+'명</strong></div>').join('')+
   '<div class="org-headcount-stat org-headcount-total"><span>총인원</span><strong>'+fmt(counts.total)+'명</strong></div>';
