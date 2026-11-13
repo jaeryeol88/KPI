@@ -1073,6 +1073,20 @@ async function fetchViewerPublicData(silent){
       try{render();}catch(renderError){console.error('실적 재표시 오류',renderError);}
       console.warn('과거 수동 구좌 조회를 위해 historical_seats_setup.sql 설정이 필요합니다.',error);
     }
+    if(assignedBranch){
+      try{
+        const competitionEvents=[],competitionHistory=[];
+        for(const [source,dest] of [['kpi_competition_signups',competitionEvents],['kpi_competition_history',competitionHistory]]){
+          for(let start=0;;start+=1000){
+            const {data,error}=await client.from(source).select('*').range(start,start+999);
+            if(error)throw error;
+            dest.push(...(data||[]));
+            if((data||[]).length<1000)break;
+          }
+        }
+        viewerExtras.setCompetitionData(competitionEvents.map(x=>({...x.event_data,id:x.id})),competitionHistory);
+      }catch(error){console.warn('지사 간 개인별 구좌 비교 조회 실패',error);}
+    }
     viewerExtras.refresh();
     await viewerExtras.refreshOrganization();
     if(!silent&&!el('status').classList.contains('error'))status((assignedBranch?assignedBranch+' 전용 · ':'')+'공개 KPI 데이터 조회 완료 · '+fmt(items.length)+'건 · 읽기 전용');
@@ -1081,9 +1095,9 @@ async function fetchViewerPublicData(silent){
     else status('공개 데이터 설정이 완료되지 않았거나 조회에 실패했습니다. 관리자에게 Supabase viewer_setup.sql 실행 여부를 확인해 주세요. ('+(error?.message||'연결 오류')+')',true);
   }
 }
-let viewerExtras={refresh:()=>{},refreshOrganization:async()=>{},setHistoricalSeats:()=>{}};
+let viewerExtras={refresh:()=>{},refreshOrganization:async()=>{},setHistoricalSeats:()=>{},setCompetitionData:()=>{}};
 try{
- const {installViewerExtras}=await import('./viewer_extra.js?v=monthly-signup-selected-labels-20261114');
+ const {installViewerExtras}=await import('./viewer_extra.js?v=competition-leaderboard-20261114');
  viewerExtras=installViewerExtras({
  assignedBranch,
  getAllEvents:()=>allViewerEvents,
