@@ -660,8 +660,8 @@ async function loadMonthlyTargets(){
   monthlyReady=false;
   el('monthlyStatus').textContent='월 목표 DB 연결 필요: Supabase SQL Editor에서 monthly_targets_setup.sql을 한 번 실행하세요. ('+(error.message||'연결 실패')+')';
  }
- renderMonthlyGoals();
- renderCoreGoalKpi(filtered());
+ // Initial KPI rendering is handled by render() after public events load.
+ // Do not block registration records when goal data is unavailable.
 }
 // Read-only viewers have no target-write capability.
 async function monthlySaveGoal(event){event.preventDefault();}
@@ -949,6 +949,7 @@ async function loadPublic(){
     }
     allViewerEvents=rows.map(r=>({...r.event_data,id:r.id}));
     items=allViewerEvents.filter(x=>!assignedBranch||eventAssignedBranches(x).includes(assignedBranch));
+    try{render();}catch(earlyError){console.error('공개 행사 초기 표시 오류',earlyError);status('행사 표시 오류: '+(earlyError?.message||earlyError),true);}
     await loadMonthlyTargets();
     try{render();}catch(error){console.error('초기 뷰어 표시 오류',error);status('뷰어 초기 표시 오류: '+(error?.message||error),true);}
     try {
