@@ -262,7 +262,7 @@ th{background:#edf2fa;font-weight:750}td{background:white}td:last-child,th:last-
 <div class="filters"><label>조회 연도 <select id="personalYear"></select></label><label>지사 <select id="personalBranch"></select></label><label>본부 <select id="personalDivision"></select></label><label>이름 조회 <input id="personalNameSearch" type="search" placeholder="이름만 입력하세요" aria-label="매니저 이름 조회" autocomplete="off"></label></div></div>
 <p>개인별 구좌와 합계만 표시합니다. 재직/계약해지 모두 실적에 합산되며 매출 항목은 없습니다.</p>
 <div class="perf-yearboard-months" id="personalMonthButtons" aria-label="개인별 실적 월 선택"></div><div class="table-wrap perf-yearboard-scroll"><table class="personal perf-yearboard-table personal-matrix"><colgroup id="personalCols"></colgroup><thead id="personalHead"></thead><tbody id="personalBody"></tbody><tfoot id="personalFoot"></tfoot></table></div></section>
-<section id="org" class="hidden org-page"><div class="org-toolbar"><div><h2>조직도 <span class="perf-linked">조직관리</span></h2><p>관리자에서 저장한 조직도와 동일하게 표시합니다. 수정 기능은 제공되지 않습니다.</p><p class="org-sync-info" id="orgSyncInfo" role="status">온라인 조직도 연결 중…</p></div></div><div class="org-scroll"><div id="orgTree" class="org-canvas"></div></div><section class="org-headcount"><div class="org-headcount-top"><h3>조직 인원 현황</h3><span id="orgCount">조직도 카드 기준 · 자동 집계</span></div><div id="orgHeadcount" class="org-headcount-grid"></div><p class="org-headcount-note">관리자 조직도에서 저장한 겸직 지정 또는 (겸직) 표시 기준으로 집계하며, 총인원에서 제외됩니다.</p><p class="org-headcount-note" id="orgDualViewerHelp" role="status"></p></section></section>
+<section id="org" class="hidden org-page"><div class="org-toolbar"><div><h2>조직도 <span class="perf-linked">조직관리</span></h2><p>관리자에서 저장한 조직도와 동일하게 표시합니다. 수정 기능은 제공되지 않습니다.</p><p class="org-sync-info" id="orgSyncInfo" role="status">온라인 조직도 연결 중…</p></div></div><div class="org-scroll"><div id="orgTree" class="org-canvas"></div></div><section class="org-headcount"><div class="org-headcount-top"><h3>조직 인원 현황</h3><span id="orgCount">조직도 카드 기준 · 자동 집계</span></div><div id="orgHeadcount" class="org-headcount-grid"></div><p class="org-headcount-note">관리자 조직도에서 ‘본부장 겸직’으로 선택해 저장한 구성원은 겸직에만 집계하며 본부장·총인원에서 제외됩니다.</p><p class="org-headcount-note" id="orgDualViewerHelp" role="status"></p></section></section>
 <section id="orgstaff" class="org-page hidden" aria-label="조직원 정보">
  <div class="staff-shell">
   <div class="staff-header"><h2>PACIFIC 부산권역 임직원 명단</h2><strong id="staffCount" class="staff-count">총 0명</strong></div>
@@ -282,4 +282,4 @@ th{background:#edf2fa;font-weight:750}td{background:white}td:last-child,th:last-
  </div>
 </section>
 
-</main></div><script src="./config.js"></script><script type="module" src="./manager_viewer.js?v=shared-dual-role-20261113"></script></body></html>
+</main></div><script src="./config.js"></script><script type="module" src="./manager_viewer.js?v=division-dual-20261113"></script></body></html>
