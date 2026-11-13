@@ -1,12 +1,13 @@
 import { drawOrgConnectorLines } from './org_connector_lines.js';
 import { emptyRevenue,recordRevenue,oldRevenue,addRevenue,clickableSeats,revenueLabel,showRevenueDetail } from './personal_revenue_ui.js';
+import { rosterPerformancePeople } from './personal_roster.js';
 /* Read-only supplemental KPI views, shared by all public viewers. */
 export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTarget,countSeats,normalizeDivision,loadOrganization}) {
  const el=id=>document.getElementById(id);
  const safe=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const fmt=x=>Number(x||0).toLocaleString('ko-KR');
- const branches=['부산 1지사','부산 2지사','부산 3지사','부산 4지사'];
- const divisions=['1본부','2본부','3본부','지사장','기타'];
+ const branches=['부산 1지사','부산 2지사','부산 3지사','부산 4지사','부산권역'];
+ const divisions=['1본부','2본부','3본부','지사장','기타','권역대표'];
  const roles={regional:'권역대표',branch:'지사장',division:'본부장',manager:'매니저'};
  let active='dashboard',year=new Date().getFullYear(),pyear=year,pmonths=new Set(),pbranch='all',pdivision='all',orgNodes=[],orgLoaded=false,orgMessage='';
  const css=`
@@ -181,16 +182,21 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
  function renderPersonal(){
   if(!years().includes(pyear))pyear=years()[0]||new Date().getFullYear();
   selectOptions(el('v-pyear'),years().map(y=>[y,y+'년']),pyear);
-  selectOptions(el('v-pbranch'),[['all','전체 지사'],...branches.map(b=>[b,b])],pbranch);
+  selectOptions(el('v-pbranch'),[['all','전체 지사'],...branches.filter(b=>!assignedBranch||b===assignedBranch).map(b=>[b,b])],pbranch);
   selectOptions(el('v-pdivision'),[['all','전체 본부'],...divisions.map(d=>[d,d])],pdivision);
   el('v-months').innerHTML='<button type="button" data-all-months class="'+(pmonths.size===0?'active':'')+'">전체(1~12월)</button>'+months.map(m=>'<label class="v-month-check'+(pmonths.has(m)?' checked':'')+'"><input type="checkbox" data-v-month="'+m+'" value="'+m+'" '+(pmonths.has(m)?'checked ':'')+'aria-label="'+m+'월 선택">'+m+'월</label>').join('');
   const shown=pmonths.size?months.filter(m=>pmonths.has(m)):months,byKey=new Map();
   const revenueActions=new Map(),oneMonth=shown.length===1;
+  for(const person of rosterPerformancePeople(orgLoaded?orgNodes:[])){
+   if(!branches.includes(person.branch)||assignedBranch&&assignedBranch!==person.branch||pbranch!=='all'&&pbranch!==person.branch||pdivision!=='all'&&pdivision!==person.division)continue;
+   const key=JSON.stringify([person.branch,person.division,person.name]);
+   if(!byKey.has(key))byKey.set(key,{b:person.branch,d:person.division,name:person.name,months:Array(12).fill(0),revenues:Array.from({length:12},emptyRevenue)});
+  }
   const action=(name,period,seats,revenue)=>{const id=String(revenueActions.size+1);revenueActions.set(id,{name,period,seats,revenue});return clickableSeats(seats,id)};
   const totalRevenueFor=(row,monthList)=>monthList.reduce((r,m)=>addRevenue(r,row.revenues[m-1]),emptyRevenue());
   const inline=(amount,missing)=>'<td class="personal-revenue-single">'+safe(revenueLabel(amount,missing))+'</td>';
   const add=(b,d,name,m,seats,revenue)=>{
-   if(!branches.includes(b)||pbranch!=='all'&&pbranch!==b||pdivision!=='all'&&pdivision!==d)return;
+   if(!branches.includes(b)||assignedBranch&&assignedBranch!==b||pbranch!=='all'&&pbranch!==b||pdivision!=='all'&&pdivision!==d)return;
    const key=JSON.stringify([b,d,name]);if(!byKey.has(key))byKey.set(key,{b,d,name,months:Array(12).fill(0),revenues:Array.from({length:12},emptyRevenue)});
    byKey.get(key).months[m-1]+=seats;
    byKey.get(key).revenues[m-1]=addRevenue(byKey.get(key).revenues[m-1],revenue);
@@ -205,7 +211,7 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
     const seats=Number(event.done);if(Number.isSafeInteger(seats)&&seats>0)add(event.branch,normalizeDivision(event.division),'담당자 미지정',m,seats,oldRevenue(event));
    }
   }
-  const rows=[...byKey.values()].map(x=>({...x,total:shown.reduce((sum,m)=>sum+x.months[m-1],0)})).filter(x=>x.total>0).sort((a,b)=>b.total-a.total||a.b.localeCompare(b.b,'ko')||a.d.localeCompare(b.d,'ko')||a.name.localeCompare(b.name,'ko'));
+  const rows=[...byKey.values()].map(x=>({...x,total:shown.reduce((sum,m)=>sum+x.months[m-1],0)})).sort((a,b)=>b.total-a.total||a.b.localeCompare(b.b,'ko')||a.d.localeCompare(b.d,'ko')||a.name.localeCompare(b.name,'ko'));
   const t=Array(12).fill(0),revenueTotals=Array.from({length:12},emptyRevenue);
   for(const row of rows)row.months.forEach((v,i)=>{t[i]+=v;revenueTotals[i]=addRevenue(revenueTotals[i],row.revenues[i])});
   const full=pmonths.size===0,showTotal=shown.length>1;
@@ -299,7 +305,7 @@ el('v-months').addEventListener('change',e=>{
  async function refreshOrganization(){
   try{const rows=await loadOrganization();orgNodes=Array.isArray(rows)?rows:[];orgMessage='부산권역 전체 조직도 · 읽기 전용';}
   catch(error){orgNodes=[];orgMessage='조직도를 표시할 수 없습니다. 관리자에게 공개 조회 설정 확인을 요청하세요. ('+(error.message||'오류')+')';}
-  orgLoaded=true;if(active==='org')renderOrg();if(active==='orgstaff')renderStaff();
+  orgLoaded=true;if(active==='org')renderOrg();if(active==='orgstaff')renderStaff();if(active==='personal')renderPersonal();
  }
  function renderStaff(){
   if(!orgLoaded){el('v-staff-body').innerHTML='<tr><td colspan="9">조직원 정보를 불러오는 중…</td></tr>';return;}
