@@ -1032,12 +1032,15 @@ function orgRenderHeadcount(){
  const target=el('orgHeadcountGrid');if(!target)return;
  const counts={regional:0,branch:0,division:0,manager:0,dual:0};
  for(const node of orgNodes){
+  if(!orgCountable(node)||node.staffHidden===true)continue;
+  // 겸직은 직책과 관계없이 별도 집계하고, 총인원에 포함하지 않습니다.
+  const concurrent=/겸직/.test(String(node.label||'')+' '+String(node.subtitle||''));
+  if(concurrent){counts.dual++;continue;}
   const role=orgEffectiveRole(node);
-  if(!role||!orgCountable(node))continue;
-  if(/\(\s*겸직\s*\)/.test(String(node.label||'')+' '+String(node.subtitle||'')))counts.dual++;
-  else counts[role]++;
+  if(Object.prototype.hasOwnProperty.call(counts,role))counts[role]++;
  }
  const labels=[['regional','권역대표'],['branch','지사장'],['division','본부장'],['manager','매니저'],['dual','겸직']];
+ // 총인원에는 실제 직책별 일반 인원만 포함합니다. 겸직은 제외.
  const total=counts.regional+counts.branch+counts.division+counts.manager;
  target.innerHTML=labels.map(([key,label])=>'<div class="org-headcount-stat"><span>'+label+'</span><strong>'+fmt(counts[key])+'명</strong></div>').join('')+
   '<div class="org-headcount-stat org-headcount-total"><span>총인원</span><strong>'+fmt(total)+'명</strong></div>';
