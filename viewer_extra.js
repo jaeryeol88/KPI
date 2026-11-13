@@ -16,7 +16,6 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
  // Only district-specific viewers hide other branches' personal revenue.
  const revenueBranch=assignedBranch&&assignedBranch!=='부산권역'?assignedBranch:null;
  let historicalSeats=[];
- const cancelPanel=cancellationPanel(document.getElementById('v-personal'));
  let active='dashboard',year=new Date().getFullYear(),yearBranch='all',highlightedYearMonth=0,pyear=year,pmonths=new Set(),pbranch='all',pdivision='all',orgNodes=[],orgLoaded=false,orgMessage='',staffStatuses=new Map(),staffStatusLoaded=false,staffStatusError='';
  const css=`
  .v-nav{display:flex;flex-direction:column;gap:8px}
@@ -173,6 +172,7 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
   <p class="v-note">재직상태는 관리자 등록 정보를 조회 전용으로 표시합니다. 연락처는 비공개이며 수정 권한은 관리자에게만 있습니다.</p><p class="v-note" id="v-staff-status-note" role="status"></p>
  </section>`;
  main.appendChild(wrapper);
+ const cancelPanel=cancellationPanel(el('v-personal'));
  const pages={yearboard:el('v-yearboard'),personal:el('v-personal'),org:el('v-org'),orgstaff:el('v-orgstaff')};
  const labels={dashboard:'KPI · 실적관리',yearboard:'지사별 / 본부별 실적현황',personal:'개인별 실적현황',org:'조직도',orgstaff:'조직원 정보'};
  function show(page){
