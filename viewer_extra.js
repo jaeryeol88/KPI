@@ -471,27 +471,30 @@ el('v-months').addEventListener('change',e=>{
  }
  async function showStaffPhone(nodeId){
   const note=el('v-staff-status-note');
-  if(!await checkStaffPhoneAccess()){
-   if(assignedBranch&&['부산 1지사','부산 2지사','부산 3지사','부산 4지사'].includes(assignedBranch)){
-    try{
-     const cfg=window.PLK_CONFIG||{};
-     const db=staffPhoneDb||createClient(cfg.supabaseUrl,cfg.supabaseAnonKey,{auth:{persistSession:false,detectSessionInUrl:false}});
-     const {data,error}=await db.rpc('kpi_public_branch_staff_phones',{p_branch:assignedBranch});
-     if(error)throw error;
-     for(const row of data||[])staffPhoneCache.set(String(row.node_id),String(row.phone||''));
-     const noPublicPhone=!staffPhoneCache.has(nodeId);
-     staffPhoneAllowed=true;
-     staffPhoneShown.add(nodeId);
-     renderStaff();
-     if(noPublicPhone)note.textContent='해당 조직원의 연락처가 등록되지 않았거나 공개 조회 대상에서 제외되었습니다.';
-     return;
-    }catch(error){
-     note.textContent='지사 공개 연락처는 서버 공개 설정이 완료되어야 표시됩니다. ('+(error.message||'설정 대기')+')';
-     return;
+  const isBranchPublic=['부산 1지사','부산 2지사','부산 3지사','부산 4지사'].includes(assignedBranch);
+  if(isBranchPublic){
+   try{
+    const cfg=window.PLK_CONFIG||{};
+    if(!cfg.supabaseUrl||!cfg.supabaseAnonKey)throw new Error('Supabase 공개 조회 연결 정보가 없습니다.');
+    const db=createClient(cfg.supabaseUrl,cfg.supabaseAnonKey,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});
+    const {data,error}=await db.rpc('kpi_public_branch_staff_phones',{p_branch:assignedBranch});
+    if(error)throw error;
+    staffPhoneCache.clear();
+    for(const row of data||[])staffPhoneCache.set(String(row.node_id),String(row.phone||''));
+    staffPhoneShown.add(nodeId);
+    renderStaff();
+    if(!staffPhoneCache.has(nodeId)){
+     note.textContent='이 조직원의 연락처가 공개 조회 결과에 없습니다. 서버 조회 '+(data||[]).length+'건 · 관리자 연락처 등록 및 지사 소속을 확인해 주세요.';
+    }else{
+     note.textContent='지사 연락처 조회 완료 · 해당 지사 공개 연락처 '+(data||[]).length+'건';
     }
+   }catch(error){
+    note.textContent='지사 연락처 조회 오류: '+(error.message||'알 수 없는 오류');
    }
-   renderStaff();
-   note.textContent='연락처 조회 권한이 없습니다. 관리자 홈페이지에 권한 있는 계정으로 로그인하면 별도 로그인창 없이 조회할 수 있습니다.';
+   return;
+  }
+  if(!await checkStaffPhoneAccess()){
+   note.textContent='전체 뷰어의 연락처는 관리자 홈페이지에 권한 있는 계정으로 로그인한 경우에만 조회할 수 있습니다.';
    return;
   }
   if(!staffPhoneCache.has(nodeId)){
