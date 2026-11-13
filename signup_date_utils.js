@@ -12,7 +12,7 @@ export function timedSignupRows(event,year=null,months=null){
  if(!Array.isArray(event?.signupEntries))return [];
  const allowedMonths=months==null?null:new Set((Array.isArray(months)?months:[months]).map(Number));
  return event.signupEntries.filter(row=>{
-  if(!row||!['corporate','individual'].includes(row.group)||!Number.isSafeInteger(row.seats)||row.seats<0)return false;
+  if(!row||row.withdrawn||!['corporate','individual'].includes(row.group)||!Number.isSafeInteger(row.seats)||row.seats<0)return false;
   const date=validSignupDate(row.signupDate);
   return Boolean(date)&&(year==null||Number(date.slice(0,4))===Number(year))&&(!allowedMonths||allowedMonths.has(Number(date.slice(5,7))));
  });
@@ -48,4 +48,32 @@ export function undatedSignupStats(events){
   }else if(Number(event.done)>0){legacyEvents++;}
  }
  return {records,seats,legacyEvents};
+}
+
+/* Revenue is recognized by scheduled installment month, not all on signup day.
+   Month 1 = signup month; following installments = subsequent calendar months.
+   Withdrawn contracts contribute neither seats nor future installment revenue. */
+export function installmentRevenueForMonth(row,year,month){
+ if(!row||row.withdrawn)return 0;
+ const date=validSignupDate(row.signupDate);
+ if(!date)return 0;
+ const offset=(Number(year)-Number(date.slice(0,4)))*12+Number(month)-Number(date.slice(5,7));
+ if(offset<0)return 0;
+ if(row.paymentType==='installment'&&Array.isArray(row.installmentAmounts)&&row.installmentAmounts.length){
+  const amount=row.installmentAmounts[offset];
+  return Number.isSafeInteger(amount)&&amount>=0?amount:0;
+ }
+ return offset===0?(Number.isSafeInteger(row.revenue)&&row.revenue>=0?row.revenue:0):0;
+}
+export function monthlyRecognizedRevenue(events,{year,month,branches=null,divisions=null,normalizeDivision=v=>String(v||'').trim()}={}){
+ let total=0;
+ for(const event of events){
+  for(const row of Array.isArray(event.signupEntries)?event.signupEntries:[]){
+   if(!row||!['corporate','individual'].includes(row.group))continue;
+   if(branches&&!branches.includes(row.branch||event.branch))continue;
+   if(divisions&&!divisions.map(normalizeDivision).includes(normalizeDivision(row.division||event.division)))continue;
+   total+=installmentRevenueForMonth(row,year,month);
+  }
+ }
+ return total;
 }
