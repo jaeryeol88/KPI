@@ -332,6 +332,7 @@ import { emptyRevenue,recordRevenue,oldRevenue,addRevenue,clickableSeats,revenue
 import { rosterPerformancePeople,regionalRepresentativeNames } from './personal_roster.js';
 import { renderPerformanceMatrix } from './performance_matrix.js';
 import { historicValue,historicalPast } from './historical_seats.js';
+import { createHistoricalEditor } from './historical_editor.js';
 import { validSignupDate,timedSignupRows,signupSeatsForPeriod,undatedSignupStats } from './signup_date_utils.js';
 let createClient;
 try {
@@ -361,6 +362,7 @@ const showApp = user => {
   el('currentUser').textContent=(access.role==='owner'?'최고관리자 · 전체 행사':access.role==='shared'?'공동 관리자 · 전체 행사':access.branch+' · 지사 관리자 (본인 지사만)')+' · '+user.email;
   el('authScreen').hidden=true; el('kpiApp').hidden=false;
   el('adminRoles').hidden=access.role!=='owner';
+  historicalEditor.show();
   el('backup').hidden=access.role!=='owner';
   el('restore').hidden=access.role!=='owner';
   const branchFilter=el('branch'), branchEditor=el('fBranch');
@@ -1489,6 +1491,7 @@ async function loadMonthlyTargets(){
    all.push(...(data||[]));if((data||[]).length<1000)break;
   }
   monthlyTargets=all;monthlyReady=true;
+  await historicalEditor.load();
   let divisionMessage='';
   try {
    const divisions=[];
@@ -1540,6 +1543,7 @@ async function monthlySaveGoal(event){
  finally{button.disabled=false;}
 }
 monthlySetup();
+const historicalEditor=createHistoricalEditor({getDb:()=>db,getRole:()=>access.role,onRecords:records=>{historicalSeats=records;renderPerformanceYearboard();renderPersonalYearboard();}});
 const productBranchExpanded=new Set();
 function renderProductBranchStats(events){
  const products=new Map();
