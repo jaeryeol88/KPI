@@ -1,5 +1,5 @@
 import {createClient} from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
-import {countOrgHeadcount} from './org_headcount.js?v=unified-20261113';
+import {countOrgHeadcount,orgEffectiveRoleShared,isDualStaff} from './org_headcount.js?v=unified-20261113';
 import { drawOrgConnectorLines } from './org_connector_lines.js';
 import { emptyRevenue,recordRevenue,oldRevenue,addRevenue,clickableSeats,revenueLabel,showRevenueDetail } from './personal_revenue_ui.js';
 import { rosterPerformancePeople,regionalRepresentativeNames } from './personal_roster.js';
@@ -352,12 +352,7 @@ el('v-months').addEventListener('change',e=>{
  renderPersonal();
 });
  const children=id=>orgNodes.filter(n=>n.parent===id).sort((a,b)=>(a.order||0)-(b.order||0));
- const effectiveRole=n=>{
-  if(Object.prototype.hasOwnProperty.call(n,'headcountRole'))return roles[n.headcountRole]?n.headcountRole:'';
-  if(n.type!=='person')return '';
-  const v=String(n.subtitle||'').replace(/\s+/g,'');
-  return Object.keys(roles).find(k=>v.includes(roles[k]))||'';
- };
+ const effectiveRole=orgEffectiveRoleShared;
  const join=n=>{
   const v=String(n.joinDate||'');if(/^[0-9]{2}[.](0[1-9]|1[0-2])$/.test(v))return v;
   const match=v.match(/^([0-9]{4})-(0[1-9]|1[0-2])(?:-[0-9]{2})?$/);return match?match[1].slice(-2)+'.'+match[2]:'';
@@ -385,7 +380,7 @@ el('v-months').addEventListener('change',e=>{
   if(n.type==='group'&&(!n.color||n.color==='default'))colors=palette.default;
   if(!n.color||n.color==='default'){if(n.type==='root'||n.type==='division')colors=palette.blue;else if(n.type==='group')colors=palette.default}
   const rawName=String(n.label||'').trim();
-  const isDual=/[（(]\s*겸\s*직\s*[)）]/.test(rawName+' '+String(n.subtitle||''));
+  const isDual=isDualStaff(n)||effectiveRole(n)==='dual';
   const role=isDual?'본부장 겸직':(roles[effectiveRole(n)]||'');
   const subtitle=String(n.subtitle||'').trim();
   const sub=subtitle&&subtitle.replace(/\s+/g,'')!==role?'<small>'+safe(subtitle)+'</small>':'';
@@ -484,6 +479,7 @@ el('v-months').addEventListener('change',e=>{
      const {data,error}=await db.rpc('kpi_public_branch_staff_phones',{p_branch:assignedBranch});
      if(error)throw error;
      for(const row of data||[])staffPhoneCache.set(String(row.node_id),String(row.phone||''));
+     if(!staffPhoneCache.has(nodeId))note.textContent='해당 조직원의 연락처가 등록되지 않았거나 공개 조회 대상에서 제외되었습니다.';
      staffPhoneAllowed=true;
      staffPhoneShown.add(nodeId);
      renderStaff();
