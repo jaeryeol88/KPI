@@ -279,7 +279,7 @@
 <p class="perf-yearboard-note" id="perfYearNote">월별 실적 데이터를 불러오는 중…</p></section>
 <section class="perf-yearboard" id="personalYearBoard" hidden aria-label="개인별 월간 실적현황">
 <div class="perf-yearboard-top"><div><h2>개인별 실적현황 <span class="perf-linked">가입 건별 실적 연동</span></h2><p>담당 매니저별 월간 가입구좌와 연간 합계입니다. 등록된 담당 지사·본부 기준이며 연간 실적 내림차순으로 정렬합니다.</p></div>
-<div class="perf-yearboard-filters"><label>조회 연도 <select id="personalYearSelect"></select></label><label>지사 <select id="personalBranchSelect"></select></label><label>본부 <select id="personalDivisionSelect"></select></label></div></div>
+<div class="perf-yearboard-filters"><label>조회 연도 <select id="personalYearSelect"></select></label><label>지사 <select id="personalBranchSelect"></select></label><label>본부 <select id="personalDivisionSelect"></select></label><label>이름 조회 <input id="personalNameSearch" type="search" placeholder="이름만 입력하세요" autocomplete="off" aria-label="매니저 이름으로 실적 검색" style="width:155px;background:#fff;border:1px solid var(--line);padding:8px;border-radius:8px;font-size:13px"></label></div></div>
 <div class="perf-yearboard-months" id="personalMonthButtons" aria-label="개인별 실적 월 선택"></div>
 <div class="perf-yearboard-scroll"><table class="perf-yearboard-table personal-matrix"><colgroup><col style="width:49px"><col style="width:151px"><col style="width:106px"><col style="width:126px"><col style="width:65px"><col style="width:65px"><col style="width:65px"><col style="width:65px"><col style="width:65px"><col style="width:65px"><col style="width:65px"><col style="width:65px"><col style="width:65px"><col style="width:65px"><col style="width:65px"><col style="width:65px"><col style="width:82px"></colgroup><thead id="personalYearHead"></thead><tbody id="personalYearBody"></tbody></table></div>
 <p class="perf-yearboard-note" id="personalYearNote"></p></section>
@@ -293,7 +293,7 @@
  <section class="org-headcount" aria-label="조직 인원 현황">
  <div class="org-headcount-top"><h3>조직 인원 현황</h3><span>조직도 카드 기준 · 자동 집계</span></div>
  <div id="orgHeadcountGrid" class="org-headcount-grid" aria-live="polite"></div>
- <p class="org-headcount-note">이름이 입력된 직책 지정 인원만 집계합니다. 이름·직급에 (겸직)이 표시된 인원은 별도 겸직 항목으로 집계하고 다른 직책에서 중복 계산하지 않습니다.</p>
+ <p class="org-headcount-note">이름이 입력된 직책 지정 인원만 집계합니다. 이름·직급에 (겸직)이 표시된 인원은 별도 겸직 항목으로 집계하고 총인원에서는 제외합니다.</p>
  </section>
  <p class="org-help">위계: 최상위 → 지사 / 부서 → 본부 / 팀 → 구성원. 카드 클릭 시 이름·직급·직책 구분 수정, 하위 카드 추가, 순서 변경, 삭제가 가능합니다.</p>
  <div id="orgEditor" class="org-editor" hidden>
@@ -1038,7 +1038,7 @@ function orgRenderHeadcount(){
   else counts[role]++;
  }
  const labels=[['regional','권역대표'],['branch','지사장'],['division','본부장'],['manager','매니저'],['dual','겸직']];
- const total=Object.values(counts).reduce((a,b)=>a+b,0);
+ const total=counts.regional+counts.branch+counts.division+counts.manager;
  target.innerHTML=labels.map(([key,label])=>'<div class="org-headcount-stat"><span>'+label+'</span><strong>'+fmt(counts[key])+'명</strong></div>').join('')+
   '<div class="org-headcount-stat org-headcount-total"><span>총인원</span><strong>'+fmt(total)+'명</strong></div>';
 }
@@ -1376,6 +1376,7 @@ el('perfMonthButtons').addEventListener('click',e=>{const b=e.target.closest('bu
 let personalSelectedYear=new Date().getFullYear();
 let personalSelectedBranch='all';
 let personalSelectedDivision='all';
+let personalNameQuery='';
 let personalSelectedMonths=new Set(); // Empty selection means the full year.
 let personalRevenueActions=new Map();
 function renderPersonalYearboard(){
@@ -1445,7 +1446,7 @@ function renderPersonalYearboard(){
    (row.manualMonths??=new Set()).add(Number(h.goal_month));
   }
  }
- const rows=[...entries.values()].map(x=>({...x,total:visibleMonths.reduce((a,m)=>a+x.monthly[m-1],0)}))
+ const rows=[...entries.values()].filter(x=>!personalNameQuery||x.manager.replace(/\s+/g,'').includes(personalNameQuery.replace(/\s+/g,''))).map(x=>({...x,total:visibleMonths.reduce((a,m)=>a+x.monthly[m-1],0)}))
   .sort((a,b)=>b.total-a.total||a.branch.localeCompare(b.branch,'ko')||a.division.localeCompare(b.division,'ko')||a.manager.localeCompare(b.manager,'ko'));
  const total=Array(12).fill(0),salesTotals=Array.from({length:12},emptyRevenue);
  let tbody='';
@@ -1478,6 +1479,7 @@ el('personalYearBody').addEventListener('click',e=>{const button=e.target.closes
 el('personalYearSelect').addEventListener('change',e=>{personalSelectedYear=Number(e.target.value);renderPersonalYearboard();});
 el('personalBranchSelect').addEventListener('change',e=>{personalSelectedBranch=e.target.value;renderPersonalYearboard();});
 el('personalDivisionSelect').addEventListener('change',e=>{personalSelectedDivision=e.target.value;renderPersonalYearboard();});
+el('personalNameSearch').addEventListener('input',e=>{personalNameQuery=String(e.target.value||'').trim();renderPersonalYearboard();});
 el('personalMonthButtons').addEventListener('click',e=>{
  if(!e.target.closest('button[data-personal-all]'))return;
  personalSelectedMonths.clear();renderPersonalYearboard();
