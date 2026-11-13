@@ -160,11 +160,11 @@
    const freeH=bottom-blockTop;
    const leadRows=direct.length?Math.ceil(direct.length/2):0;
    const cardGap=.045,headH=.27,leadH=.30,sectionGap=.12;
-   const headerBudget=leadRows?leadRows*leadH+.10:.04;
-   const sectionBudget=sections.length*(headH+sectionGap);
-   const remaining=freeH-headerBudget-sectionBudget;
+   const headerBudget=leadRows?leadRows*leadH+.10:0;
+   const sectionBudget=sections.length*(headH+.045+sectionGap);
    const totalRows=sections.reduce((n,sec)=>n+Math.max(1,Math.ceil(sec.people.length/2)),0);
-   const rowH=Math.max(.105,Math.min(.315,(remaining-cardGap*(totalRows-sections.length))/Math.max(totalRows,1)));
+   const remaining=freeH-headerBudget-sectionBudget-totalRows*cardGap;
+   const rowH=Math.max(.09,Math.min(.315,remaining/Math.max(totalRows,1)));
    let y=blockTop;
    if(direct.length){
     line(slide,pptx,cx,branchTop+branchH,cx,y);
@@ -293,9 +293,9 @@
    }
    if(!roots.some(node=>node.type==='root'))throw new Error('최상위 조직이 없습니다.');
    const title=String(roots.find(node=>node.type==='root').label||'PLK').replace(/[\\/:*?"<>|]/g,'_').slice(0,36);
-   const name=title+'_조직도.pptx';
+   const name=title+'_전체조직원_조직도.pptx';
    await pptx.writeFile({fileName:name});
-   orgApi.status('조직도 PPT 다운로드를 완료했습니다. 현재 화면의 카드 정보가 반영되어 있습니다.');
+   orgApi.status('PPT 다운로드 완료 · 첫 장에 전체 조직원이 표시됩니다. 파일명: '+name);
   }catch(err){console.error(err);orgApi.status('PPT 다운로드 오류: '+(err.message||String(err)),true);}
   finally{button.disabled=false;button.textContent=old;}
  }
