@@ -554,7 +554,7 @@ function attributedSeats(event,branches=null,divisions=null){
  const divSet=divisions?new Set(divisions.map(normalizeDivision)):null;
  if(Array.isArray(event.signupEntries)&&event.signupEntries.some(row=>row&&Number.isSafeInteger(row.seats)&&row.seats>=0)){
   return event.signupEntries.reduce((total,row)=>{
-   if(!row||!Number.isSafeInteger(row.seats)||row.seats<0)return total;
+   if(!row||row.withdrawn||!Number.isSafeInteger(row.seats)||row.seats<0)return total;
    const b=row.branch||event.branch,d=normalizeDivision(row.division||event.division);
    return (!branchSet||branchSet.has(b))&&(!divSet||divSet.has(d))?total+row.seats:total;
   },0);
@@ -568,7 +568,7 @@ function scopedSignupRows(event){
  const divisions=multiValues.division.size?new Set([...multiValues.division].map(normalizeDivision)):null;
  if(!Array.isArray(event.signupEntries)||!event.signupEntries.some(r=>r&&['corporate','individual'].includes(r.group)))return null;
  return event.signupEntries.filter(r=>{
-  if(!r||!['corporate','individual'].includes(r.group))return false;
+  if(!r||r.withdrawn||!['corporate','individual'].includes(r.group))return false;
   return (!branches||branches.has(r.branch||event.branch))&&(!divisions||divisions.has(normalizeDivision(r.division||event.division)));
  });
 }
