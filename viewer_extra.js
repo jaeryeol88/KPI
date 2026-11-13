@@ -602,7 +602,7 @@ el('v-months').addEventListener('change',e=>{
  el('v-staff-status').addEventListener('change',renderStaff);
 
  function refresh(){if(active==='yearboard')renderYear();if(active==='personal')renderPersonal();if(active==='monthlysignups')renderSignupReport();}
- function setHistoricalSeats(data,cancellations=[]){historicalSeats=Array.isArray(data)?data:[];cancelPanel.setRows(cancellations);refresh();},
- setCompetitionData(events,history){competitionEvents=Array.isArray(events)?events:null;competitionHistoricalSeats=Array.isArray(history)?history:null;refresh();}
- return {refresh,refreshOrganization,setHistoricalSeats};
+ function setHistoricalSeats(data,cancellations=[]){historicalSeats=Array.isArray(data)?data:[];cancelPanel.setRows(cancellations);refresh();}
+ function setCompetitionData(events,history){competitionEvents=Array.isArray(events)?events:null;competitionHistoricalSeats=Array.isArray(history)?history:null;refresh();}
+ return {refresh,refreshOrganization,setHistoricalSeats,setCompetitionData};
 }
