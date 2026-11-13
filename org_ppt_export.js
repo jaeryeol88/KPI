@@ -117,70 +117,122 @@
  // First slide: all currently visible org cards in one editable 16:9 tree.
  // Unlike the per-branch breakdown, this page includes ALL branch members and all division members.
 
- // Capture actual read-only viewer DOM and its SVG connector lines.
- // The first slide is a visual screenshot; following slides remain editable shapes.
+ // Export the actual viewer layout as native, individually editable PowerPoint
+ // shapes and text. Positions, colors and connectors come from rendered viewer DOM.
  async function viewerSnapshot(pptx,root,pageCounter){
   const frame=document.createElement('iframe');
-  frame.src='./viewer.html?ppt-preview=1&v=20261113c';
-  frame.title='조직도 PPT 캡처';
+  frame.src='./viewer.html?ppt-preview=1&v=20261113-editable';
+  frame.title='조직도 PPT 편집 가능 내보내기';
   Object.assign(frame.style,{
    position:'fixed',left:'-30000px',top:'0',width:'2300px',height:'1400px',
    border:'0',background:'#fafcff',pointerEvents:'none'
   });
-  document.body.appendChild(frame);
-  const loadScript=(doc,win,url)=>new Promise((resolve,reject)=>{
-   const script=doc.createElement('script');
-   script.src=url;script.async=true;
-   const timeout=setTimeout(()=>{script.remove();reject(new Error('화면 캡처 도구 응답 지연'));},12000);
-   script.onload=()=>{clearTimeout(timeout);resolve();};
-   script.onerror=()=>{clearTimeout(timeout);script.remove();reject(new Error('캡처 도구 다운로드 실패'));};
-   doc.head.appendChild(script);
-  });
   const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+  const loaded=new Promise((resolve,reject)=>{
+   const timeout=setTimeout(()=>reject(new Error('뷰어 조직도 연결 시간이 초과되었습니다.')),20000);
+   frame.onload=()=>{clearTimeout(timeout);resolve();};
+   frame.onerror=()=>{clearTimeout(timeout);reject(new Error('뷰어 조직도에 접근할 수 없습니다.'));};
+  });
+  document.body.appendChild(frame);
   try{
-   await new Promise((resolve,reject)=>{
-    const timeout=setTimeout(()=>reject(new Error('뷰어 화면을 불러오지 못했습니다.')),20000);
-    frame.onload=()=>{clearTimeout(timeout);resolve();};
-    frame.onerror=()=>{clearTimeout(timeout);reject(new Error('뷰어 페이지 연결 실패'));};
-   });
+   await loaded;
    const win=frame.contentWindow,doc=frame.contentDocument;
-   if(!win||!doc)throw new Error('같은 사이트의 뷰어 화면에 접근할 수 없습니다.');
+   if(!win||!doc)throw new Error('같은 사이트의 뷰어 조직도에 접근할 수 없습니다.');
    for(let retry=0;typeof win.PLK_RENDER_PPT_ORG_PREVIEW!=='function';retry++){
-    if(retry>=180)throw new Error('뷰어 조직도 표시 기능을 준비하지 못했습니다. 새로고침 후 재시도해 주세요.');
+    if(retry>=180)throw new Error('뷰어 조직도 모듈이 준비되지 않았습니다. 새로고침 후 다시 시도하세요.');
     await sleep(100);
    }
-   const currentNodes=orgApi.nodes.map(n=>({...n}));
-   const node=win.PLK_RENDER_PPT_ORG_PREVIEW(currentNodes);
-   if(!node||!node.querySelector('.v-org-root'))throw new Error('뷰어 전체 조직도를 표시할 수 없습니다.');
-   // Two frames allow drawOrgConnectorLines to finish its SVG positioning.
+   const node=win.PLK_RENDER_PPT_ORG_PREVIEW(orgApi.nodes.map(n=>({...n})));
+   if(!node||!node.querySelector('.v-org-root'))throw new Error('전체 조직도를 표시할 수 없습니다.');
    await new Promise(resolve=>win.requestAnimationFrame(()=>win.requestAnimationFrame(resolve)));
-   if(typeof win.html2canvas!=='function'){
-    let lastError=null;
-    for(const url of [
-     'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js',
-     'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
-     'https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js'
-    ]){
-     try{await loadScript(doc,win,url);if(typeof win.html2canvas==='function')break;}
-     catch(error){lastError=error;}
-    }
-    if(typeof win.html2canvas!=='function')throw new Error('뷰어 조직도 캡처 도구를 불러오지 못했습니다. '+(lastError?.message||''));
-   }
-   const width=Math.ceil(node.scrollWidth),height=Math.ceil(node.scrollHeight);
-   if(width<100||height<100)throw new Error('전체 조직도 크기가 유효하지 않습니다.');
-   // Browser canvas dimension and memory safeguards; never crop any member.
-   const scale=Math.min(2,12000/Math.max(width,height),Math.sqrt(24000000/(width*height)));
-   const bitmap=await win.html2canvas(node,{
-    backgroundColor:'#fafcff',scale:Math.max(.4,scale),useCORS:true,
-    logging:false,removeContainer:true,width,height,scrollX:0,scrollY:0,
-    windowWidth:Math.max(2300,width+80),windowHeight:Math.max(1400,height+80)
-   });
+
+   const bounds=node.getBoundingClientRect(),width=Math.ceil(Math.max(node.scrollWidth,bounds.width)),
+    height=Math.ceil(Math.max(node.scrollHeight,bounds.height));
+   if(width<100||height<100)throw new Error('조직도 화면 크기가 올바르지 않습니다.');
+   const fitW=W-.70,fitH=5.75;
+   const ratio=Math.min(fitW/width,fitH/height),shiftX=(W-width*ratio)/2,shiftY=1.24+(fitH-height*ratio)/2;
+   const X=px=>shiftX+px*ratio,Y=px=>shiftY+px*ratio;
+   const box=(element)=>{
+    const r=element.getBoundingClientRect();
+    return {x:X(r.left-bounds.left),y:Y(r.top-bounds.top),w:r.width*ratio,h:r.height*ratio};
+   };
+   const hex=(color,fallback)=>{
+    const value=String(color||''),match=value.match(/rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)/i);
+    if(match)return match.slice(1,4).map(x=>Math.max(0,Math.min(255,Number(x))).toString(16).padStart(2,'0')).join('').toUpperCase();
+    const raw=value.match(/^#([\da-f]{3,8})$/i);
+    if(raw)return raw[1].length===3?raw[1].split('').map(c=>c+c).join('').toUpperCase():raw[1].slice(0,6).toUpperCase();
+    return fallback;
+   };
    const slide=pptx.addSlide();
-   base(slide,pptx,'PLK 조직도 · 전체 조직도','뷰어와 동일한 카드 배치 및 연결선  |  전체 구성원 표시  |  2페이지부터 편집 가능한 상세 도형',++pageCounter.value);
-   const x0=.35,y0=1.24,maxW=W-.70,maxH=5.76;
-   const ratio=Math.min(maxW/bitmap.width,maxH/bitmap.height);
-   const w=bitmap.width*ratio,h=bitmap.height*ratio;
-   slide.addImage({data:bitmap.toDataURL('image/png'),x:(W-w)/2,y:y0+(maxH-h)/2,w,h});
+   base(slide,pptx,'PLK 조직도 · 전체 조직도','뷰어와 동일한 조직도 배치 · 모든 이름, 직책, 카드와 연결선을 개별 편집 가능',++pageCounter.value);
+
+   // SVG paths are simple orthogonal M/H/V connector segments, each exported as lines.
+   const svg=node.querySelector('svg.org-connectors-svg');
+   if(svg){
+    for(const path of svg.querySelectorAll('path[d]')){
+     const d=path.getAttribute('d')||'';
+     const tokens=d.match(/[MLHVmlhv]|-?\d*\.?\d+(?:e[-+]?\d+)?/gi)||[];
+     let x=0,y=0,cursor=0,command='';
+     while(cursor<tokens.length){
+      const token=tokens[cursor++];
+      if(/^[MLHVmlhv]$/.test(token)){command=token;continue;}
+      const value=Number(token);if(!Number.isFinite(value))continue;
+      if(!command)continue;
+      let nx=x,ny=y;
+      if(command.toUpperCase()==='M'||command.toUpperCase()==='L'){
+       if(cursor>=tokens.length)break;
+       const other=Number(tokens[cursor++]);if(!Number.isFinite(other))continue;
+       nx=command===command.toLowerCase()?x+value:value;
+       ny=command===command.toLowerCase()?y+other:other;
+      }else if(command.toUpperCase()==='H')nx=command==='h'?x+value:value;
+      else if(command.toUpperCase()==='V')ny=command==='v'?y+value:value;
+      else continue;
+      if(command.toUpperCase()!=='M'&&(nx!==x||ny!==y)){
+       const aX=X(x),aY=Y(y),bX=X(nx),bY=Y(ny);
+       slide.addShape(pptx.ShapeType.line,{
+        x:Math.min(aX,bX),y:Math.min(aY,bY),w:Math.abs(bX-aX),h:Math.abs(bY-aY),
+        line:{color:'ACBFD8',width:Math.max(.25,2*ratio*72/96)}
+       });
+      }
+      x=nx;y=ny;
+      if(command==='M')command='L';
+      if(command==='m')command='l';
+     }
+    }
+   }
+   // Cards are individual shapes; role, name, subtitle and date are separate text objects.
+   const elements=[...node.querySelectorAll('.v-org-branch-heading,.v-org-card')];
+   if(!elements.length)throw new Error('내보낼 조직도 카드가 없습니다.');
+   let textCount=0;
+   for(const element of elements){
+    const r=box(element),style=win.getComputedStyle(element);
+    if(r.w<=0||r.h<=0)continue;
+    const fill=hex(style.backgroundColor,'FFFFFF'),
+      fg=hex(style.color,'172840'),border=hex(style.borderColor,fill);
+    slide.addShape(pptx.ShapeType.roundRect,{
+     x:r.x,y:r.y,w:r.w,h:r.h,rectRadius:Math.min(.08,r.h/7),
+     line:{color:border,width:.35},fill:{color:fill}
+    });
+    const childTexts=element.classList.contains('v-org-branch-heading')?[element]:
+     [...element.querySelectorAll('.v-org-role,strong,small')];
+    for(const child of childTexts){
+     const value=String(child.textContent||'').trim();
+     if(!value)continue;
+     const p=box(child),font=win.getComputedStyle(child);
+     // A matching scale converts actual CSS font size into PPT font points.
+     const fontPx=parseFloat(font.fontSize)||13;
+     const fontSize=Math.max(2.4,Math.min(72,fontPx*ratio*72));
+     slide.addText(value,{
+      x:Math.max(r.x,p.x),y:Math.max(r.y,p.y),
+      w:Math.max(.025,Math.min(p.w,r.x+r.w-p.x)),
+      h:Math.max(.025,Math.min(p.h,r.y+r.h-p.y)),
+      fontFace:FONT,fontSize,color:hex(font.color,fg),bold:(Number(font.fontWeight)||400)>=700,
+      align:'center',valign:'mid',margin:0,breakLine:false,fit:'shrink'
+     });
+     textCount++;
+    }
+   }
+   if(textCount===0)throw new Error('조직도에 편집 가능한 이름을 추가하지 못했습니다.');
   }finally{frame.remove();}
  }
 
@@ -274,9 +326,9 @@
    }
    if(!roots.some(node=>node.type==='root'))throw new Error('최상위 조직이 없습니다.');
    const title=String(roots.find(node=>node.type==='root').label||'PLK').replace(/[\\/:*?"<>|]/g,'_').slice(0,36);
-   const name=title+'_뷰어화면그대로_전체조직도.pptx';
+   const name=title+'_전체조직도_편집가능.pptx';
    await pptx.writeFile({fileName:name});
-   orgApi.status('PPT 다운로드 완료 · 첫 장은 뷰어 화면과 동일한 전체 조직도입니다. 파일명: '+name);
+   orgApi.status('PPT 다운로드 완료 · 첫 장의 전체 조직도 카드, 이름, 연결선까지 개별 수정할 수 있습니다. 파일명: '+name);
   }catch(err){console.error(err);orgApi.status('PPT 다운로드 오류: '+(err.message||String(err)),true);}
   finally{button.disabled=false;button.textContent=old;}
  }
