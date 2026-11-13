@@ -7,6 +7,10 @@ export const ORG_ROLE_LABELS=Object.freeze({regional:'권역대표',branch:'지�
 const PLACEHOLDERS=new Set(['구성원','새 구성원','이름 미입력','최상위 조직','새 지사 / 부서','새 본부 / 팀','지사장 / 담당자 입력']);
 const DUAL_MARK=/[（(]?\s*겸\s*직\s*[)）]?/;
 export function orgEffectiveRoleShared(node){
+ if(node.headcountRole==='dual')return 'dual';
+ // Older cards may have an empty stored role while their visible title says 겸직.
+ const dualText=String(node.label||'')+' '+String(node.subtitle||'');
+ if(DUAL_MARK.test(dualText))return 'dual';
  if(Object.prototype.hasOwnProperty.call(node,'headcountRole'))
   return Object.prototype.hasOwnProperty.call(ORG_ROLE_LABELS,node.headcountRole)?node.headcountRole:'';
  if(node.type!=='person')return '';
@@ -19,7 +23,7 @@ export function orgEffectiveRoleShared(node){
 }
 export function orgIdentityName(value){
  return String(value||'').replace(/[（(]\s*겸\s*직\s*[)）]/g,'')
-  .replace(/부산\s*[1-4]\s*지사|권역대표|지사장|본부장|매니저/g,'')
+  .replace(/부산\s*[1-4]\s*지사|권역대표|지사장|본부장|매니저|겸직/g,'')
   .replace(/[^가-힣a-zA-Z]/g,'').trim();
 }
 export function isDualStaff(node){
@@ -54,7 +58,7 @@ export function countOrgHeadcount(nodes){
   const roles=person.roles;
   const branchException=excluded.has(name)&&roles.has('branch');
   const automaticallyDual=roles.size>1&&!branchException;
-  if((person.explicitDual&&!branchException)||automaticallyDual){
+  if(person.explicitDual||automaticallyDual){
    counts.dual++;
    // Explicit dual-only cards do not add a second person to the total.
    // For duplicate assignments, keep the person's primary role once.
