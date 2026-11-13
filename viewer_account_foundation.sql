@@ -40,7 +40,37 @@ BEGIN
  IF (p_role='branch' AND coalesce(p_branch,'') NOT IN ('부산 1지사','부산 2지사','부산 3지사','부산 4지사')) OR
     (p_role<>'branch' AND p_branch IS NOT NULL) THEN RAISE EXCEPTION '잘못된 지사 권한'; END IF;
  IF p_id IS NULL THEN
-  IF length(coalesce(p_password,''))<12 THEN RAISE EXCEPTION '비밀번호는 12자 이상이어야 합니다'; END IF;
+  IF coalesce(p_password,'') !~ '^[0-9]{4} THEN RAISE EXCEPTION '비밀번호는 숫자 4자리여야 합니다'; END IF;
+  INSERT INTO public.kpi_viewer_accounts(username,password_hash,role,branch,enabled)
+  VALUES(v_username,extensions.crypt(p_password,extensions.gen_salt('bf',12)),p_role,p_branch,p_enabled) RETURNING id INTO v_id;
+ ELSE
+  UPDATE public.kpi_viewer_accounts
+  SET username=v_username,role=p_role,branch=p_branch,enabled=p_enabled,
+      password_hash=CASE WHEN p_password IS NULL OR p_password='' THEN password_hash
+        ELSE extensions.crypt(p_password,extensions.gen_salt('bf',12)) END,
+      updated_at=now()
+  WHERE id=p_id RETURNING id INTO v_id;
+  IF v_id IS NULL THEN RAISE EXCEPTION '계정이 없습니다'; END IF;
+  IF p_password IS NOT NULL AND p_password<>'' AND p_password !~ '^[0-9]{4} THEN
+    RAISE EXCEPTION '비밀번호는 숫자 4자리여야 합니다';
+  END IF;
+ END IF;
+ RETURN v_id;
+END;$$;
+CREATE OR REPLACE FUNCTION public.kpi_admin_delete_viewer_account(p_id uuid)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+BEGIN
+ IF NOT public.kpi_is_admin() THEN RAISE EXCEPTION '관리자만 접근할 수 있습니다'; END IF;
+ DELETE FROM public.kpi_viewer_accounts WHERE id=p_id;
+END;$$;
+REVOKE ALL ON FUNCTION public.kpi_admin_list_viewer_accounts() FROM PUBLIC,anon;
+REVOKE ALL ON FUNCTION public.kpi_admin_save_viewer_account(uuid,text,text,text,text,boolean) FROM PUBLIC,anon;
+REVOKE ALL ON FUNCTION public.kpi_admin_delete_viewer_account(uuid) FROM PUBLIC,anon;
+GRANT EXECUTE ON FUNCTION public.kpi_admin_list_viewer_accounts() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.kpi_admin_save_viewer_account(uuid,text,text,text,text,boolean) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.kpi_admin_delete_viewer_account(uuid) TO authenticated;
+COMMIT;
+ THEN RAISE EXCEPTION '비밀번호는 숫자 4자리여야 합니다'; END IF;
   INSERT INTO public.kpi_viewer_accounts(username,password_hash,role,branch,enabled)
   VALUES(v_username,extensions.crypt(p_password,extensions.gen_salt('bf',12)),p_role,p_branch,p_enabled) RETURNING id INTO v_id;
  ELSE
@@ -52,7 +82,56 @@ BEGIN
   WHERE id=p_id RETURNING id INTO v_id;
   IF v_id IS NULL THEN RAISE EXCEPTION '계정이 없습니다'; END IF;
   IF p_password IS NOT NULL AND p_password<>'' AND length(p_password)<12 THEN
-    RAISE EXCEPTION '비밀번호는 12자 이상이어야 합니다';
+    RAISE EXCEPTION '비밀번호는 숫자 4자리여야 합니다';
+  END IF;
+ END IF;
+ RETURN v_id;
+END;$$;
+CREATE OR REPLACE FUNCTION public.kpi_admin_delete_viewer_account(p_id uuid)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+BEGIN
+ IF NOT public.kpi_is_admin() THEN RAISE EXCEPTION '관리자만 접근할 수 있습니다'; END IF;
+ DELETE FROM public.kpi_viewer_accounts WHERE id=p_id;
+END;$$;
+REVOKE ALL ON FUNCTION public.kpi_admin_list_viewer_accounts() FROM PUBLIC,anon;
+REVOKE ALL ON FUNCTION public.kpi_admin_save_viewer_account(uuid,text,text,text,text,boolean) FROM PUBLIC,anon;
+REVOKE ALL ON FUNCTION public.kpi_admin_delete_viewer_account(uuid) FROM PUBLIC,anon;
+GRANT EXECUTE ON FUNCTION public.kpi_admin_list_viewer_accounts() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.kpi_admin_save_viewer_account(uuid,text,text,text,text,boolean) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.kpi_admin_delete_viewer_account(uuid) TO authenticated;
+COMMIT;
+ THEN
+    RAISE EXCEPTION '비밀번호는 숫자 4자리여야 합니다';
+  END IF;
+ END IF;
+ RETURN v_id;
+END;$$;
+CREATE OR REPLACE FUNCTION public.kpi_admin_delete_viewer_account(p_id uuid)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+BEGIN
+ IF NOT public.kpi_is_admin() THEN RAISE EXCEPTION '관리자만 접근할 수 있습니다'; END IF;
+ DELETE FROM public.kpi_viewer_accounts WHERE id=p_id;
+END;$$;
+REVOKE ALL ON FUNCTION public.kpi_admin_list_viewer_accounts() FROM PUBLIC,anon;
+REVOKE ALL ON FUNCTION public.kpi_admin_save_viewer_account(uuid,text,text,text,text,boolean) FROM PUBLIC,anon;
+REVOKE ALL ON FUNCTION public.kpi_admin_delete_viewer_account(uuid) FROM PUBLIC,anon;
+GRANT EXECUTE ON FUNCTION public.kpi_admin_list_viewer_accounts() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.kpi_admin_save_viewer_account(uuid,text,text,text,text,boolean) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.kpi_admin_delete_viewer_account(uuid) TO authenticated;
+COMMIT;
+ THEN RAISE EXCEPTION '비밀번호는 숫자 4자리여야 합니다'; END IF;
+  INSERT INTO public.kpi_viewer_accounts(username,password_hash,role,branch,enabled)
+  VALUES(v_username,extensions.crypt(p_password,extensions.gen_salt('bf',12)),p_role,p_branch,p_enabled) RETURNING id INTO v_id;
+ ELSE
+  UPDATE public.kpi_viewer_accounts
+  SET username=v_username,role=p_role,branch=p_branch,enabled=p_enabled,
+      password_hash=CASE WHEN p_password IS NULL OR p_password='' THEN password_hash
+        ELSE extensions.crypt(p_password,extensions.gen_salt('bf',12)) END,
+      updated_at=now()
+  WHERE id=p_id RETURNING id INTO v_id;
+  IF v_id IS NULL THEN RAISE EXCEPTION '계정이 없습니다'; END IF;
+  IF p_password IS NOT NULL AND p_password<>'' AND length(p_password)<12 THEN
+    RAISE EXCEPTION '비밀번호는 숫자 4자리여야 합니다';
   END IF;
  END IF;
  RETURN v_id;
