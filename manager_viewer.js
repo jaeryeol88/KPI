@@ -91,8 +91,75 @@ function drawPersonal(){
  el('personalFoot').innerHTML='<tr><td colspan="4">합계</td>'+sums.map(n=>'<td>'+fmt(n)+'</td>').join('')+
   (showTotal?'<td>'+fmt(sums.reduce((a,b)=>a+b,0))+'</td>':'')+'</tr>';
 }
+
+/* Read the very same saved document as admin and run its legacy-card normalization
+   in memory. This projection never writes to the database. */
+function projectAdminOrgChart(original){
+ const nodes=Array.isArray(original)?original.map(n=>({...n})):[];
+ const roleOf=n=>{
+  const roles=['regional','branch','division','manager'];
+  if(Object.prototype.hasOwnProperty.call(n,'headcountRole'))return roles.includes(n.headcountRole)?n.headcountRole:'';
+  if(n.type!=='person')return '';
+  const title=String(n.subtitle||'').replace(/\s+/g,'');
+  if(title.includes('권역대표'))return 'regional';
+  if(title.includes('지사장'))return 'branch';
+  if(title.includes('본부장'))return 'division';
+  if(title.includes('매니저'))return 'manager';
+  return '';
+ };
+ const siblings=(id)=>nodes.filter(n=>String(n.parent??'')===String(id??'')).sort((a,b)=>(Number(a.order)||0)-(Number(b.order)||0));
+ const branchOf=group=>{
+  const explicit=String(group.branchName||'').trim();
+  if(explicit)return explicit;
+  const existing=String(group.label||'').match(/부산\s*[1-4]\s*지사/);
+  if(existing)return existing[0].replace(/\s+/g,' ').replace(/부산 ([1-4]) 지사/,'부산 $1지사').replace(/부산([1-4])지사/,'부산 $1지사');
+  const peers=siblings(group.parent).filter(n=>n.type==='group');
+  const index=peers.findIndex(n=>String(n.id)===String(group.id));
+  return index>=0&&index<4?'부산 '+(index+1)+'지사':'지사 / 부서';
+ };
+ for(const root of nodes.filter(n=>n.type==='root')){
+  const direct=nodes.filter(n=>n.type==='person'&&String(n.parent)===String(root.id));
+  if(!direct.length){
+   const role=roleOf(root),subtitle=String(root.subtitle||'').trim(),label=String(root.label||'').trim();
+   const hasName=label&&!/권역|지역|최상위 조직/.test(label);
+   const name=hasName?label:(role==='regional'?subtitle.replace(/권역대표|대표/g,'').trim():'');
+   const person={id:'viewer-root-person-'+String(root.id),parent:root.id,type:'person',label:name||'구성원',
+    subtitle:hasName?subtitle:'',headcountRole:'regional',color:'white',order:-1,
+    joinDate:root.joinDate||'',staffHidden:root.staffHidden===true};
+   if(name)person.staffContactId=String(root.id);
+   nodes.push(person);
+   if(hasName)root.label=String(root.regionName||'부산권역');
+  }
+  if(root.headcountRole==='regional'&&root.label==='부산권역')delete root.headcountRole;
+ }
+ for(const group of [...nodes]){
+  if(group.type!=='group')continue;
+  const branch=branchOf(group),name=String(group.label||'').trim();
+  const isPerson=name&&name!=='지사장 / 담당자 입력'&&name!=='새 지사 / 부서'&&
+   name.replace(/\s+/g,'')!==branch.replace(/\s+/g,'');
+  const role=roleOf(group),subtitleName=String(group.subtitle||'').replace(/지사장|본부장|권역대표|매니저/g,'').trim();
+  const clean=isPerson?(name.replace(/부산\s*[1-4]\s*지사/g,'').replace(/지사장/g,'').trim()||name):(role?subtitleName:'');
+  if(clean){
+   nodes.push({id:'viewer-group-person-'+String(group.id),parent:group.id,type:'person',label:clean,
+    subtitle:isPerson?(group.subtitle||''):'',headcountRole:role||'branch',
+    joinDate:group.joinDate||'',color:group.color==='default'?'white':(group.color||'white'),
+    order:-1,staffHidden:group.staffHidden===true,staffContactId:String(group.id)});
+  }
+  group.label=branch;group.branchName=branch;
+  if(clean)for(const prop of ['subtitle','headcountRole','joinDate','staffHidden'])delete group[prop];
+ }
+ return nodes;
+}
+async function loadSavedAdminOrg(db){
+ // org_chart_setup.sql already exposes this saved document read-only to anonymous viewers.
+ // Private staff contact records are stored in another table and are NEVER selected here.
+ const {data,error}=await db.from('kpi_org_chart').select('nodes').eq('id',1).maybeSingle();
+ if(error)throw error;
+ return projectAdminOrgChart(data?.nodes);
+}
+
 function drawOrg(){
- const visible=orgNodes.filter(n=>n&&n.staffHidden!==true);
+ const visible=orgNodes.filter(Boolean);
  const roles={regional:'권역대표',branch:'지사장',division:'본부장',manager:'매니저'};
  const roleOf=n=>{
   if(Object.prototype.hasOwnProperty.call(n,'headcountRole'))return roles[n.headcountRole]?n.headcountRole:'';
@@ -111,6 +178,7 @@ function drawOrg(){
   .replace(/부산\s*[1-4]\s*지사|권역대표|지사장|본부장|매니저/g,'').replace(/[^가-힣a-zA-Z]/g,'').trim();
  const dualNames=new Set(),dualIds=new Set(),counts={regional:0,branch:0,division:0,manager:0,dual:0};
  for(const n of visible){
+  if(n.staffHidden===true)continue;
   const label=String(n.label||''),subtitle=String(n.subtitle||'');
   const leader=roleOf(n)==='branch'&&['박영우','안선경'].includes(cleanName(label));
   if(leader||!marked.test(label+' '+subtitle))continue;
@@ -120,7 +188,7 @@ function drawOrg(){
  }
  counts.dual=dualNames.size;
  for(const n of visible){
-  if(!countable(n))continue;
+  if(n.staffHidden===true||!countable(n))continue;
   const name=cleanName(n.label);
   if(dualIds.has(String(n.id))||(name&&dualNames.has(name)))continue;
   const role=roleOf(n);
@@ -153,7 +221,7 @@ function drawOrg(){
  const person=n=>'<div class="org-person">'+card(n)+'</div>';
  const division=n=>'<div class="org-unit-col">'+card(n)+'<div class="org-person-list">'+kids(n.id).filter(x=>x.type==='person').map(person).join('')+'</div></div>';
  const branchName=n=>{const v=String(n.branchName||n.label||'').trim(),m=v.match(/부산\s*([1-4])\s*지사/);return m?'부산 '+m[1]+'지사':v;};
- const group=n=>'<div class="org-group-wrap"><div class="org-branch-heading">'+safe(branchName(n))+'</div>'+
+ const group=n=>'<div class="org-group-wrap"><button type="button" disabled class="org-branch-heading">'+safe(branchName(n))+'</button>'+
    (kids(n.id).some(x=>x.type==='person')?'<div class="org-branch-direct-members">'+kids(n.id).filter(x=>x.type==='person').map(person).join('')+'</div>':'')+
    '<div class="org-unit-row">'+kids(n.id).filter(x=>x.type==='division').map(division).join('')+'</div></div>';
  const root=n=>'<div class="org-root-branch"><div class="org-root-row">'+card(n)+'</div>'+
@@ -280,9 +348,7 @@ async function syncOrganization(force=false){
  if(!force&&Date.now()-lastOrgSync<5000)return;
  orgSyncBusy=true;
  try{
-  const {data,error}=await viewerDb.rpc('kpi_manager_org_nodes');
-  if(error)throw error;
-  const next=Array.isArray(data?.[0]?.nodes)?data[0].nodes:[];
+  const next=await loadSavedAdminOrg(viewerDb);
   const fingerprint=JSON.stringify(next);
   lastOrgSync=Date.now();
   if(fingerprint!==orgFingerprint){
@@ -374,11 +440,11 @@ async function main(){
    readPages((from,to)=>db.from('kpi_historical_seats').select('branch,division,manager,goal_year,goal_month,target_seats,actual_seats,employment_status').range(from,to)),
    readPages((from,to)=>db.from('kpi_monthly_targets').select('branch,goal_year,goal_month,target_seats').range(from,to)),
    readPages((from,to)=>db.from('kpi_monthly_division_targets').select('branch,division,goal_year,goal_month,target_seats').range(from,to)),
-   db.rpc('kpi_manager_org_nodes')
+   loadSavedAdminOrg(db)
   ]);
-  if(organization.error)throw organization.error;
+  if(!Array.isArray(organization))throw Error('조직도 데이터 형식 오류');
   signedRows=signups;history=historic;branchTargets=targets;divisionTargets=divisionGoals;
-  orgNodes=Array.isArray(organization.data?.[0]?.nodes)?organization.data[0].nodes:[];
+  orgNodes=organization;
   orgFingerprint=JSON.stringify(orgNodes);lastOrgSync=Date.now();lastPerformanceSync=Date.now();
   // Re-check the saved organization regularly while this viewer is open.
   window.setInterval(()=>void syncOrganization(),15000);
