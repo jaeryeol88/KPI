@@ -352,7 +352,7 @@ el('v-months').addEventListener('change',e=>{
    if(/\(\s*겸직\s*\)/.test(String(n.label||'')+' '+String(n.subtitle||'')))counts.dual++;
    else counts[r]++;
   }
-  const total=Object.values(counts).reduce((sum,v)=>sum+v,0);
+  const total=counts.regional+counts.branch+counts.division+counts.manager;
   el('v-headcount-grid').innerHTML=[...Object.entries(counts).map(([r,n])=>[r==='dual'?'겸직':roles[r],n]),['총인원',total]].map(([label,n])=>'<div class="v-hc"><span>'+label+'</span><strong>'+fmt(n)+'명</strong></div>').join('');
  }
  async function refreshOrganization(){
