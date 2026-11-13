@@ -1,7 +1,7 @@
 import { drawOrgConnectorLines } from './org_connector_lines.js';
 import { emptyRevenue,recordRevenue,oldRevenue,addRevenue,clickableSeats,revenueLabel,showRevenueDetail } from './personal_revenue_ui.js';
 import { rosterPerformancePeople,regionalRepresentativeNames } from './personal_roster.js';
-import { renderPerformanceMatrix } from './performance_matrix.js';
+import { renderPerformanceMatrix } from './performance_matrix.js?v=year-to-date-totals-20261113';
 import { historicValue,historicalActualSeats } from './historical_seats.js?v=auto-person-rollup-20261113';
 import { cancellationPanel } from './historical_cancellations_ui.js';
 import { timedSignupRows,signupSeatsForPeriod,undatedSignupStats } from './signup_date_utils.js';
@@ -87,7 +87,7 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
  .v-year-months button{border:1px solid #d9e3f0;background:#f6f8fc;border-radius:8px;color:#637187;padding:6px 9px;cursor:pointer;font-size:12px}
  .v-year-months button.active{background:#2e63c5;color:#fff;border-color:#2e63c5}
  .v-linked{font-size:11px;background:#e1f7e9;border-radius:15px;color:#087a50;padding:4px 9px;vertical-align:middle;white-space:nowrap}
- .v-year-matrix{min-width:1356px;width:100%;border-collapse:separate;border-spacing:0;table-layout:fixed;font-size:12px}
+ .v-year-matrix{min-width:1468px;width:100%;border-collapse:separate;border-spacing:0;table-layout:fixed;font-size:12px}
  .v-year-matrix th,.v-year-matrix td{padding:5px 6px;border-right:1px solid #d1dbea;border-bottom:1px solid #d1dbea;text-align:right!important;white-space:nowrap;font-variant-numeric:tabular-nums;box-sizing:border-box;overflow:hidden;text-overflow:ellipsis}
  .v-year-matrix th{background:#fbe5d8!important;color:#29384b;text-align:center!important;font-weight:750}
  .v-year-matrix thead th:nth-child(2){background:#f9deda!important}
@@ -151,7 +151,7 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
  <section id="v-yearboard" class="v-extra" hidden>
   <div class="v-extra-head"><div><h2>▦ 지사별 / 본부별 실적 현황 <span class="v-linked">실적 내역 연동</span></h2><p>회사 배정 월별 목표와 등록된 가입 실적을 1~12월 기준으로 자동 집계합니다. 실적은 가입 건별 담당 지사·본부를 기준으로 계산합니다.</p></div><div class="v-filters"><label>조회 연도 <select id="v-year"></select></label><label>지사 <select id="v-year-branch"></select></label></div></div>
   <div id="v-year-months" class="v-year-months" aria-label="강조할 월 선택"></div>
-  <div class="v-table-scroll"><table class="v-table v-year-matrix" style="min-width:1356px"><colgroup><col style="width:118px"><col style="width:116px"><col style="width:70px"><col style="width:92px"><col style="width:80px"><col style="width:80px"><col style="width:80px"><col style="width:80px"><col style="width:80px"><col style="width:80px"><col style="width:80px"><col style="width:80px"><col style="width:80px"><col style="width:80px"><col style="width:80px"><col style="width:80px"></colgroup><thead id="v-year-head"></thead><tbody id="v-year-body"></tbody></table></div>
+  <div class="v-table-scroll"><table class="v-table v-year-matrix" style="min-width:1468px"><colgroup><col style="width:118px"><col style="width:116px"><col style="width:70px"><col style="width:92px"><col style="width:112px"><col style="width:80px"><col style="width:80px"><col style="width:80px"><col style="width:80px"><col style="width:80px"><col style="width:80px"><col style="width:80px"><col style="width:80px"><col style="width:80px"><col style="width:80px"><col style="width:80px"><col style="width:80px"></colgroup><thead id="v-year-head"></thead><tbody id="v-year-body"></tbody></table></div>
   <p class="v-note" id="v-year-note"></p>
  </section>
  <section id="v-personal" class="v-extra" hidden>
