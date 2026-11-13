@@ -90,13 +90,24 @@ BEGIN
  IF p_source='kpi_public_events' AND a.role IN ('all','branch') THEN
    SELECT coalesce(jsonb_agg(jsonb_build_object('id',e.id,'event_data',
      CASE WHEN v_branch IS NULL THEN e.event_data ELSE
-       jsonb_set(e.event_data,'{signupEntries}',
-         coalesce((SELECT jsonb_agg(entry) FROM jsonb_array_elements(
-           CASE WHEN jsonb_typeof(e.event_data->'signupEntries')='array' THEN e.event_data->'signupEntries' ELSE '[]'::jsonb END
-         ) entry WHERE coalesce(entry->>'branch',e.event_data->>'branch')=v_branch),'[]'::jsonb),true)
+       jsonb_set(
+         jsonb_set(e.event_data,'{branches}',jsonb_build_array(v_branch),true),
+         '{signupEntries}',
+         coalesce((SELECT jsonb_agg(entry)
+           FROM jsonb_array_elements(CASE WHEN jsonb_typeof(e.event_data->'signupEntries')='array'
+             THEN e.event_data->'signupEntries' ELSE '[]'::jsonb END) entry
+           WHERE coalesce(nullif(entry->>'branch',''),e.event_data->>'branch')=v_branch),'[]'::jsonb),
+         true)
      END) ORDER BY e.id),'[]'::jsonb)
    INTO v_rows FROM public.kpi_public_events e
-   WHERE v_branch IS NULL OR e.event_data->>'branch'=v_branch;
+   WHERE v_branch IS NULL
+      OR e.event_data->>'branch'=v_branch
+      OR (jsonb_typeof(e.event_data->'branches')='array'
+          AND e.event_data->'branches' ? v_branch)
+      OR EXISTS (SELECT 1 FROM jsonb_array_elements(
+          CASE WHEN jsonb_typeof(e.event_data->'signupEntries')='array'
+          THEN e.event_data->'signupEntries' ELSE '[]'::jsonb END) entry
+          WHERE entry->>'branch'=v_branch);
  ELSIF p_source='kpi_manager_performance_signups' AND a.role='manager' THEN
    SELECT coalesce(jsonb_agg(to_jsonb(x)),'[]'::jsonb) INTO v_rows
    FROM public.kpi_manager_performance_signups() x;
