@@ -1037,19 +1037,17 @@ function orgRenderHeadcount(){
  const cleanName=value=>String(value||'').replace(/[（(]\s*겸\s*직\s*[)）]/g,'')
   .replace(/부산\s*[1-4]\s*지사|권역대표|지사장|본부장|매니저/g,'')
   .replace(/[^가-힣a-zA-Z]/g,'').trim();
- // 해당 두 인원은 겸직임이 확인되었지만 기존 저장 데이터에는 표시가 빠져 있습니다.
- // 기존 데이터가 변경되기 전까지도 올바르게 집계하도록 명시적 예외를 둡니다.
- const confirmedDualNames=new Set(['박영우','안선경']);
+ // (겸직)으로 실제 표시된 구성원만 겸직으로 계산합니다.
  const dualNames=new Set();
  const dualIds=new Set();
  for(const node of orgNodes){
   if(!node||node.staffHidden===true)continue;
   const label=String(node.label||''),subtitle=String(node.subtitle||'');
-  // Explicitly confirmed dual-duty staff can have the suffix missing in saved data.
-  const confirmed=confirmedDualNames.has(cleanName(label));
-  if(!marked.test(label+' '+subtitle)&&!confirmed)continue;
+  // 박영우·안선경의 지사장 카드는 지사장 인원으로 집계합니다.
+  const isBranchLeader=orgEffectiveRole(node)==='branch'&&['박영우','안선경'].includes(cleanName(label));
+  if(isBranchLeader||!marked.test(label+' '+subtitle))continue;
   // 직책명만 있는 조직 제목은 인원으로 계산하지 않습니다.
-  const personName=marked.test(label)||confirmed?cleanName(label):cleanName(subtitle);
+  const personName=marked.test(label)?cleanName(label):cleanName(subtitle);
   if(!personName||/^(구성원|새구성원|이름미입력)$/.test(personName))continue;
   dualNames.add(personName);
   dualIds.add(String(node.id));
@@ -1134,8 +1132,8 @@ function orgNodeMarkup(node){
  const join=joinMonth?'<small class="org-join-date">입사 '+esc(joinMonth)+'</small>':'';
  const col=node.color==='default'?'':' color-'+esc(node.color);
  const rawName=String(node.label||'').trim();
- const confirmedDual=['박영우','안선경'].includes(rawName.replace(/[（(]\s*겸\s*직\s*[)）]/g,'').trim());
- const shownName=confirmedDual&&!/겸\s*직/.test(rawName)?rawName+'(겸직)':rawName;
+ const branchLeader=orgEffectiveRole(node)==='branch'&&['박영우','안선경'].includes(rawName.replace(/[（(]\s*겸\s*직\s*[)）]/g,'').trim());
+ const shownName=branchLeader?rawName.replace(/[（(]\s*겸\s*직\s*[)）]/g,'').trim():rawName;
  return '<button type="button" class="org-node org-node-'+esc(node.type)+col+'" data-org-node="'+esc(node.id)+'" title="카드 선택 후 편집">'+roleTag+'<strong>'+esc(shownName||'이름 미입력')+'</strong>'+sub+join+'</button>';
 }
 function orgDraw(){
