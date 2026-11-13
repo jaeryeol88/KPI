@@ -332,6 +332,7 @@ el('v-months').addEventListener('change',e=>{
   el('v-headcount-grid').innerHTML=[...Object.entries(counts).map(([r,n])=>[roles[r],n]),['총인원',total]].map(([label,n])=>'<div class="v-hc"><span>'+label+'</span><strong>'+fmt(n)+'명</strong></div>').join('');
  }
  async function refreshOrganization(){
+  if(new URLSearchParams(window.location.search).has('ppt-preview')&&window.PLK_RENDER_PPT_ORG_PREVIEW)return;
   try{const rows=await loadOrganization();orgNodes=Array.isArray(rows)?rows:[];orgMessage='부산권역 전체 조직도 · 읽기 전용';}
   catch(error){orgNodes=[];orgMessage='조직도를 표시할 수 없습니다. 관리자에게 공개 조회 설정 확인을 요청하세요. ('+(error.message||'오류')+')';}
   // Anonymous viewers can read ONLY the safe status projection; phone numbers remain protected.
