@@ -252,7 +252,7 @@
 <section class="month-goals" id="monthlyGoalPanel" aria-label="월별 및 연간 구좌목표 달성률">
 <h2>월별 · 연간 구좌목표 달성률</h2>
 <p>월 목표는 회사에서 배정하며 행사·실적 등록과 별개로 관리됩니다. 부산권역 전체 조회는 부산 1~4지사와 부산권역 실적을 각각 한 번씩 합산합니다. 행사 유형 필터와 무관하게 등록된 실적을 집계합니다.</p>
-<div class="month-controls" id="monthlyFilterControls" aria-label="월 목표 현황 다중 선택 필터"><div class="month-multi" data-monthly-filter="year"><span>연도</span></div><div class="month-multi" data-monthly-filter="branch"><span>지사</span></div><div class="month-multi" data-monthly-filter="division"><span>본부</span></div><div class="month-multi" data-monthly-filter="month"><span>기준 월</span></div></div>
+<div class="month-controls" id="monthlyFilterControls" hidden style="display:none!important" aria-label="월 목표 현황 다중 선택 필터"><div class="month-multi" data-monthly-filter="year"><span>연도</span></div><div class="month-multi" data-monthly-filter="branch"><span>지사</span></div><div class="month-multi" data-monthly-filter="division"><span>본부</span></div><div class="month-multi" data-monthly-filter="month"><span>기준 월</span></div></div>
 <div class="month-cards">
 <div class="month-card"><span>선택 기간 목표 달성률</span><strong id="monthlyRate">—</strong><small id="monthlySummary">목표 미입력</small></div>
 <div class="month-card"><span>선택 기간 달성구좌</span><strong id="annualRate">0구좌</strong><small id="annualSummary">선택한 연도·월 기준</small></div>
@@ -708,18 +708,19 @@ function monthlyYearList(){
  const values=[new Date().getFullYear(),...items.map(e=>Number(String(e.date||'').slice(0,4))),...items.flatMap(e=>timedSignupRows(e).map(row=>Number(row.signupDate.slice(0,4)))),...monthlyTargets.map(t=>Number(t.goal_year)),...monthlyDivisionTargets.map(t=>Number(t.goal_year)),...historicalSeats.map(t=>Number(t.goal_year)),...monthlyFilterValues.year].filter(y=>Number.isInteger(Number(y))&&Number(y)>=2020&&Number(y)<=2100);
  return [...new Set(values.map(Number))].sort((a,b)=>b-a);
 }
+// 월별 목표 현황은 상단 공통 지사·본부·연도·월 필터를 그대로 사용합니다.
 function monthlySelectedYears(){
- return (monthlyFilterValues.year.size?[...monthlyFilterValues.year].map(Number):monthlyYearList()).sort((a,b)=>a-b);
+ return (multiValues.year.size?[...multiValues.year].map(Number):monthlyYearList()).sort((a,b)=>a-b);
 }
 function monthlySelectedMonths(){
- return (monthlyFilterValues.month.size?[...monthlyFilterValues.month].map(Number):Array.from({length:12},(_,i)=>i+1)).sort((a,b)=>a-b);
+ return (multiValues.month.size?[...multiValues.month].map(Number):Array.from({length:12},(_,i)=>i+1)).sort((a,b)=>a-b);
 }
 function monthlySelectedBranches(){
  const allowed=monthlyAllowedBranches();
- return monthlyFilterValues.branch.size?allowed.filter(b=>monthlyFilterValues.branch.has(b)):allowed;
+ return multiValues.branch.size?allowed.filter(b=>multiValues.branch.has(b)):allowed;
 }
 function monthlySelectedDivisions(){
- return monthlyFilterValues.division.size?[...monthlyFilterValues.division].filter(d=>monthlyDivisions.includes(d)):['all'];
+ return multiValues.division.size?[...multiValues.division].filter(d=>monthlyDivisions.includes(d)):['all'];
 }
 function monthlySetup(){
  // All reporting controls support multiple selection. An empty set means "all".
