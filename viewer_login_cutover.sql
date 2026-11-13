@@ -99,7 +99,32 @@ BEGIN
  ELSIF p_source='kpi_historical_cancellations' AND a.role='all' THEN
    SELECT coalesce(jsonb_agg(to_jsonb(x)),'[]'::jsonb) INTO v_rows FROM public.kpi_historical_cancellations x;
  ELSIF p_source='kpi_org_chart' THEN
-   SELECT coalesce(jsonb_agg(to_jsonb(x)),'[]'::jsonb) INTO v_rows FROM public.kpi_org_chart x WHERE x.id=1;
+   IF v_branch IS NULL THEN
+     SELECT coalesce(jsonb_agg(to_jsonb(x)),'[]'::jsonb) INTO v_rows
+     FROM public.kpi_org_chart x WHERE x.id=1;
+   ELSE
+     WITH RECURSIVE
+       all_nodes AS (
+         SELECT n.node,n.ord,n.node->>'id' AS node_id,n.node->>'parent' AS parent_id
+         FROM public.kpi_org_chart c,
+              jsonb_array_elements(c.nodes) WITH ORDINALITY AS n(node,ord)
+         WHERE c.id=1
+       ),
+       descendants AS (
+         SELECT node_id,parent_id FROM all_nodes WHERE node->>'label'=v_branch
+         UNION
+         SELECT n.node_id,n.parent_id FROM all_nodes n
+         JOIN descendants d ON n.parent_id=d.node_id
+       ),
+       ancestors AS (
+         SELECT n.node_id,n.parent_id FROM all_nodes n JOIN descendants d ON n.node_id=d.node_id
+         UNION
+         SELECT n.node_id,n.parent_id FROM all_nodes n JOIN ancestors a ON a.parent_id=n.node_id
+       )
+     SELECT jsonb_build_array(jsonb_build_object('id',1,'nodes',
+       coalesce(jsonb_agg(n.node ORDER BY n.ord),'[]'::jsonb)))
+     INTO v_rows FROM all_nodes n WHERE n.node_id IN (SELECT node_id FROM ancestors);
+   END IF;
  ELSIF p_source='kpi_org_staff_public_status' AND a.role='manager' THEN
    SELECT coalesce(jsonb_agg(to_jsonb(x)),'[]'::jsonb) INTO v_rows FROM public.kpi_org_staff_public_status x;
  ELSE
