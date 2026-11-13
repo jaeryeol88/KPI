@@ -82,7 +82,7 @@ a.btn{display:inline-flex;align-items:center}
 <script type="module">
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 import { historicalActualSeats } from './historical_seats.js?v=auto-person-rollup-20261113';
-import { installViewerExtras } from './viewer_extra.js?v=phone-rpc-fix-20261113';
+// Supplemental menus are loaded independently so a sidebar error cannot disable the KPI dashboard.
 import { validSignupDate,timedSignupRows,signupSeatsForPeriod,undatedSignupStats } from './signup_date_utils.js';
 const el=id=>document.getElementById(id);
 const cfg=window.PLK_CONFIG||{};
@@ -982,7 +982,10 @@ async function loadPublic(){
     status('공개 데이터 설정이 완료되지 않았거나 조회에 실패했습니다. 관리자에게 Supabase viewer_setup.sql 실행 여부를 확인해 주세요. ('+(error?.message||'연결 오류')+')',true);
   }
 }
-const viewerExtras=installViewerExtras({
+let viewerExtras={refresh:()=>{},refreshOrganization:async()=>{},setHistoricalSeats:()=>{}};
+try{
+ const {installViewerExtras}=await import('./viewer_extra.js?v=sidebar-recovery-20261113');
+ viewerExtras=installViewerExtras({
  assignedBranch,
  getAllEvents:()=>allViewerEvents,
  getYears:()=>monthlyYearList(),
@@ -996,5 +999,6 @@ const viewerExtras=installViewerExtras({
   return Array.isArray(data?.nodes)?data.nodes:[];
  }
 });
+}catch(error){console.error('뷰어 메뉴 초기화 오류',error);status('실적 메뉴 로딩 오류: '+(error?.message||error),true);}
 loadPublic();
 </script></body></html>
