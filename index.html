@@ -217,6 +217,19 @@
 
 /* 입회금 분납 내역: 관리자 및 뷰어 공통 */
 .installment-details{border-bottom:1px solid #e2e8f0}.installment-summary{cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between;gap:12px}.installment-summary::-webkit-details-marker{display:none}.installment-summary-amount{display:flex;flex-direction:column;align-items:flex-end;gap:4px}.installment-summary-amount strong{color:#172840!important;opacity:1!important;font-weight:800}.installment-summary-amount small{color:#2563eb;font-size:11px;font-weight:600}.installment-details[open] .installment-summary-amount small{color:#526989}.installment-content{padding:12px 0 14px;display:grid;gap:12px}.installment-card{border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;background:#fff}.installment-card-heading{padding:12px 14px;background:#f5f8fc;color:#172840;font-size:13px;font-weight:750}.installment-card-heading span{font-weight:500;color:#64748b}.installment-table-scroll{overflow-x:auto}.installment-table{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}.installment-table th{background:#edf3fb;color:#385477;font-weight:750;text-align:center;padding:10px 9px;border-bottom:1px solid #dce6f2}.installment-table td{padding:10px 9px;border-bottom:1px solid #edf1f6;text-align:center;color:#172840}.installment-table tr:last-child td{border-bottom:0}.installment-table tbody tr:nth-child(even){background:#f8fbff}.installment-table td:last-child{text-align:right;font-weight:750;white-space:nowrap;color:#172840}.installment-table th:last-child{text-align:right}.installment-table td:first-child{white-space:nowrap;color:#526989}.installment-table td:nth-child(2){white-space:nowrap}
+
+#monthlySignupBoard[hidden]{display:none!important}
+.signup-report-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:18px 0}
+.signup-report-summary>div{border:1px solid #e2e8f0;border-radius:10px;background:#fff;padding:15px 18px;display:flex;flex-direction:column;gap:7px}
+.signup-report-summary span{color:#64748b;font-size:12px}.signup-report-summary strong{color:#172840;font-size:20px;font-weight:800;font-variant-numeric:tabular-nums}
+.signup-report-scroll{overflow-x:auto;border:1px solid #e2e8f0;border-radius:10px;background:white}
+.signup-report-table{width:100%;min-width:1220px;border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums}
+.signup-report-table th{background:#eaf2ff;color:#24466e;font-weight:750;text-align:left;padding:13px 11px;white-space:nowrap;border-bottom:1px solid #dce6f2}
+.signup-report-table td{padding:12px 11px;border-bottom:1px solid #edf1f6;white-space:nowrap;color:#172840}
+.signup-report-table tbody tr:nth-child(even){background:#f8fbff}.signup-report-table tbody tr:last-child td{border-bottom:0}
+.signup-report-table .num{text-align:right}.signup-report-table .strong{font-weight:800}.signup-report-table .signup-report-empty{text-align:center;padding:30px;color:#718098}
+.signup-report-badge{display:block;color:#2563eb;font-size:11px;margin-top:4px}
+@media(max-width:750px){.signup-report-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
 </style>
 </head><body>
 <section class="auth-screen" id="authScreen">
@@ -234,7 +247,7 @@
   </div>
 </section>
 
-<div class="app" id="kpiApp" hidden><aside class="sidebar"><div class="brand">PLK <span style="color:#71afff">KPI</span><small>EVENT PERFORMANCE</small></div><nav class="sidebar-nav" aria-label="실적 메뉴"><button type="button" class="nav-item active" data-kpi-page="dashboard" aria-current="page">▦ &nbsp; 실적관리</button><button type="button" class="nav-item nav-parent" id="perfNavToggle" aria-expanded="false" aria-controls="perfNavChildren">▤ &nbsp; 실적현황 <span aria-hidden="true" class="nav-chevron">▾</span></button><div class="sidebar-subnav" id="perfNavChildren" hidden><button type="button" class="nav-item nav-child" data-kpi-page="yearboard">지사별 / 본부별 실적현황</button><button type="button" class="nav-item nav-child" data-kpi-page="personal">개인별 실적현황</button></div><button type="button" class="nav-item nav-parent" id="orgNavToggle" aria-expanded="false" aria-controls="orgNavChildren">♧ &nbsp; 조직관리 <span aria-hidden="true" class="nav-chevron">▾</span></button><div class="sidebar-subnav" id="orgNavChildren" hidden><button type="button" class="nav-item nav-child" data-kpi-page="org">조직도</button><button type="button" class="nav-item nav-child" data-kpi-page="orgstaff">조직원 정보</button></div></nav><div class="aside-note">회사 행사 실적을 한눈에.<br>로그인 후 행사 데이터를 온라인에 안전하게 저장합니다.</div></aside>
+<div class="app" id="kpiApp" hidden><aside class="sidebar"><div class="brand">PLK <span style="color:#71afff">KPI</span><small>EVENT PERFORMANCE</small></div><nav class="sidebar-nav" aria-label="실적 메뉴"><button type="button" class="nav-item active" data-kpi-page="dashboard" aria-current="page">▦ &nbsp; 실적관리</button><button type="button" class="nav-item nav-parent" id="perfNavToggle" aria-expanded="false" aria-controls="perfNavChildren">▤ &nbsp; 실적현황 <span aria-hidden="true" class="nav-chevron">▾</span></button><div class="sidebar-subnav" id="perfNavChildren" hidden><button type="button" class="nav-item nav-child" data-kpi-page="yearboard">지사별 / 본부별 실적현황</button><button type="button" class="nav-item nav-child" data-kpi-page="personal">개인별 실적현황</button><button type="button" class="nav-item nav-child" data-kpi-page="monthlysignups">월별 입회 현황</button></div><button type="button" class="nav-item nav-parent" id="orgNavToggle" aria-expanded="false" aria-controls="orgNavChildren">♧ &nbsp; 조직관리 <span aria-hidden="true" class="nav-chevron">▾</span></button><div class="sidebar-subnav" id="orgNavChildren" hidden><button type="button" class="nav-item nav-child" data-kpi-page="org">조직도</button><button type="button" class="nav-item nav-child" data-kpi-page="orgstaff">조직원 정보</button></div></nav><div class="aside-note">회사 행사 실적을 한눈에.<br>로그인 후 행사 데이터를 온라인에 안전하게 저장합니다.</div></aside>
 <main class="main"><header class="top"><div><div class="eyebrow">PERFORMANCE OVERVIEW</div><h1 class="h1">KPI · 실적관리</h1><p class="sub">행사 투입 비용과 실적을 한곳에서 관리하세요.</p><div class="top-user" id="currentUser"></div></div><div class="btns"><a class="btn" href="./viewer.html?v=20261110-3" target="_blank" rel="noopener" style="text-decoration:none">↗ 공개 뷰어</a><a class="btn" href="./manager-viewer.html?v=division-dual-20261113" target="_blank" rel="noopener" style="text-decoration:none">↗ 전 매니저 실적·조직도 뷰어</a><button class="btn" id="exportCsv">↓ CSV 다운로드</button><button class="btn" id="backup">↓ 백업</button><button class="btn" id="restore">↑ 복원</button><button class="btn primary" id="add">+등록</button><button class="btn" id="logout">로그아웃</button></div></header>
 <div id="status" class="sync-status" role="status" aria-live="polite">온라인 데이터 연결 중…</div>
 <section id="adminRoles" hidden style="background:#fff;border:1px solid var(--line);padding:18px;border-radius:12px;margin-top:14px">
@@ -280,6 +293,12 @@
 <div class="perf-yearboard-months" id="perfMonthButtons" aria-label="강조할 월 선택"></div>
 <div class="perf-yearboard-scroll"><table class="perf-yearboard-table"><colgroup><col style="width:118px"><col style="width:116px"><col style="width:70px"><col style="width:92px"><col style="width:112px"><col style="width:80px"><col style="width:80px"><col style="width:80px"><col style="width:80px"><col style="width:80px"><col style="width:80px"><col style="width:80px"><col style="width:80px"><col style="width:80px"><col style="width:80px"><col style="width:80px"><col style="width:80px"></colgroup><thead id="perfYearHead"></thead><tbody id="perfYearBody"></tbody></table></div>
 <p class="perf-yearboard-note" id="perfYearNote">월별 실적 데이터를 불러오는 중…</p></section>
+<section class="perf-yearboard" id="monthlySignupBoard" hidden aria-label="월별 입회 현황">
+<div class="perf-yearboard-top"><div><h2>월별 입회 현황 <span class="perf-linked">가입 건별 등록 연동</span></h2><p>실제 가입일 기준으로 집계합니다. 분납은 납부월마다 해당 회차 금액만 입회금에 반영하며, 구좌·연회비는 최초 가입월에만 집계합니다.</p></div>
+<div class="perf-yearboard-filters"><label>조회 연도 <select id="signupReportYear"></select></label><label>조회 월 <select id="signupReportMonth"></select></label><label>소속지사 <select id="signupReportBranch"></select></label><label>소속본부 <select id="signupReportDivision"></select></label></div></div>
+<div class="signup-report-summary" id="signupReportSummary" aria-live="polite"></div>
+<div class="signup-report-scroll"><table class="signup-report-table"><thead><tr><th>가입 일자</th><th>소속지사</th><th>소속본부</th><th>가입 담당 매니저</th><th>가입상품</th><th>구좌</th><th>입회금</th><th>연회비</th><th>총 매출</th><th>입회자 성함</th></tr></thead><tbody id="signupReportBody"></tbody></table></div>
+<p class="perf-yearboard-note" id="signupReportNote"></p></section>
 <section class="perf-yearboard" id="personalYearBoard" hidden aria-label="개인별 월간 실적현황">
 <div class="perf-yearboard-top"><div><h2>개인별 실적현황 <span class="perf-linked">가입 건별 실적 연동</span></h2><p>담당 매니저별 월간 가입구좌와 연간 합계입니다. 등록된 담당 지사·본부 기준이며 연간 실적 내림차순으로 정렬합니다.</p></div>
 <div class="perf-yearboard-filters"><label>조회 연도 <select id="personalYearSelect"></select></label><label>지사 <select id="personalBranchSelect"></select></label><label>본부 <select id="personalDivisionSelect"></select></label><label>이름 조회 <input id="personalNameSearch" type="search" placeholder="이름만 입력하세요" autocomplete="off" aria-label="매니저 이름으로 실적 검색" style="width:155px;background:#fff;border:1px solid var(--line);padding:8px;border-radius:8px;font-size:13px"></label></div></div>
@@ -991,6 +1010,7 @@ function renderMonthlyGoals(){
  if(expandedMonthlyBranch&&!branches.includes(expandedMonthlyBranch))expandedMonthlyBranch=null;
  renderPerformanceYearboard();
  renderPersonalYearboard();
+ if(activeKpiPage==='monthlysignups')renderMonthlySignupReport();
 }
 
 
@@ -1276,18 +1296,19 @@ function setOrgNavOpen(open){
  el('orgNavToggle').classList.toggle('active',open);
 }
 function switchKpiPage(page){
- activeKpiPage=['dashboard','yearboard','personal','org','orgstaff'].includes(page)?page:'dashboard';
+ activeKpiPage=['dashboard','yearboard','personal','monthlysignups','org','orgstaff'].includes(page)?page:'dashboard';
  el('dashboardPage').hidden=activeKpiPage!=='dashboard';
  el('perfYearBoard').hidden=activeKpiPage!=='yearboard';
  el('personalYearBoard').hidden=activeKpiPage!=='personal';
+ el('monthlySignupBoard').hidden=activeKpiPage!=='monthlysignups';
  el('orgPage').hidden=activeKpiPage!=='org';
  el('orgStaffPage').hidden=activeKpiPage!=='orgstaff';
- const labels={dashboard:'KPI · 실적관리',yearboard:'지사별 / 본부별 실적현황',personal:'개인별 실적현황',org:'조직도',orgstaff:'조직원 정보'};
- const descriptions={dashboard:'행사 투입 비용과 실적을 한곳에서 관리하세요.',yearboard:'1월~12월 목표·실적·달성률을 한눈에 확인하세요.',personal:'매니저별 1월~12월 가입 실적과 연간 합계를 확인하세요.',org:'조직 구성과 카드 정보를 확인하고 수정하세요.',orgstaff:'조직 구성원 인사 정보를 확인하고 관리하세요.'};
+ const labels={dashboard:'KPI · 실적관리',yearboard:'지사별 / 본부별 실적현황',personal:'개인별 실적현황',monthlysignups:'월별 입회 현황',org:'조직도',orgstaff:'조직원 정보'};
+ const descriptions={dashboard:'행사 투입 비용과 실적을 한곳에서 관리하세요.',yearboard:'1월~12월 목표·실적·달성률을 한눈에 확인하세요.',personal:'매니저별 1월~12월 가입 실적과 연간 합계를 확인하세요.',monthlysignups:'가입 건별 등록 내역을 기준으로 월별 입회금과 매출을 확인하세요.',org:'조직 구성과 카드 정보를 확인하고 수정하세요.',orgstaff:'조직 구성원 인사 정보를 확인하고 관리하세요.'};
  const title=document.querySelector('.top .h1'),subtitle=document.querySelector('.top .sub');
  if(title)title.textContent=labels[activeKpiPage];
  if(subtitle)subtitle.textContent=descriptions[activeKpiPage];
- if(activeKpiPage==='yearboard'||activeKpiPage==='personal')setPerfNavOpen(true);
+ if(activeKpiPage==='yearboard'||activeKpiPage==='personal'||activeKpiPage==='monthlysignups')setPerfNavOpen(true);
  if(activeKpiPage==='org'||activeKpiPage==='orgstaff')setOrgNavOpen(true);
  document.querySelectorAll('.sidebar-nav [data-kpi-page]').forEach(button=>{
   const selected=button.dataset.kpiPage===activeKpiPage;
@@ -1296,6 +1317,7 @@ function switchKpiPage(page){
   else button.removeAttribute('aria-current');
  });
  if(activeKpiPage==='yearboard')renderPerformanceYearboard();
+ if(activeKpiPage==='monthlysignups')renderMonthlySignupReport();
  if(activeKpiPage==='personal'){
   renderPersonalYearboard();
   if(!orgLoaded)orgLoad().then(()=>{if(activeKpiPage==='personal')renderPersonalYearboard();});
@@ -1316,6 +1338,50 @@ el('perfNavToggle').addEventListener('click',()=>{
 document.querySelectorAll('.sidebar-nav [data-kpi-page]').forEach(button=>{
  button.addEventListener('click',()=>switchKpiPage(button.dataset.kpiPage));
 });
+
+
+/* 월별 입회 현황: 가입 건별 데이터의 납부 회차를 월별로 펼쳐 표시 */
+let signupReportYear=new Date().getFullYear(),signupReportMonth=new Date().getMonth()+1,signupReportBranch='all',signupReportDivision='all';
+function renderMonthlySignupReport(){
+ const yearEl=el('signupReportYear'),monthEl=el('signupReportMonth'),branchEl=el('signupReportBranch'),divisionEl=el('signupReportDivision'),body=el('signupReportBody');
+ if(!yearEl||!body)return;
+ const fixed=restrictedBranch();
+ const allowed=monthlyAllowedBranches();
+ const all=[];
+ for(const event of items){
+  if(!Array.isArray(event.signupEntries))continue;
+  for(const row of event.signupEntries){
+   if(!row||row.withdrawn||!['corporate','individual'].includes(row.group))continue;
+   const signupDate=validSignupDate(row.signupDate);
+   if(!signupDate)continue;
+   const branch=row.branch||event.branch||'',division=normalizeDivision(row.division||event.division)||'';
+   if(fixed&&branch!==fixed)continue;
+   const y=Number(signupDate.slice(0,4)),m=Number(signupDate.slice(5,7));
+   const amounts=row.paymentType==='installment'&&Array.isArray(row.installmentAmounts)&&row.installmentAmounts.length?row.installmentAmounts:[Number(row.revenue)||0];
+   amounts.forEach((amount,i)=>{
+    const payYear=y+Math.floor((m-1+i)/12),payMonth=(m-1+i)%12+1;
+    all.push({signupDate,branch,division,manager:row.manager||'',product:row.product||'',memberName:row.memberName||'',seats:i===0?(Number(row.seats)||0):0,fee:i===0?(Number(row.annualFee)||0):0,revenue:Number(amount)||0,payYear,payMonth,installment:amounts.length>1,sequence:i+1});
+   });
+  }
+ }
+ const years=[...new Set([new Date().getFullYear(),...all.map(x=>x.payYear)])].sort((a,b)=>b-a);
+ if(!years.includes(signupReportYear))signupReportYear=years[0];
+ yearEl.innerHTML=years.map(y=>'<option value="'+y+'">'+y+'년</option>').join('');yearEl.value=String(signupReportYear);
+ monthEl.innerHTML=Array.from({length:12},(_,i)=>'<option value="'+(i+1)+'">'+(i+1)+'월</option>').join('');monthEl.value=String(signupReportMonth);
+ const branches=[...new Set(all.map(x=>x.branch).filter(Boolean))].filter(b=>!allowed.length||allowed.includes(b)).sort((a,b)=>a.localeCompare(b,'ko'));
+ if(signupReportBranch!=='all'&&!branches.includes(signupReportBranch))signupReportBranch='all';
+ branchEl.innerHTML='<option value="all">전체 지사</option>'+branches.map(b=>'<option value="'+esc(b)+'">'+esc(b)+'</option>').join('');branchEl.value=signupReportBranch;
+ const divisions=[...new Set(all.filter(x=>signupReportBranch==='all'||x.branch===signupReportBranch).map(x=>x.division).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko'));
+ if(signupReportDivision!=='all'&&!divisions.includes(signupReportDivision))signupReportDivision='all';
+ divisionEl.innerHTML='<option value="all">전체 본부</option>'+divisions.map(d=>'<option value="'+esc(d)+'">'+esc(d)+'</option>').join('');divisionEl.value=signupReportDivision;
+ const rows=all.filter(x=>x.payYear===signupReportYear&&x.payMonth===signupReportMonth&&(signupReportBranch==='all'||x.branch===signupReportBranch)&&(signupReportDivision==='all'||x.division===signupReportDivision)).sort((a,b)=>b.signupDate.localeCompare(a.signupDate)||a.manager.localeCompare(b.manager,'ko'));
+ const sum=k=>rows.reduce((n,x)=>n+x[k],0);
+ const summary=el('signupReportSummary');
+ summary.innerHTML='<div><span>해당 월 구좌</span><strong>'+fmt(sum('seats'))+'구좌</strong></div><div><span>입회금</span><strong>'+won(sum('revenue'))+'</strong></div><div><span>연회비</span><strong>'+won(sum('fee'))+'</strong></div><div><span>총 매출</span><strong>'+won(sum('revenue')+sum('fee'))+'</strong></div>';
+ body.innerHTML=rows.length?rows.map(x=>'<tr><td>'+esc(x.signupDate)+'</td><td>'+esc(x.branch||'—')+'</td><td>'+esc(x.division||'—')+'</td><td>'+esc(x.manager||'—')+'</td><td>'+esc(x.product||'—')+(x.installment?'<small class="signup-report-badge">'+x.sequence+'회차 분납</small>':'')+'</td><td class="num">'+fmt(x.seats)+'</td><td class="num">'+won(x.revenue)+'</td><td class="num">'+won(x.fee)+'</td><td class="num strong">'+won(x.revenue+x.fee)+'</td><td>'+esc(x.memberName||'—')+'</td></tr>').join(''):'<tr><td colspan="10" class="signup-report-empty">선택한 월에 등록된 입회 또는 분납 내역이 없습니다.</td></tr>';
+ el('signupReportNote').textContent='총 '+fmt(rows.length)+'건의 월별 매출 기록 · 분납 회차는 실제 가입일을 유지하고 해당 납부월에 표시합니다. 후속 회차의 구좌 및 연회비는 중복 집계하지 않습니다.';
+}
+[['signupReportYear',v=>signupReportYear=Number(v)],['signupReportMonth',v=>signupReportMonth=Number(v)],['signupReportBranch',v=>{signupReportBranch=v;signupReportDivision='all';}],['signupReportDivision',v=>signupReportDivision=v]].forEach(([id,set])=>el(id).addEventListener('change',e=>{set(e.target.value);renderMonthlySignupReport();}));
 
 /* Live matrix: uses the same items / monthlyTarget / monthlyActual as the existing monthly KPI. */
 let perfSelectedYear=new Date().getFullYear();
