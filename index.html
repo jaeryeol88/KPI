@@ -339,7 +339,7 @@
   <form id="viewerAccountsForm" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:18px 0">
    <input type="hidden" id="vaId">
    <label>아이디<input id="vaUsername" required pattern="[a-z][a-z0-9_-]{3,31}" placeholder="busan1" style="width:100%;padding:10px"></label>
-   <label>비밀번호<input id="vaPassword" type="password" minlength="12" autocomplete="new-password" placeholder="신규 12자 이상 / 수정 시 공란" style="width:100%;padding:10px"></label>
+   <label>비밀번호<input id="vaPassword" type="password" inputmode="numeric" pattern="[0-9]{4}" minlength="4" maxlength="4" autocomplete="new-password" placeholder="숫자 4자리 / 수정 시 공란" style="width:100%;padding:10px"></label>
    <label>접근 권한<select id="vaRole" style="width:100%;padding:10px"><option value="all">전체 뷰어</option><option value="branch">지사별 뷰어</option><option value="manager">매니저 뷰어</option></select></label>
    <label>소속 지사<select id="vaBranch" disabled style="width:100%;padding:10px"><option value="">선택 안 함</option><option>부산 1지사</option><option>부산 2지사</option><option>부산 3지사</option><option>부산 4지사</option></select></label>
    <label style="align-self:end"><input id="vaEnabled" type="checkbox" checked> 계정 활성화</label>
