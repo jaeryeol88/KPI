@@ -17,6 +17,7 @@ let currentYear=new Date().getFullYear(),currentBranch='all',yearHighlight=new D
 const cache=new Map();
 let phoneDb=null,phoneAuthenticated=false;
 let staffStatuses=new Map(),staffStatusAvailable=false;
+let viewerDb=null,orgFingerprint='',orgSyncBusy=false,lastOrgSync=0;
 const phoneCache=new Map(),revealedPhones=new Set();
 const choices=(node,options,value)=>{node.innerHTML=options.map(([id,label])=>'<option value="'+safe(id)+'">'+safe(label)+'</option>').join('');node.value=String(value);};
 const allYears=()=>[...new Set([new Date().getFullYear(),...signedRows.map(r=>Number(r.goal_year)),...history.map(r=>Number(r.goal_year)),...branchTargets.map(r=>Number(r.goal_year)),...divisionTargets.map(r=>Number(r.goal_year))])].filter(y=>y>=2020&&y<=2100).sort((a,b)=>b-a);
@@ -271,12 +272,38 @@ el('staffBody').addEventListener('mouseup',async e=>{
   el('staffMessage').textContent='연락처 조회 실패: '+(error.message||'조회 권한 확인 필요');
  }
 });
+// The manager viewer shares the saved Supabase organization with admin.
+ // Polling works without requiring a Realtime publication for the organization table.
+async function syncOrganization(force=false){
+ if(!viewerDb||orgSyncBusy||(!force&&document.hidden))return;
+ if(!force&&Date.now()-lastOrgSync<5000)return;
+ orgSyncBusy=true;
+ try{
+  const {data,error}=await viewerDb.rpc('kpi_manager_org_nodes');
+  if(error)throw error;
+  const next=Array.isArray(data?.[0]?.nodes)?data[0].nodes:[];
+  const fingerprint=JSON.stringify(next);
+  lastOrgSync=Date.now();
+  if(fingerprint!==orgFingerprint){
+   orgNodes=next;orgFingerprint=fingerprint;
+   if(!el('org').classList.contains('hidden'))drawOrg();
+   if(!el('orgstaff').classList.contains('hidden'))drawStaff();
+   if(!el('personal').classList.contains('hidden'))drawPersonal();
+  }
+  const indicator=el('orgSyncInfo');
+  if(indicator){indicator.textContent='온라인 조직도 자동 동기화 · '+new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',second:'2-digit'})+' 확인';indicator.classList.remove('err');}
+ }catch(error){
+  const indicator=el('orgSyncInfo');
+  if(indicator){indicator.textContent='조직도 갱신 실패 · 재시도 예정: '+(error.message||'연결 오류');indicator.classList.add('err');}
+ }finally{orgSyncBusy=false;}
+}
 function showPage(page){
  const titles={year:'지사별 / 본부별 실적현황',personal:'개인별 실적현황',org:'조직도',orgstaff:'조직원 정보'};
  for(const p of Object.keys(titles))el(p).classList.toggle('hidden',p!==page);
  document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('active',x.dataset.page===page));
  el('pageTitle').textContent=titles[page];
  if(page==='year')drawYear();if(page==='personal')drawPersonal();if(page==='org')drawOrg();if(page==='orgstaff')drawStaff();
+ if(page==='org'||page==='orgstaff')void syncOrganization(true);
 }
 document.querySelector('nav').addEventListener('click',e=>{const b=e.target.closest('button[data-page]');if(b)showPage(b.dataset.page);});
 el('yearSelect').addEventListener('change',e=>{currentYear=Number(e.target.value);drawYear()});
@@ -292,6 +319,8 @@ el('personalNameSearch').addEventListener('input',e=>{individualName=String(e.ta
 el('personalMonthButtons').addEventListener('click',e=>{if(e.target.closest('[data-personal-all]')){individualSelectedMonths.clear();drawPersonal();}});
 el('personalMonthButtons').addEventListener('change',e=>{const input=e.target.closest('input[data-personal-month]');if(!input)return;const m=Number(input.dataset.personalMonth);if(input.checked)individualSelectedMonths.add(m);else individualSelectedMonths.delete(m);if(individualSelectedMonths.size===12)individualSelectedMonths.clear();drawPersonal();});
 window.addEventListener('resize',()=>{if(!el('org').classList.contains('hidden'))requestAnimationFrame(()=>drawOrgConnectorLines(el('orgTree'),'admin'));});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)void syncOrganization(true);});
+window.addEventListener('focus',()=>void syncOrganization());
 
 async function readPages(query,fields){
  const all=[];
@@ -307,6 +336,7 @@ async function main(){
   const cfg=window.PLK_CONFIG||{};
   if(!/^https:\/\/[^/]+\.supabase\.co\/?$/.test(cfg.supabaseUrl||'')||!cfg.supabaseAnonKey)throw Error('Supabase 공개 연결 설정이 없습니다.');
   const db=createClient(cfg.supabaseUrl,cfg.supabaseAnonKey,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});
+  viewerDb=db;
   phoneDb=createClient(cfg.supabaseUrl,cfg.supabaseAnonKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
   await refreshPhoneAccess();
   phoneDb.auth.onAuthStateChange((event)=>{
@@ -326,6 +356,9 @@ async function main(){
   if(organization.error)throw organization.error;
   signedRows=signups;history=historic;branchTargets=targets;divisionTargets=divisionGoals;
   orgNodes=Array.isArray(organization.data?.[0]?.nodes)?organization.data[0].nodes:[];
+  orgFingerprint=JSON.stringify(orgNodes);lastOrgSync=Date.now();
+  // Re-check the saved organization regularly while this viewer is open.
+  window.setInterval(()=>void syncOrganization(),15000);
   // Reconstitute only non-financial signup attribution fields for shared seat aggregation.
   events=signedRows.map(r=>({branch:r.branch,division:normalizeDivision(r.division),signupEntries:[{
    group:'individual',manager:r.manager,seats:Number(r.seats),branch:r.branch,division:normalizeDivision(r.division),
