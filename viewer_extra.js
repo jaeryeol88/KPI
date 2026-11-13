@@ -76,7 +76,7 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
  .v-org-card.group{min-width:210px;min-height:74px}.v-org-card.group strong{font-size:16px}.v-org-card.division{min-width:103px}.v-org-card.person{min-height:64px}.v-org-card.person strong{font-size:17px;font-weight:850;line-height:1.4;letter-spacing:.1px}.v-org-card .v-org-date{font-size:12px;font-weight:650;opacity:.92}.v-org-card .v-org-role{font-size:12px;font-weight:750;opacity:.86}
  .v-headcount{margin-top:20px;padding:19px 20px 15px;background:#fff;border:1px solid #dce5f2;border-radius:14px}
  .v-headcount h3{margin:0 0 14px;font-size:18px;color:#172c4b}
- .v-headcount-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+ .v-headcount-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
  .v-hc{padding:18px 10px 16px;text-align:center;border:1px solid #e2eaf5;border-radius:11px;background:#f3f7fd}
  .v-hc:last-child{background:#e7efff;border-color:#b8d0ff}
  .v-hc span{font-size:13px;color:#526782;font-weight:700;display:block;margin-bottom:5px}.v-hc strong{display:block;font-size:29px;line-height:1.3;font-weight:850;color:#1c4d9a;font-variant-numeric:tabular-nums}.v-hc:last-child strong{color:#1449b4}
@@ -343,15 +343,17 @@ el('v-months').addEventListener('change',e=>{
   const root=n=>'<div class="v-org-root">'+card(n)+(children(n.id).some(x=>x.type==='person')?'<div class="v-org-region-members">'+children(n.id).filter(x=>x.type==='person').map(person).join('')+'</div>':'')+'<div class="v-org-groups">'+children(n.id).filter(x=>x.type==='group').map(group).join('')+'</div></div>';
   el('v-org-canvas').innerHTML=children(null).map(root).join('')||'<p class="v-note">등록된 조직도가 없습니다.</p>';
   alignOrgConnectors();
-  const counts={regional:0,branch:0,division:0,manager:0};
+  const counts={regional:0,branch:0,division:0,manager:0,dual:0};
   for(const n of orgNodes){
    const name=String(n.label||'').trim();
    if(!name||['구성원','새 구성원','이름 미입력','최상위 조직','새 지사 / 부서','새 본부 / 팀','지사장 / 담당자 입력'].includes(name))continue;
    if(['group','root'].includes(n.type)||(n.type!=='person'&&!Object.prototype.hasOwnProperty.call(n,'headcountRole')))continue;
-   const r=effectiveRole(n);if(Object.prototype.hasOwnProperty.call(counts,r))counts[r]++;
+   const r=effectiveRole(n);if(!Object.prototype.hasOwnProperty.call(roles,r))continue;
+   if(/\(\s*겸직\s*\)/.test(String(n.label||'')+' '+String(n.subtitle||'')))counts.dual++;
+   else counts[r]++;
   }
   const total=Object.values(counts).reduce((sum,v)=>sum+v,0);
-  el('v-headcount-grid').innerHTML=[...Object.entries(counts).map(([r,n])=>[roles[r],n]),['총인원',total]].map(([label,n])=>'<div class="v-hc"><span>'+label+'</span><strong>'+fmt(n)+'명</strong></div>').join('');
+  el('v-headcount-grid').innerHTML=[...Object.entries(counts).map(([r,n])=>[r==='dual'?'겸직':roles[r],n]),['총인원',total]].map(([label,n])=>'<div class="v-hc"><span>'+label+'</span><strong>'+fmt(n)+'명</strong></div>').join('');
  }
  async function refreshOrganization(){
   if(new URLSearchParams(window.location.search).has('ppt-preview')&&window.PLK_RENDER_PPT_ORG_PREVIEW)return;
