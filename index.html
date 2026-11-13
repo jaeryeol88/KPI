@@ -1031,20 +1031,34 @@ function orgCountable(node){
 function orgRenderHeadcount(){
  const target=el('orgHeadcountGrid');if(!target)return;
  const counts={regional:0,branch:0,division:0,manager:0,dual:0};
+ // 겸직 표기는 직원 카드뿐 아니라 이전 데이터의 지사장/본부 제목 카드에도
+ // 들어갈 수 있으므로 모든 조직 카드에서 먼저 확인합니다.
+ const marked=/[（(]\\s*겸\\s*직\\s*[)）]/;
+ const cleanName=value=>String(value||'').replace(/[（(]\\s*겸\\s*직\\s*[)）]/g,'')
+  .replace(/부산\\s*[1-4]\\s*지사|권역대표|지사장|본부장|매니저/g,'')
+  .replace(/[^가-힣a-zA-Z]/g,'').trim();
+ const dualNames=new Set();
+ const dualIds=new Set();
  for(const node of orgNodes){
-  if(node.staffHidden===true)continue;
-  // 조직도 카드의 이름 또는 직급에 "(겸직)" 표시가 있다면 직책 설정 유무와 관계없이 집계.
-  const label=String(node.label||'').trim();
-  const subtitle=String(node.subtitle||'').trim();
-  const marked=/\(\s*겸직\s*\)/.test(label+' '+subtitle);
-  const isMemberCard=node.type==='person'||node.type==='division';
-  if(marked&&isMemberCard&&label){counts.dual++;continue;}
-  if(!orgCountable(node))continue;
+  if(!node||node.staffHidden===true)continue;
+  const label=String(node.label||''),subtitle=String(node.subtitle||'');
+  if(!marked.test(label+' '+subtitle))continue;
+  // 직책명만 있는 조직 제목은 인원으로 계산하지 않습니다.
+  const personName=marked.test(label)?cleanName(label):cleanName(subtitle);
+  if(!personName||/^(구성원|새구성원|이름미입력)$/.test(personName))continue;
+  dualNames.add(personName);
+  dualIds.add(String(node.id));
+ }
+ counts.dual=dualNames.size;
+ for(const node of orgNodes){
+  if(!node||node.staffHidden===true||!orgCountable(node))continue;
+  const name=cleanName(node.label);
+  // 겸직으로 표시된 직원이 별도 직책 카드에도 있으면 중복 카운팅 방지.
+  if(dualIds.has(String(node.id))||(name&&dualNames.has(name)))continue;
   const role=orgEffectiveRole(node);
   if(Object.prototype.hasOwnProperty.call(counts,role))counts[role]++;
  }
  const labels=[['regional','권역대표'],['branch','지사장'],['division','본부장'],['manager','매니저'],['dual','겸직']];
- // 총인원에는 실제 직책별 일반 인원만 포함합니다. 겸직은 제외.
  const total=counts.regional+counts.branch+counts.division+counts.manager;
  target.innerHTML=labels.map(([key,label])=>'<div class="org-headcount-stat"><span>'+label+'</span><strong>'+fmt(counts[key])+'명</strong></div>').join('')+
   '<div class="org-headcount-stat org-headcount-total"><span>총인원</span><strong>'+fmt(total)+'명</strong></div>';
