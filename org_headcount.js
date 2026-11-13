@@ -35,26 +35,28 @@ export function isDualStaff(node){
 }
 export function countOrgHeadcount(nodes){
  const counts={regional:0,branch:0,division:0,manager:0,dual:0};
- const dualNames=new Set();
  const regularNames=new Map();
+ const dualKeys=new Set();
  for(const node of nodes){
   if(!node||node.staffHidden===true)continue;
   const raw=String(node.label||'').trim();
-  if(!raw||PLACEHOLDERS.has(raw))continue;
   const explicit=String(node.headcountRole||'').trim();
-  // Count the role selected in the card editor, including division cards.
-  // The dual role is a separate statistic and never contributes to total.
-  const role=explicit==='dual'||explicit==='본부장 겸직'||explicit==='겸직'?'dual':orgEffectiveRoleShared(node);
-  if(!Object.prototype.hasOwnProperty.call(counts,role))continue;
-  if(['root','group'].includes(node.type)&&!explicit)continue;
+  const role=['dual','본부장 겸직','겸직'].includes(explicit)?'dual':orgEffectiveRoleShared(node);
+  if(role==='dual'){
+   // An explicitly selected dual-duty role is countable even when the
+   // organizational card uses a generic title rather than a person's name.
+   const name=orgIdentityName(raw);
+   const validName=raw&&!PLACEHOLDERS.has(raw)&&name&&!/^(구성원|새구성원|이름미입력|새본부팀)$/.test(name);
+   if(explicit||validName)dualKeys.add(validName?'name:'+name:'id:'+String(node.id));
+   continue;
+  }
+  if(!raw||PLACEHOLDERS.has(raw)||['root','group'].includes(node.type)&&!explicit)continue;
+  if(!['regional','branch','division','manager'].includes(role))continue;
   const name=orgIdentityName(raw);
   if(!name||/^(구성원|새구성원|이름미입력|새본부팀)$/.test(name))continue;
-  if(role==='dual')dualNames.add(name);
-  else if(!regularNames.has(name))regularNames.set(name,role);
+  if(!regularNames.has(name))regularNames.set(name,role);
  }
- counts.dual=dualNames.size;
- // A dual-duty card is excluded from total; an independent primary-role
- // card for the same person remains counted once in that primary role.
+ counts.dual=dualKeys.size;
  for(const role of regularNames.values())counts[role]++;
  return {...counts,total:counts.regional+counts.branch+counts.division+counts.manager};
 }
