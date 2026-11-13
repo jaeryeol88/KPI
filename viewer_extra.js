@@ -2,7 +2,7 @@ import { drawOrgConnectorLines } from './org_connector_lines.js';
 import { emptyRevenue,recordRevenue,oldRevenue,addRevenue,clickableSeats,revenueLabel,showRevenueDetail } from './personal_revenue_ui.js';
 import { rosterPerformancePeople,regionalRepresentativeNames } from './personal_roster.js';
 import { renderPerformanceMatrix } from './performance_matrix.js';
-import { historicValue } from './historical_seats.js';
+import { historicValue,historicalActualSeats } from './historical_seats.js';
 import { cancellationPanel } from './historical_cancellations_ui.js';
 import { timedSignupRows,signupSeatsForPeriod,undatedSignupStats } from './signup_date_utils.js';
 /* Read-only supplemental KPI views, shared by all public viewers. */
@@ -192,7 +192,7 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
  nav.addEventListener('click',event=>{const b=event.target.closest('button[data-vpage]');if(b)show(b.dataset.vpage)});
  const selectOptions=(node,opts,value)=>{node.innerHTML=opts.map(([v,t])=>'<option value="'+safe(v)+'">'+safe(t)+'</option>').join('');node.value=String(value)};
  const years=()=>[...new Set([...getYears(),...historicalSeats.map(x=>Number(x.goal_year)),...getAllEvents().map(e=>Number(String(e.date||'').slice(0,4))),new Date().getFullYear()])].filter(y=>Number.isInteger(y)&&y>=2020&&y<=2100).sort((a,b)=>b-a);
- const actual=(branch,y,m,div='all')=>historicValue(historicalSeats,branch,div==='all'?'':div,'',y,m,'actual_seats')??signupSeatsForPeriod(getAllEvents(),{years:[y],months:[m],branches:[branch],divisions:div==='all'?null:[div],normalizeDivision});
+ const actual=(branch,y,m,div='all')=>historicalActualSeats({history:historicalSeats,events:getAllEvents(),branch,year:y,month:m,division:div,normalizeDivision,timedSignupRows});
  const goal=(branch,y,m,div='all')=>historicValue(historicalSeats,branch,div==='all'?'':div,'',y,m,'target_seats')??getTarget(branch,y,m,div);
  const months=Array.from({length:12},(_,i)=>i+1);
  function renderYear(){
@@ -210,7 +210,7 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
   el('v-year-body').innerHTML=matrix.body;
   const total=selected.reduce((sum,b)=>sum+months.reduce((subtotal,m)=>subtotal+actual(b,year,m),0),0);
   el('v-year-note').textContent=year+'년 · '+(yearBranch==='all'?'전체 지사':yearBranch)+
-   ' · 과거 수동 입력값 우선, 미입력 월은 온라인 집계 · 미배정 목표는 — 표시 · 실제 가입일자 기준 · 합계 달성률은 연간 실적 ÷ 연간 배정 목표입니다. · 전체 '+fmt(total)+'구좌'+
+   ' · 개인별 과거 수동 구좌가 본부·지사에 자동 합산 · 미입력 월은 온라인 집계 · 미배정 목표는 — 표시 · 실제 가입일자 기준 · 합계 달성률은 연간 실적 ÷ 연간 배정 목표입니다. · 전체 '+fmt(total)+'구좌'+
    (undatedSignupStats(getAllEvents()).records?' · 가입일 미입력 '+undatedSignupStats(getAllEvents()).records+'건 ('+fmt(undatedSignupStats(getAllEvents()).seats)+'구좌) 제외':'');
  }
  el('v-year').addEventListener('change',e=>{year=Number(e.target.value);renderYear()});
