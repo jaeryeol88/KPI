@@ -225,7 +225,7 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
   <p class="v-note" id="v-person-note"></p>
  </section>
  <section id="v-monthlysignups" class="v-extra" hidden>
- <div class="v-extra-head"><div><h2>월별 입회 현황 <span class="v-linked">가입 건별 등록 연동</span></h2><p>실제 가입일 기준 신규 입회만 표시하며, 이전 가입자의 해당 월 분납금은 아래 별도 표에 표시합니다.</p></div><div class="v-filters"><label>조회 연도 <span id="v-syear" class="v-multi-slot"></span></label><label>조회 월 <span id="v-smonth" class="v-multi-slot"></span></label><label>소속지사 <span id="v-sbranch" class="v-multi-slot"></span></label><label>소속본부 <span id="v-sdivision" class="v-multi-slot"></span></label></div></div>
+ <div class="v-extra-head"><div><h2>월별 입회 현황 <span class="v-linked">가입 건별 등록 연동</span></h2><p>실제 가입일 기준 신규 입회만 표시하며, 이전 가입자의 해당 월 분납금은 아래 별도 표에 표시합니다.</p></div><div class="v-filters"><span class="v-signup-filter">조회 연도 <span id="v-syear" class="v-multi-slot"></span></span><span class="v-signup-filter">조회 월 <span id="v-smonth" class="v-multi-slot"></span></span><span class="v-signup-filter">소속지사 <span id="v-sbranch" class="v-multi-slot"></span></span><span class="v-signup-filter">소속본부 <span id="v-sdivision" class="v-multi-slot"></span></span></div></div>
  <div id="v-ssummary" class="v-signup-summary"></div>
  <div class="v-table-scroll"><table class="v-table v-signup-table"><thead><tr><th>가입 일자</th><th>소속지사</th><th>소속본부</th><th>가입 담당 매니저</th><th>가입상품</th><th>구좌</th><th>입회금</th><th>연회비</th><th>총 매출</th><th>입회자 성함</th></tr></thead><tbody id="v-snew"></tbody></table></div><p class="v-note" id="v-snewnote"></p>
  <div class="v-signup-prior"><h3>전월 이전 가입자 분납금</h3><strong id="v-spriortotal"></strong></div>
