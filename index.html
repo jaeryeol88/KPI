@@ -2200,6 +2200,18 @@ function showEventDetail(x){
  }else{
   signupDetail='<p class="detail-no-entries">가입 건별 세부 기록이 없는 기존 데이터입니다. 아래에 저장된 상품·구좌·매출 합계를 표시하며, 납부 방식 등 미등록 정보는 임의로 생성하지 않습니다.</p>';
  }
+ const installmentDetails=group=>{
+  const entries=signupRows.filter(r=>r.group===group&&r.paymentType==='installment'&&Array.isArray(r.installmentAmounts)&&r.installmentAmounts.length);
+  if(!entries.length)return '';
+  return '<details style="margin:5px 0 10px;border:1px solid #e2e8f0;border-radius:8px;padding:9px 12px"><summary style="cursor:pointer;color:#2563eb;font-size:13px">분납 회차별 금액 보기</summary>'+entries.map(r=>{
+   const date=validSignupDate(r.signupDate),y=date?Number(date.slice(0,4)):null,m=date?Number(date.slice(5,7)):null;
+   return '<div style="padding:8px 0"><small>'+esc(r.memberName||r.product||'가입 건')+' · 계약금액 '+won(Number(r.revenue)||0)+'</small>'+r.installmentAmounts.map((amount,i)=>{
+    const year=y===null?null:y+Math.floor((m-1+i)/12),month=m===null?null:(m-1+i)%12+1;
+    return '<div class="detail-line"><span>'+(year===null?(i+1)+'회차':year+'년 '+month+'월 · '+(i+1)+'회차')+'</span><strong>'+won(Number(amount)||0)+'</strong></div>';
+   }).join('')+'</div>';
+  }).join('')+'</details>';
+ };
+ const installmentLine=(label,group,amount)=>'<div class="detail-line"><span>'+label+'</span><strong>'+value(amount)+'</strong></div>'+installmentDetails(group);
  el('detailTitle').textContent=x.name||'등록 상세';
  el('detailContent').innerHTML=
  heading('기본 등록 정보')+
@@ -2217,8 +2229,8 @@ function showEventDetail(x){
  line('개인 가입구좌',count(x.individual))+
  line('법인 가입상품',productList(x.corporateProducts))+
  line('개인 가입상품',productList(x.individualProducts))+
- line('법인 가입 매출',value(x.corporateRevenue))+
- line('개인 가입 매출',value(x.individualRevenue))+
+ installmentLine('법인 가입 매출','corporate',x.corporateRevenue)+
+ installmentLine('개인 가입 매출','individual',x.individualRevenue)+
  line('총 가입구좌 매출',subscriptionRevenue===null?none:won(subscriptionRevenue))+
  line('연회비 합계',value(x.annualFee))+
  line('행사 수입',value(x.eventIncome))+
@@ -2233,15 +2245,6 @@ function showEventDetail(x){
  heading('행사 비용 내역')+
  (expenseFields?line('대관료',value(x.venueCost))+line('식음료비',value(x.foodCost))+line('시상품비',value(x.prizeCost))+line('기타비용',value(x.otherCost)):line('세부 비용','기존 기록 · 미분류'))+
  line('총 행사비용',value(x.cost))+
- heading('핵심 성과 지표')+
- '<div class="detail-kpis">'+
- item('목표구좌 대비 달성률',rate(x.goal,x.done))+
- item('참가인원 대비 입회 전환율',signupRate(x),signupCount(x)===null?'법인/개인 구분 미입력':fmt(signupCount(x))+'건 / '+fmt(x.attendees)+'명')+
- item('환산 입회 건수',signupCount(x)===null?'미분류':fmt(signupCount(x))+'건','법인 4구좌당 1건 + 개인 1구좌당 1건')+
- item('달성구좌당 비용',x.done?won(x.cost/x.done):'—')+
- item('1인당 행사 비용',x.attendees?won(x.cost/x.attendees):'—')+
- item('총수입 − 행사비용',profit===null?'계산 보류':profitText(profit),'상품원가·세금·수수료 미반영')+
- '</div>'+
  heading('메모')+
  '<p class="detail-memo">'+(x.memo?esc(x.memo):none)+'</p>'+
  '<p class="foot">※ 가입매출은 기록된 금액을 기준으로 표시합니다. 분납 개월 수는 실제 수납 완료 금액이 아니며, 연회비는 가입매출 합계에 중복 가산하지 않습니다.</p>';
