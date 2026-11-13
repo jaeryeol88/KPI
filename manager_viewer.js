@@ -70,19 +70,30 @@ function drawPersonal(){
  el('personalFoot').innerHTML='<tr><td colspan="4">합계</td><td>'+fmt(sums.reduce((a,b)=>a+b,0))+'</td>'+sums.map(fmt).map(n=>'<td>'+n+'</td>').join('')+'</tr>';
 }
 function drawOrg(){
- const people=rosterPerformancePeople(orgNodes).filter(p=>branches.includes(p.branch));
+ const visible=orgNodes.filter(n=>n&&n.staffHidden!==true);
+ const people=rosterPerformancePeople(visible).filter(p=>branches.includes(p.branch));
  const host=el('orgTree');el('orgCount').textContent='조직도 등록 인원 '+fmt(people.length)+'명';
+ const children=new Map();
+ for(const n of visible){const parent=n.parent===null||n.parent===undefined?'':String(n.parent);if(!children.has(parent))children.set(parent,[]);children.get(parent).push(n);}
+ const branchLabel=n=>{const v=String(n.branchName||n.label||'').trim();const m=v.match(/부산\s*([1-4])\s*지사/);return m?'부산 '+m[1]+'지사':v;};
+ const drawNode=(node,depth=0)=>{
+  if(depth>12)return '';
+  const kids=children.get(String(node.id))||[];
+  const label=safe(node.label||'소속 미지정');
+  const subtitle=node.subtitle?'<small>'+safe(node.subtitle)+'</small>':'';
+  if(node.type==='person')return '<div class="org-person"><strong>'+label+'</strong>'+subtitle+'</div>';
+  if(node.type==='division')return '<div class="org-division"><h4>'+label+' '+subtitle+'</h4>'+kids.map(k=>drawNode(k,depth+1)).join('')+'</div>';
+  return kids.map(k=>drawNode(k,depth+1)).join('');
+ };
  host.innerHTML=branches.map(b=>{
-  const rows=people.filter(p=>p.branch===b);
-  const ds=[...new Set([...divisions,...rows.map(p=>p.division)])];
-  const cards=ds.map(d=>{
-   const names=rows.filter(p=>p.division===d);
-   if(!names.length)return '';
-   return '<div class="org-division"><h4>'+safe(d)+' · '+names.length+'명</h4>'+
-    names.map(p=>'<div class="org-person"><strong>'+safe(p.name)+'</strong></div>').join('')+'</div>';
-  }).join('');
-  return '<div class="org-branch"><h3>'+safe(b)+' <span class="org-count">('+rows.length+'명)</span></h3>'+
-   '<div class="org-division-wrap">'+(cards||'<span class="org-count">등록된 구성원이 없습니다.</span>')+'</div></div>';
+  const group=visible.find(n=>n.type==='group'&&branchLabel(n)===b);
+  const direct=group?(children.get(String(group.id))||[]):[];
+  const main=direct.map(n=>drawNode(n)).join('');
+  const members=people.filter(p=>p.branch===b);
+  const fallback=[...new Set(members.map(p=>p.division))].map(d=>'<div class="org-division"><h4>'+safe(d)+'</h4>'+
+    members.filter(p=>p.division===d).map(p=>'<div class="org-person"><strong>'+safe(p.name)+'</strong></div>').join('')+'</div>').join('');
+  return '<div class="org-branch"><h3>'+safe(b)+' <span class="org-count">('+members.length+'명)</span></h3>'+
+   '<div class="org-division-wrap">'+(main||fallback||'<span class="org-count">등록된 구성원이 없습니다.</span>')+'</div></div>';
  }).join('');
 }
 function showPage(page){
