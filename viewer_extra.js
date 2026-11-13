@@ -193,7 +193,7 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
  const selectOptions=(node,opts,value)=>{node.innerHTML=opts.map(([v,t])=>'<option value="'+safe(v)+'">'+safe(t)+'</option>').join('');node.value=String(value)};
  const years=()=>[...new Set([...getYears(),...historicalSeats.map(x=>Number(x.goal_year)),...getAllEvents().map(e=>Number(String(e.date||'').slice(0,4))),new Date().getFullYear()])].filter(y=>Number.isInteger(y)&&y>=2020&&y<=2100).sort((a,b)=>b-a);
  const actual=(branch,y,m,div='all')=>historicalActualSeats({history:historicalSeats,events:getAllEvents(),branch,year:y,month:m,division:div,normalizeDivision,timedSignupRows});
- const goal=(branch,y,m,div='all')=>historicValue(historicalSeats,branch,div==='all'?'':div,'',y,m,'target_seats')??getTarget(branch,y,m,div);
+ const goal=(branch,y,m,div='all')=>getTarget(branch,y,m,div)??historicValue(historicalSeats,branch,div==='all'?'':div,'',y,m,'target_seats');
  const months=Array.from({length:12},(_,i)=>i+1);
  function renderYear(){
   if(!years().includes(year))year=years()[0]||new Date().getFullYear();
