@@ -232,7 +232,7 @@ th{background:#edf2fa;font-weight:750}td{background:white}td:last-child,th:last-
 .staff-message{font-size:12px;color:#57718c;margin:6px 0 10px}
 .staff-tip{margin:12px 1px 0;color:#71819a;font-size:12px;line-height:1.7}
 .staff-phone{display:inline-block;min-width:105px;cursor:text;padding:4px;border:1px dashed #cbd9e9;border-radius:5px}
-.staff-phone.locked{font-size:11px;color:#8a9bb1;cursor:pointer}
+.staff-phone.locked{font-size:11px;color:transparent;cursor:pointer;position:relative}.staff-phone.locked::after{content:'더블클릭 확인';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#8293ab;background:#f8faff;border-radius:5px}
 .staff-phone.concealed{color:transparent;text-shadow:none;user-select:text}
 .staff-phone.concealed::selection{color:#163b73;background:#cde2ff}
 .staff-phone.visible{color:#163b73;background:#eaf2ff}
