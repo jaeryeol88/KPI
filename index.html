@@ -1037,7 +1037,10 @@ function orgRenderHeadcount(){
  const cleanName=value=>String(value||'').replace(/[（(]\s*겸\s*직\s*[)）]/g,'')
   .replace(/부산\s*[1-4]\s*지사|권역대표|지사장|본부장|매니저/g,'')
   .replace(/[^가-힣a-zA-Z]/g,'').trim();
- const dualNames=new Set();
+ // 해당 두 인원은 겸직임이 확인되었지만 기존 저장 데이터에는 표시가 빠져 있습니다.
+ // 기존 데이터가 변경되기 전까지도 올바르게 집계하도록 명시적 예외를 둡니다.
+ const confirmedDualNames=new Set(['박영우','안선경']);
+ const dualNames=new Set(confirmedDualNames);
  const dualIds=new Set();
  for(const node of orgNodes){
   if(!node||node.staffHidden===true)continue;
