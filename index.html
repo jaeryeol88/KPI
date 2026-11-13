@@ -1047,7 +1047,9 @@ function orgRenderHeadcount(){
   const isBranchLeader=orgEffectiveRole(node)==='branch'&&['박영우','안선경'].includes(cleanName(label));
   if(isBranchLeader||!marked.test(label+' '+subtitle))continue;
   // 직책명만 있는 조직 제목은 인원으로 계산하지 않습니다.
-  const personName=marked.test(label)?cleanName(label):cleanName(subtitle);
+  const labelName=cleanName(label),subtitleName=cleanName(subtitle);
+  // 직급란에 '(겸직)'만 써 놓은 카드도 성명(label)을 기준으로 집계합니다.
+  const personName=labelName&&!/^(구성원|새구성원|이름미입력|최상위조직|새지사부서|새본부팀)$/.test(labelName)?labelName:subtitleName;
   if(!personName||/^(구성원|새구성원|이름미입력)$/.test(personName))continue;
   dualNames.add(personName);
   dualIds.add(String(node.id));
