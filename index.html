@@ -1020,7 +1020,9 @@ function orgCountable(node){
 function orgRenderHeadcount(){
  const target=el('orgHeadcountGrid');if(!target)return;
  const counts=countOrgHeadcount(orgNodes);
- const help=el('orgDualHelp');if(help)help.textContent=counts.dual===0?'겸직 0명: 현재 조직도에서 겸직으로 지정된 구성원이 없습니다. 해당 카드 클릭 → 인원 집계 직책 ‘본부장 겸직’ 선택 → 변경 적용 → 조직도 저장 순서로 등록하세요.':'';
+ const dualCards=orgNodes.filter(n=>n&&n.staffHidden!==true&&['dual','본부장 겸직','겸직'].includes(String(n.headcountRole||'').trim()));
+ counts.dual=new Set(dualCards.map(n=>String(n.id))).size;
+ const help=el('orgDualHelp');if(help)help.textContent=counts.dual===0?'저장된 조직도에 본부장 겸직 직책이 0건입니다. 변경 적용 후 조직도 저장을 확인하세요.':'본부장 겸직으로 지정된 조직도 카드 '+counts.dual+'건 (총인원 제외)';
  const labels=[['regional','권역대표'],['branch','지사장'],['division','본부장'],['manager','매니저'],['dual','겸직']];
  target.innerHTML=labels.map(([key,label])=>'<div class="org-headcount-stat"><span>'+label+'</span><strong>'+fmt(counts[key])+'명</strong></div>').join('')+
   '<div class="org-headcount-stat org-headcount-total"><span>총인원</span><strong>'+fmt(counts.total)+'명</strong></div>';
@@ -1200,7 +1202,12 @@ async function orgSave(){
  try{
   const {error}=await db.from('kpi_org_chart').upsert({id:1,nodes:orgNodes,updated_at:new Date().toISOString()},{onConflict:'id'});
   if(error)throw error;
-  orgDirty=false;orgStatus('조직도를 온라인에 저장했습니다.');
+  const {data:verified,error:verifyError}=await db.from('kpi_org_chart').select('nodes').eq('id',1).maybeSingle();
+  if(verifyError)throw verifyError;
+  const expectedDual=orgNodes.filter(n=>n&&n.headcountRole==='dual').length;
+  const storedDual=(Array.isArray(verified?.nodes)?verified.nodes:[]).filter(n=>n&&n.headcountRole==='dual').length;
+  if(storedDual!==expectedDual)throw new Error('겸직 직책 저장 확인 실패: 화면 '+expectedDual+'건 / DB '+storedDual+'건');
+  orgDirty=false;orgRenderHeadcount();orgStatus('조직도를 온라인에 저장했습니다. 본부장 겸직 '+storedDual+'건 저장 확인.');
  }catch(e){orgStatus('저장 실패: '+errText(e),true);}
  finally{button.disabled=false;}
 }
