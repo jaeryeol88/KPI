@@ -9,12 +9,16 @@ CREATE TABLE IF NOT EXISTS public.kpi_historical_seats (
  goal_month integer NOT NULL CHECK (goal_month BETWEEN 1 AND 12),
  target_seats integer CHECK (target_seats BETWEEN 0 AND 1000000),
  actual_seats numeric(12,1) CHECK (actual_seats BETWEEN 0 AND 1000000),
+ employment_status text NOT NULL DEFAULT '재직' CHECK (employment_status IN ('재직','계약해지')),
+
  updated_at timestamptz NOT NULL DEFAULT now(),
  PRIMARY KEY (branch,division,manager,goal_year,goal_month),
  CONSTRAINT historical_hierarchy CHECK ((division='' AND manager='') OR (division<>'' AND length(trim(division))>0)),
  CONSTRAINT historical_not_empty CHECK (target_seats IS NOT NULL OR actual_seats IS NOT NULL)
 );
 ALTER TABLE public.kpi_historical_seats ALTER COLUMN actual_seats TYPE numeric(12,1) USING actual_seats::numeric(12,1);
+ALTER TABLE public.kpi_historical_seats ADD COLUMN IF NOT EXISTS employment_status text NOT NULL DEFAULT '재직';
+
 ALTER TABLE public.kpi_historical_seats ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.kpi_historical_seats FROM PUBLIC,anon,authenticated;
 GRANT SELECT ON public.kpi_historical_seats TO anon,authenticated;
