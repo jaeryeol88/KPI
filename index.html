@@ -231,6 +231,9 @@
 .signup-report-badge{display:block;color:#2563eb;font-size:11px;margin-top:4px}
 @media(max-width:750px){.signup-report-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
  .signup-prior-heading{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin:30px 0 12px}.signup-prior-heading h3{font-size:17px;color:#172840;margin:0}.signup-prior-heading p{font-size:12px;color:#718098;margin:0}.signup-prior-heading strong{margin-left:auto;color:#145dc5;font-size:16px;font-variant-numeric:tabular-nums}
+
+/* Responsive monthly KPI trend chart */
+.plk-trend{margin:18px 0 22px;padding:20px;border:1px solid #e1e8f2;border-radius:16px;background:#fff;min-width:0}.plk-trend-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap}.plk-trend-head h3{margin:0;font-size:19px;color:#172840}.plk-trend-head p{margin:7px 0 0;font-size:12px;color:#64748b;line-height:1.6}.plk-trend-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:17px 0}.plk-trend-stat{padding:14px;border:1px solid #e5eaf2;border-radius:12px;background:#f8faff;min-width:0}.plk-trend-stat span{display:block;font-size:12px;color:#64748b}.plk-trend-stat strong{display:block;margin-top:7px;font-size:19px;color:#1d5fc9;overflow-wrap:anywhere}.plk-trend-graph{width:100%;min-width:0;overflow:hidden}.plk-trend-graph svg{display:block;width:100%;height:auto;touch-action:pan-y}.plk-trend-detail{padding:12px 14px;background:#edf4ff;border-radius:10px;color:#214c83;font-weight:700;font-size:13px;line-height:1.6}.plk-trend-point{cursor:pointer;outline:none}.plk-trend-point:focus circle{stroke:#f59e0b;stroke-width:4}@media(max-width:650px){.plk-trend{padding:13px;margin:13px 0;border-radius:13px}.plk-trend-head h3{font-size:17px}.plk-trend-stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.plk-trend-stat{padding:11px}.plk-trend-stat strong{font-size:18px}.plk-trend-graph svg{min-height:190px}.plk-trend-detail{font-size:12px}}
 </style>
 <style id="mobile-nav-polish">@media(max-width:650px){
 .sidebar{padding:14px 16px!important;gap:10px!important}
@@ -283,6 +286,7 @@
 <div class="month-card"><span>선택 기간 목표 달성률</span><strong id="monthlyRate">—</strong><small id="monthlySummary">목표 미입력</small></div>
 <div class="month-card"><span>선택 기간 달성구좌</span><strong id="annualRate">0구좌</strong><small id="annualSummary">선택한 연도·월 기준</small></div>
 </div>
+<section class="plk-trend" aria-label="월별 목표 대비 실적 그래프"><div class="plk-trend-head"><div><h3>월별 실적 추이</h3><p>실선: 실적 · 점선: 목표 · 월을 터치하면 상세 수치를 확인할 수 있습니다.</p></div><div id="plkTrendYear"></div></div><div id="plkTrendStats" class="plk-trend-stats"></div><div id="plkTrendGraph" class="plk-trend-graph"></div><div id="plkTrendDetail" class="plk-trend-detail" aria-live="polite"></div></section>
 <div class="month-scroll"><table><thead><tr><th>조회 월</th><th>목표구좌</th><th>달성구좌</th><th>달성률</th></tr></thead><tbody id="monthlyRows"></tbody></table></div>
 <div class="month-scroll"><table><thead><tr><th>선택 기간 지사별 현황 (클릭하면 본부별 펼침)</th><th>목표구좌</th><th>달성구좌</th><th>달성률</th></tr></thead><tbody id="monthlyBranchRows"></tbody></table></div>
 <p class="month-status" id="monthlyStatus">월 목표 데이터 확인 중…</p>
@@ -984,6 +988,24 @@ function monthlyManagerBreakdown(branch,division,years,months){
  }
  return [...managerRows.values()].map(item=>({...item,products:[...item.products.values()].sort((a,b)=>b.seats-a.seats||a.product.localeCompare(b.product,'ko'))})).sort((a,b)=>b.seats-a.seats||b.records-a.records||a.manager.localeCompare(b.manager,'ko'));
 }
+
+function renderPlkMonthlyTrend(years,branches,divisions){
+ const host=el('plkTrendGraph');if(!host)return;
+ const year=years.length===1?years[0]:Math.max(...years);
+ if(!Number.isFinite(year)){host.textContent='조회 연도를 선택해 주세요.';return;}
+ el('plkTrendYear').textContent=years.length>1?'최근 연도 '+year+'년':year+'년';
+ const values=Array.from({length:12},(_,i)=>{const m=i+1;let goal=0,actual=0;for(const b of branches){if(divisions.length===1&&divisions[0]==='all'){goal+=monthlyTarget(b,year,m,'all')??0;actual+=monthlyActual(b,year,m,'all');}else for(const d of divisions){goal+=monthlyTarget(b,year,m,d)??0;actual+=monthlyActual(b,year,m,d);}}return {m,goal,actual};});
+ const sum=key=>values.reduce((a,v)=>a+v[key],0),total=sum('actual'),target=sum('goal'),best=values.reduce((a,b)=>b.actual>a.actual?b:a,values[0]);
+ const current=new Date(),selected=(year===current.getFullYear()?current.getMonth()+1:12),active=values[selected-1];
+ el('plkTrendStats').innerHTML=[['연간 총 실적',total+'구좌'],['연간 총 목표',target+'구좌'],['최고 실적 월',best.m+'월 ('+best.actual+'구좌)'],['선택 월 실적',active.actual+'구좌']].map(([label,value])=>'<div class="plk-trend-stat"><span>'+label+'</span><strong>'+value+'</strong></div>').join('');
+ const W=720,H=280,L=36,R=14,T=24,B=35,max=Math.max(10,...values.flatMap(v=>[v.actual,v.goal]));const cap=Math.ceil(max/10)*10;const x=i=>L+(W-L-R)*i/11,y=n=>T+(H-T-B)*(1-n/cap);
+ const line=key=>values.map((v,i)=>(i?'L':'M')+x(i).toFixed(1)+' '+y(v[key]).toFixed(1)).join(' ');
+ const grid=[0,.25,.5,.75,1].map(t=>'<line x1="'+L+'" y1="'+y(cap*t)+'" x2="'+(W-R)+'" y2="'+y(cap*t)+'" stroke="#e7edf5" stroke-dasharray="4 5"/><text x="'+(L-8)+'" y="'+(y(cap*t)+4)+'" font-size="11" text-anchor="end" fill="#8492a6">'+Math.round(cap*t)+'</text>').join('');
+ const pts=values.map((v,i)=>'<g class="plk-trend-point" role="button" tabindex="0" data-month="'+v.m+'" aria-label="'+v.m+'월 실적 '+v.actual+'구좌 목표 '+v.goal+'구좌"><circle cx="'+x(i)+'" cy="'+y(v.actual)+'" r="11" fill="transparent"/><circle cx="'+x(i)+'" cy="'+y(v.actual)+'" r="4.5" fill="#2563eb" stroke="white" stroke-width="2"/><text x="'+x(i)+'" y="'+(H-9)+'" text-anchor="middle" font-size="11" fill="#64748b">'+v.m+'월</text></g>').join('');
+ host.innerHTML='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+year+'년 월별 실적 파란 실선과 목표 회색 점선 비교">'+grid+'<path d="'+line('goal')+'" fill="none" stroke="#94a3b8" stroke-width="2.5" stroke-dasharray="7 6"/><path d="'+line('actual')+'" fill="none" stroke="#2563eb" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"/>'+pts+'</svg>';
+ const detail=el('plkTrendDetail');const show=m=>{const v=values[m-1];detail.textContent=year+'년 '+m+'월 · 목표 '+v.goal+'구좌 · 실적 '+v.actual+'구좌 · 달성률 '+(v.goal?(v.actual/v.goal*100).toFixed(1)+'%':'목표 미입력');};show(selected);
+ host.querySelectorAll('[data-month]').forEach(node=>{const go=()=>show(Number(node.dataset.month));node.addEventListener('click',go);node.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go();}});});
+}
 function renderMonthlyGoals(){
  monthlySyncBranches();
  const ys=monthlySelectedYears(),months=monthlySelectedMonths(),branches=monthlySelectedBranches(),divisions=monthlySelectedDivisions();
@@ -1003,6 +1025,7 @@ function renderMonthlyGoals(){
   return {goal,done,rate:goal>0?(done/goal*100).toFixed(1)+'%':'—'};
  };
  const total=rollup(branches,ys,months,divisions);
+ renderPlkMonthlyTrend(ys,branches,divisions);
  el('monthlyRate').textContent=total.rate;
  const missingDates=undatedSignupStats(items);
  el('monthlySummary').textContent=monthlyCaption(total)+(missingDates.records?' · 가입일 미입력 '+fmt(missingDates.records)+'건 / '+fmt(missingDates.seats)+'구좌 집계 제외':'')+(missingDates.legacyEvents?' · 가입건별 정보 없는 기존 행사 '+fmt(missingDates.legacyEvents)+'건 집계 제외':'');
