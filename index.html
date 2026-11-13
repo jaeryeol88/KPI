@@ -331,7 +331,7 @@ import { drawOrgConnectorLines } from './org_connector_lines.js';
 import { emptyRevenue,recordRevenue,oldRevenue,addRevenue,clickableSeats,revenueLabel,showRevenueDetail } from './personal_revenue_ui.js';
 import { rosterPerformancePeople,regionalRepresentativeNames } from './personal_roster.js';
 import { renderPerformanceMatrix } from './performance_matrix.js';
-import { historicValue,historicalPast,historicalActualSeats } from './historical_seats.js';
+import { historicValue,historicalPast,historicalActualSeats } from './historical_seats.js?v=auto-person-rollup-20261113';
 import { createHistoricalEditor } from './historical_editor.js?v=employment-selector-visible-20261113';
 import { cancellationPanel } from './historical_cancellations_ui.js';
 import { validSignupDate,timedSignupRows,signupSeatsForPeriod,undatedSignupStats } from './signup_date_utils.js';
@@ -1563,7 +1563,7 @@ async function monthlySaveGoal(event){
 }
 monthlySetup();
 historicalCancellationPanel=cancellationPanel(el('personalYearBoard'));
-const historicalEditor=createHistoricalEditor({getDb:()=>db,getRole:()=>access.role,onRecords:records=>{historicalSeats=records;renderPerformanceYearboard();renderPersonalYearboard();}});
+const historicalEditor=createHistoricalEditor({getDb:()=>db,getRole:()=>access.role,onRecords:records=>{historicalSeats=records;renderMonthlyGoals();renderCoreGoalKpi(filtered());}});
 window.addEventListener('plk-historical-bulk-saved',()=>{loadMonthlyTargets();});
 const productBranchExpanded=new Set();
 function renderProductBranchStats(events){
