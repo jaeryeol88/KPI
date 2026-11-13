@@ -291,7 +291,7 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
   if(key==='branch')signupSelections.division.clear();
   const pageY=window.scrollY;
   renderSignupReport();
-  window.scrollTo({top:pageY,behavior:'instant'});
+  window.scrollTo(0,pageY);
  });
  document.addEventListener('click',e=>{if(e.target.closest('.v-signup-multi'))return;document.querySelectorAll('.v-signup-multi[open]').forEach(d=>d.open=false)});
  function renderSignupReport(){
