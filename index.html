@@ -2232,7 +2232,7 @@ function showEventDetail(x){
  (()=>{
  const allInstallments=signupRows.filter(r=>!r.withdrawn&&r.paymentType==='installment'&&Array.isArray(r.installmentAmounts)&&r.installmentAmounts.length);
  const amount=subscriptionRevenue===null?none:won(subscriptionRevenue);
- if(!allInstallments.length)return line('총 가입 매출',amount);
+ if(!allInstallments.length)return line('입회금',amount);
  const detail=allInstallments.map(r=>{
   const date=validSignupDate(r.signupDate),y=date?Number(date.slice(0,4)):null,m=date?Number(date.slice(5,7)):null;
   const rows=r.installmentAmounts.map((v,i)=>{
@@ -2241,7 +2241,7 @@ function showEventDetail(x){
   }).join('');
   return '<div style="padding:8px 0"><small>'+esc(r.product||'가입상품')+' · '+esc(r.memberName||'입회자')+'</small>'+rows+'</div>';
  }).join('');
- return '<details style="border-bottom:1px solid #e2e8f0"><summary class="detail-line" style="cursor:pointer;list-style:none"><span>총 가입 매출 <small style="color:#2563eb">· 금액 클릭 시 분납 내역</small></span><strong>'+amount+'</strong></summary><div style="padding:4px 12px 12px">'+detail+'</div></details>';
+ return '<details style="border-bottom:1px solid #e2e8f0"><summary class="detail-line" style="cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between"><span>입회금</span><span style="display:flex;flex-direction:column;align-items:flex-end;gap:3px"><strong>'+amount+'</strong><small style="color:#2563eb;font-size:11px;font-weight:500">분납 내역 보기 ▾</small></span></summary><div style="padding:4px 12px 12px">'+detail+'</div></details>';
  })()+
  line('연회비 합계',value(x.annualFee))+
  line('행사 수입',value(x.eventIncome))+
