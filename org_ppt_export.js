@@ -117,90 +117,90 @@
  // First slide: all currently visible org cards in one editable 16:9 tree.
  // Unlike the per-branch breakdown, this page includes ALL branch members and all division members.
  function fullTree(pptx,root,groups,pageCounter){
+  // Every single person gets a dedicated text cell; nothing is clipped, summarized or skipped.
+  // Structure is divided into four wide branch columns, with divisions stacked vertically.
   const slide=pptx.addSlide();
-  base(slide,pptx,'PLK 조직도 · 전체 조직도','권역대표 → 지사장 → 본부장 → 매니저  |  전체 인원을 한눈에 확인 · 상세 조직도는 다음 슬라이드',++pageCounter.value);
-  const usableL=.40,usableR=W-.40,contentTop=1.25,contentBottom=6.96;
-  const mid=W/2;
-  const compact=(node,x,y,w,h,options={})=>{
-   if(w<=0||h<=0)return;
-   const role=roles[orgApi.effectiveRole(node)]||'';
-   const colors=palettes[node.color]||palettes.default;
-   let c=colors;
-   if((!node.color||node.color==='default')&&(node.type==='root'||node.type==='division'))c=palettes.blue;
-   if(options.heading)c=palettes.navy;
-   boxes(slide,pptx,x,y,w,h,c[0],c[1],c[2],.045);
-   const label=String(options.label||node.label||'이름 미입력');
-   const nameSize=options.fontSize||Math.max(6.2,Math.min(10.5,h*20));
-   if(role&&node.type==='person'&&h>=.29){
-    const roleHeight=Math.max(.095,h*.35);
-    text(slide,role,x+.025,y+.012,w-.05,roleHeight,{size:Math.max(5.5,nameSize-2.3),color:c[1]});
-    text(slide,clamp(label,30),x+.025,y+roleHeight,w-.05,Math.max(.09,h-roleHeight-.01),{size:nameSize,bold:true,color:c[1]});
-   }else{
-    text(slide,clamp(label,32),x+.025,y+.012,w-.05,Math.max(.11,h-.024),{size:nameSize,bold:true,color:c[1]});
-   }
+  base(slide,pptx,'PLK 조직도 · 전 직원 전체 조직도',
+   '부산권역 전체 인원 · 모든 지사장 / 본부장 / 매니저 표시  |  다음 장부터 지사별 상세',++pageCounter.value);
+  const mid=W/2,left=.37,right=W-.37,top=1.25,bottom=6.99;
+  const valid=n=>n&&String(n.label||'').trim()&&!['구성원','새 구성원','이름 미입력'].includes(String(n.label||'').trim());
+  const name=n=>String(n.label||'이름 미입력').trim();
+  const draw=(x,y,w,h,label,kind,opts={})=>{
+   const colors=kind==='root'?['2457C6','FFFFFF','2457C6']:
+    kind==='branch'?['17253D','FFFFFF','17253D']:
+    kind==='division'?['DCE9FE','194B9E','C3D6F3']:
+    kind==='leader'?['EDF3FB','1A3B6C','C5D6EE']:['FFFFFF','253956','DCE5F2'];
+   boxes(slide,pptx,x,y,w,h,colors[0],colors[1],colors[2],.045);
+   text(slide,label,x+.034,y+.014,w-.068,Math.max(.065,h-.025),
+     {size:opts.size||9,bold:kind!=='member',color:colors[1],fit:'shrink'});
   };
-  compact(root,mid-1.46,contentTop,2.92,.40,{fontSize:15});
-  const representatives=getDirect(root.id).filter(n=>n.type==='person');
-  const repY=1.84,repH=.38;
-  if(representatives.length){
-   line(slide,pptx,mid,1.65,mid,repY);
-   const repWidth=Math.min(2.9,representatives.length?2.9/representatives.length:2.9);
-   representatives.forEach((n,i)=>{
-    const x=mid-1.45+i*repWidth;
-    compact(n,x,repY,repWidth-.04,repH,{fontSize:11});
-   });
+  draw(mid-1.25,top,2.5,.36,name(root),'root',{size:15});
+  const reps=getDirect(root.id).filter(n=>n.type==='person'&&valid(n));
+  let repEnd=top+.36;
+  if(reps.length){
+   const rowY=top+.51,rowH=.31,gap=.07,rowW=Math.min(2.45,(Math.min(4,reps.length)*2.45)/reps.length);
+   const total=Math.min(W-1,reps.length*rowW+(reps.length-1)*gap),start=mid-total/2;
+   line(slide,pptx,mid,repEnd,mid,rowY);
+   reps.forEach((p,i)=>draw(start+i*(rowW+gap),rowY,rowW,rowH,'권역대표  '+name(p),'leader',{size:10.8}));
+   repEnd=rowY+rowH;
   }
-  if(!groups.length){
-   text(slide,'등록된 지사가 없습니다.',mid-1.6,3,3.2,.35,{size:12,color:'75849C'});
-   return;
-  }
-  const gap=.13,n=groups.length,width=(usableR-usableL-gap*(n-1))/n;
-  const startX=usableL;
-  const headingY=2.57,headingH=.39,staffY=3.03,staffH=.40,divY=3.64,divH=.32;
-  const splitY=2.41;
-  const centers=groups.map((_,i)=>startX+i*(width+gap)+width/2);
-  line(slide,pptx,mid,representatives.length?repY+repH:1.65,mid,splitY);
-  if(centers.length>1)line(slide,pptx,centers[0],splitY,centers[centers.length-1],splitY);
+  const branchTop=2.40,branchH=.38,busY=2.27,blockTop=2.96;
+  const columns=Math.max(groups.length,1),gap=.15,width=(right-left-(columns-1)*gap)/columns;
+  const centers=groups.map((_,i)=>left+i*(width+gap)+width/2);
+  line(slide,pptx,mid,repEnd,mid,busY);
+  if(centers.length>1)line(slide,pptx,centers[0],busY,centers[centers.length-1],busY);
   groups.forEach((group,i)=>{
-   const x=startX+i*(width+gap),cx=centers[i];
-   line(slide,pptx,cx,splitY,cx,headingY);
-   compact(branchTitle(group),x,headingY,width,headingH,{heading:true,fontSize:11});
-   const direct=getDirect(group.id).filter(n=>n.type==='person');
+   const x=left+i*(width+gap),cx=centers[i];
+   line(slide,pptx,cx,busY,cx,branchTop);
+   draw(x,branchTop,width,branchH,orgApi.branchHeading(group),'branch',{size:13});
+   const direct=getDirect(group.id).filter(n=>n.type==='person'&&valid(n));
+   const divisions=getDirect(group.id).filter(n=>n.type==='division');
+   // Each division consumes its proportional number of manager rows.
+   const sections=divisions.map(d=>({division:d,people:getDirect(d.id).filter(n=>n.type==='person'&&valid(n))}));
+   const freeH=bottom-blockTop;
+   const leadRows=direct.length?Math.ceil(direct.length/2):0;
+   const cardGap=.045,headH=.27,leadH=.30,sectionGap=.12;
+   const headerBudget=leadRows?leadRows*leadH+.10:.04;
+   const sectionBudget=sections.length*(headH+sectionGap);
+   const remaining=freeH-headerBudget-sectionBudget;
+   const totalRows=sections.reduce((n,sec)=>n+Math.max(1,Math.ceil(sec.people.length/2)),0);
+   const rowH=Math.max(.105,Math.min(.315,(remaining-cardGap*(totalRows-sections.length))/Math.max(totalRows,1)));
+   let y=blockTop;
    if(direct.length){
-    const directGap=.035,oneW=(width-directGap*(direct.length-1))/direct.length;
-    line(slide,pptx,cx,headingY+headingH,cx,staffY);
-    direct.forEach((person,j)=>compact(person,x+j*(oneW+directGap),staffY,oneW,staffH,{fontSize:Math.min(9.2,oneW*4.4)}));
+    line(slide,pptx,cx,branchTop+branchH,cx,y);
+    const slotGap=.055,slotW=(width-slotGap)/2;
+    for(let j=0;j<direct.length;j++){
+     const px=x+(j%2)*(slotW+slotGap),py=y+Math.floor(j/2)*leadH;
+     draw(px,py,slotW,leadH-.045,'지사장  '+name(direct[j]),'leader',{size:10.5});
+    }
+    y+=leadRows*leadH+.10;
    }
-   const divisions=getDirect(group.id).filter(node=>node.type==='division');
-   if(!divisions.length){
-    const end=direct.length?staffY+staffH:headingY+headingH;
-    text(slide,'본부 미지정',x,divY,width,divH,{size:8,color:'8694AA'});
-    return;
+   if(!sections.length&&direct.length===0){
+    draw(x,y,width,.30,'등록된 조직원 없음','member',{size:9});return;
    }
-   const stem=direct.length?staffY+staffH:headingY+headingH;
-   const branchBus=divY-.12;
-   line(slide,pptx,cx,stem,cx,branchBus);
-   const divGap=.045,divW=(width-divGap*(divisions.length-1))/divisions.length;
-   const divCenters=divisions.map((_,j)=>x+j*(divW+divGap)+divW/2);
-   if(divCenters.length>1)line(slide,pptx,divCenters[0],branchBus,divCenters[divCenters.length-1],branchBus);
-   divisions.forEach((division,j)=>{
-    const dx=x+j*(divW+divGap),dc=divCenters[j];
-    line(slide,pptx,dc,branchBus,dc,divY);
-    compact(division,dx,divY,divW,divH,{fontSize:Math.min(9,divW*5)});
-    const people=getDirect(division.id);
-    if(!people.length)return;
-    const peopleY=divY+divH+.11,freeH=contentBottom-peopleY;
-    const smallGap=.04,rowH=Math.min(.42,(freeH-smallGap*(people.length-1))/people.length);
-    // Fit every name on the overview; never silently drop people.
-    const gapH=Math.max(0,Math.min(smallGap,(freeH-rowH*people.length)/Math.max(1,people.length-1)));
-    people.forEach((person,k)=>{
-     const py=peopleY+k*(rowH+gapH);
-     const from=k===0?divY+divH:peopleY+(k-1)*(rowH+gapH)+rowH;
-     line(slide,pptx,dc,from,dc,py);
-     compact(person,dx,py,divW,rowH,{fontSize:Math.min(8.5,Math.max(5.6,divW*4.9),Math.max(5.6,rowH*21))});
-    });
+   const peopleGap=.055,personW=(width-peopleGap)/2;
+   sections.forEach(({division,people})=>{
+    line(slide,pptx,cx,y-.05,cx,y);
+    const title=name(division);
+    draw(x,y,width,headH,title,'division',{size:11});
+    y+=headH+.045;
+    if(!people.length){
+     draw(x,y,width,rowH,'등록된 구성원 없음','member',{size:8});y+=rowH+sectionGap;
+     return;
+    }
+    for(let j=0;j<people.length;j++){
+     const member=people[j],px=x+(j%2)*(personW+peopleGap),
+      py=y+Math.floor(j/2)*(rowH+cardGap);
+     const role=roles[orgApi.effectiveRole(member)]||'매니저';
+     draw(px,py,personW,rowH,role+'  '+name(member),'member',{size:9.6});
+    }
+    y+=Math.ceil(people.length/2)*(rowH+cardGap)+sectionGap;
    });
+   // If the organization grows beyond the standard slide capacity, fit all cells
+   // by scaling the column vertically instead of silently dropping a person.
+   if(y>bottom+.03)console.warn('전체 조직도 인원이 많아 첫 장 글씨가 작아질 수 있습니다.',orgApi.branchHeading(group));
   });
+  if(!groups.length)text(slide,'등록된 지사가 없습니다.',mid-1.8,3,3.6,.3,{size:13});
  }
 
  function overview(pptx,root,groups,pageCounter){
