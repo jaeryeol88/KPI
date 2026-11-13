@@ -72,6 +72,36 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
  .v-hc{padding:18px 10px 16px;text-align:center;border:1px solid #e2eaf5;border-radius:11px;background:#f3f7fd}
  .v-hc:last-child{background:#e7efff;border-color:#b8d0ff}
  .v-hc span{font-size:13px;color:#526782;font-weight:700;display:block;margin-bottom:5px}.v-hc strong{display:block;font-size:29px;line-height:1.3;font-weight:850;color:#1c4d9a;font-variant-numeric:tabular-nums}.v-hc:last-child strong{color:#1449b4}
+
+ /* Match administrator layouts while keeping all public data strictly read-only. */
+ .v-extra{margin:20px 0;padding:18px;border:1px solid #dce5f2;border-radius:12px;background:#fff}
+ .v-extra-head h2{font-size:19px;color:#142b4c}
+ .v-filters label{font-size:12px;font-weight:700}
+ .v-filters select{border:1px solid #d6e0ec;padding:8px;border-radius:8px}
+ .v-table{border-spacing:0;border-collapse:separate;table-layout:fixed;font-size:11px}
+ .v-table th,.v-table td{padding:5px 6px;border-right:1px solid #d1dbea;border-bottom:1px solid #d1dbea;font-variant-numeric:tabular-nums;overflow:hidden;text-overflow:ellipsis;box-sizing:border-box}
+ .v-table th{background:#fbe5d8;color:#29384b;text-align:center;font-weight:750}
+ .v-table td{color:#254260}
+ .v-table .v-total td{background:#dfe8fa;font-weight:850}
+ .v-table .v-number{color:#285ce4;font-weight:800}
+ #v-person-table thead th{background:#edf2f8!important}
+ #v-person-table td{text-align:center;white-space:nowrap}
+ #v-person-table td:nth-child(4){font-weight:800;color:#203551}
+ .v-org-scroll{overflow-x:auto;padding:22px 14px;background:#fafcff;border:1px solid #dce5f2;border-radius:14px}
+ .v-org-card{font-family:inherit}
+ .v-org-branch-heading{box-sizing:border-box}
+ .v-org-card.root{background:linear-gradient(135deg,#1b56d5,#343b9c)!important;color:white!important;border-color:#406fd3!important}
+ .v-org-card.division{background:linear-gradient(135deg,#1254d4,#3734a8)!important;color:white!important;border-color:#3663cc!important}
+ .v-org-card.person{background:#fff;color:#122a47;border-color:#d5dfeb}
+ .v-staff-filters{margin:8px 0 12px;gap:8px}
+ .v-staff-filters input,.v-staff-filters select{border:1px solid #d4deec;border-radius:9px;padding:9px 12px;min-height:39px;background:white;max-width:220px;font:inherit;font-size:12px}
+ .v-staff-table{border-collapse:collapse;min-width:1150px;width:100%;font-size:12px}
+ .v-staff-table th{background:#f7f9fc!important;color:#526179;font-size:12px;font-weight:800;padding:15px 8px;border-bottom:1px solid #dce5f2;text-align:center}
+ .v-staff-table td{padding:13px 8px;text-align:center!important;border-bottom:1px solid #eef2f8;color:#364962}
+ .v-staff-table tbody tr:hover{background:#f8fbff}
+ .v-staff-table .v-staff-name{font-size:13px;color:#14253f;font-weight:800}
+ .v-staff-table .v-staff-pill{display:inline-block;color:#235fe0;background:#edf4ff;border:1px solid #cfddf5;padding:3px 8px;border-radius:4px;font-size:11px;font-weight:800}
+
  @media(max-width:1050px){.v-nav{flex-direction:row;flex-wrap:wrap}.v-headcount-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
  @media(max-width:650px){.v-headcount-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.v-hc:last-child{grid-column:1/-1}}
  `;
@@ -102,9 +132,9 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
  <section id="v-orgstaff" class="v-extra" hidden>
   <div class="v-extra-head"><div><h2>PACIFIC 부산권역 임직원 명단</h2><p>조직도에 등록된 전체 조직원 목록입니다. 개인정보 보호를 위해 연락처는 공개하지 않습니다.</p></div>
   <strong id="v-staff-count" style="background:#e9f1ff;color:#215ddd;border-radius:7px;padding:6px 10px;font-size:13px">총 0명</strong></div>
-  <div class="v-filters" style="margin-bottom:12px"><input id="v-staff-search" placeholder="성명·직급·소속 검색" aria-label="조직원 검색" type="search" style="padding:9px 12px;border:1px solid #d4deec;border-radius:9px"></div>
-  <div class="v-table-scroll"><table class="v-table v-staff-table" style="min-width:1000px"><thead><tr><th>No.</th><th>성명</th><th>직급</th><th>소속 지사</th><th>소속 본부/부서</th><th>연락처</th><th>입사년월</th><th>재직상태</th></tr></thead><tbody id="v-staff-body"></tbody></table></div>
-  <p class="v-note">연락처와 인사상태는 공개뷰어에 제공되지 않습니다. 조직 정보는 관리자가 등록한 내용을 기준으로 표시됩니다.</p>
+  <div class="v-filters v-staff-filters"><input id="v-staff-search" placeholder="성명·직급·소속 검색" aria-label="조직원 검색" type="search"><select id="v-staff-branch" aria-label="지사별 검색"><option value="all">전체 지사</option></select><select id="v-staff-status" aria-label="재직상태"><option value="all">전체 재직상태</option><option value="재직">재직</option><option value="휴직">휴직</option><option value="퇴사">퇴사</option></select></div>
+  <div class="v-table-scroll"><table class="v-table v-staff-table" style="min-width:1150px"><thead><tr><th>No.</th><th>성명</th><th>직급</th><th>소속 지사</th><th>소속 본부/부서</th><th>연락처</th><th>입사년월</th><th>재직상태</th><th>관리</th></tr></thead><tbody id="v-staff-body"></tbody></table></div>
+  <p class="v-note">관리자 화면과 동일한 조직원 목록입니다. 연락처와 재직상태는 개인정보 보호를 위해 공개하지 않으며, 수정 권한은 관리자에게만 있습니다.</p>
  </section>`;
  main.appendChild(wrapper);
  const pages={yearboard:el('v-yearboard'),personal:el('v-personal'),org:el('v-org'),orgstaff:el('v-orgstaff')};
@@ -272,7 +302,7 @@ el('v-months').addEventListener('change',e=>{
   orgLoaded=true;if(active==='org')renderOrg();if(active==='orgstaff')renderStaff();
  }
  function renderStaff(){
-  if(!orgLoaded){el('v-staff-body').innerHTML='<tr><td colspan="8">조직원 정보를 불러오는 중…</td></tr>';return;}
+  if(!orgLoaded){el('v-staff-body').innerHTML='<tr><td colspan="9">조직원 정보를 불러오는 중…</td></tr>';return;}
   const placeholder=['구성원','새 구성원','이름 미입력','최상위 조직','새 지사 / 부서','새 본부 / 팀','지사장 / 담당자 입력'];
   const tree=n=>{
    let b='',d='',p=n,depth=0;
@@ -287,10 +317,16 @@ el('v-months').addEventListener('change',e=>{
   }).sort((a,b)=>a.branch.localeCompare(b.branch,'ko')||a.division.localeCompare(b.division,'ko')||a.name.localeCompare(b.name,'ko'));
   el('v-staff-count').textContent='총 '+data.length+'명';
   const query=el('v-staff-search').value.trim().toLocaleLowerCase('ko');
-  const filtered=data.filter(r=>!query||[r.name,r.role,r.branch,r.division].join(' ').toLocaleLowerCase('ko').includes(query));
-  el('v-staff-body').innerHTML=filtered.map((r,i)=>'<tr><td>'+(i+1)+'</td><td style="font-weight:800">'+safe(r.name)+'</td><td><span style="color:#235fe0;background:#edf4ff;border:1px solid #cfddf5;border-radius:4px;padding:3px 8px;font-weight:800">'+safe(r.role)+'</span></td><td>'+safe(r.branch||'—')+'</td><td>'+safe(r.division||'—')+'</td><td>비공개</td><td>'+safe(r.hire||'—')+'</td><td>—</td></tr>').join('')||'<tr><td colspan="8">조직원 정보가 없습니다.</td></tr>';
+  const selectedBranch=el('v-staff-branch').value;
+  const filtered=data.filter(r=>(selectedBranch==='all'||r.branch===selectedBranch)&&(!query||[r.name,r.role,r.branch,r.division].join(' ').toLocaleLowerCase('ko').includes(query)));
+  el('v-staff-body').innerHTML=filtered.map((r,i)=>'<tr><td>'+(i+1)+'</td><td class="v-staff-name">'+safe(r.name)+'</td><td><span class="v-staff-pill">'+safe(r.role)+'</span></td><td>'+safe(r.branch||'—')+'</td><td>'+safe(r.division||'—')+'</td><td>비공개</td><td>'+safe(r.hire||'—')+'</td><td>비공개</td><td>조회 전용</td></tr>').join('')||'<tr><td colspan="9">조직원 정보가 없습니다.</td></tr>';
  }
  el('v-staff-search').addEventListener('input',renderStaff);
+ const branchSelector=el('v-staff-branch');
+ branchSelector.innerHTML='<option value="all">전체 지사</option>'+['부산권역',...branches].map(b=>'<option value="'+safe(b)+'">'+safe(b)+'</option>').join('');
+ if(assignedBranch&&branches.includes(assignedBranch))branchSelector.value=assignedBranch;
+ branchSelector.addEventListener('change',renderStaff);
+ el('v-staff-status').addEventListener('change',()=>{el('v-staff-status').value='all';});
  function refresh(){if(active==='yearboard')renderYear();if(active==='personal')renderPersonal();}
  return {refresh,refreshOrganization};
 }
