@@ -18,7 +18,7 @@ h1{font-size:25px;margin:6px 0 9px}.eyebrow{font-size:12px;font-weight:800;color
 .panel h2{font-size:18px;margin:0}.panel p{font-size:12px;color:var(--muted);line-height:1.7}
 .toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .filters{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.filters label{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700}
-select{border:1px solid #d0dded;border-radius:8px;background:white;padding:9px;max-width:200px}
+input[type="search"]{border:1px solid #d0dded;border-radius:8px;background:white;padding:9px;min-width:145px;max-width:220px;font:inherit}select{border:1px solid #d0dded;border-radius:8px;background:white;padding:9px;max-width:200px}
 .table-wrap{overflow:auto;border:1px solid #d2ddec;border-radius:9px;margin-top:18px}
 table{border-collapse:separate;border-spacing:0;min-width:100%;font-size:12px;table-layout:fixed}
 th,td{padding:9px 8px;text-align:center;border-right:1px solid #d7e0ec;border-bottom:1px solid #d7e0ec;white-space:nowrap}
@@ -47,9 +47,9 @@ th{background:#edf2fa;font-weight:750}td{background:white}td:last-child,th:last-
 <p>합계는 1~12월, 현재 월까지 합계는 조회연도 중 현재 월까지의 누계입니다. 실적은 개인별 수동값 및 가입일자 기준으로 자동 반영됩니다.</p>
 <div class="table-wrap"><table class="matrix"><thead id="yearHead"></thead><tbody id="yearBody"></tbody></table></div></section>
 <section id="personal" class="panel hidden"><div class="toolbar"><h2>개인별 월간 구좌 실적</h2>
-<div class="filters"><label>조회 연도 <select id="personalYear"></select></label><label>지사 <select id="personalBranch"></select></label><label>본부 <select id="personalDivision"></select></label></div></div>
+<div class="filters"><label>조회 연도 <select id="personalYear"></select></label><label>지사 <select id="personalBranch"></select></label><label>본부 <select id="personalDivision"></select></label><label>이름 조회 <input id="personalNameSearch" type="search" placeholder="내 이름 검색" aria-label="매니저 이름 조회" autocomplete="off"></label></div></div>
 <p>개인별 구좌와 합계만 표시합니다. 재직/계약해지 모두 실적에 합산되며 매출 항목은 없습니다.</p>
 <div class="table-wrap"><table class="personal"><thead id="personalHead"></thead><tbody id="personalBody"></tbody><tfoot id="personalFoot"></tfoot></table></div></section>
-<section id="org" class="panel hidden"><div class="toolbar"><h2>부산권역 조직도</h2><span class="org-count" id="orgCount"></span></div>
+<section id="org" class="panel hidden"><div class="toolbar"><h2>부산권역 조직도</h2><span class="org-count" id="orgCount"></span></div><div id="orgHeadcount" class="notice" aria-label="조직 인원 현황"></div>
 <p>지사·본부·소속 인원을 조회만 할 수 있습니다. 인사 연락처 및 수정 기능은 제공하지 않습니다.</p><div id="orgTree"></div></section>
-</main></div><script src="./config.js"></script><script type="module" src="./manager_viewer.js?v=20261113-org-hierarchy"></script></body></html>
+</main></div><script src="./config.js"></script><script type="module" src="./manager_viewer.js?v=20261113-name-search-dual-duty"></script></body></html>
