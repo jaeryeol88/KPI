@@ -90,9 +90,9 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
  .v-org-scroll{overflow-x:auto;padding:22px 14px;background:#fafcff;border:1px solid #dce5f2;border-radius:14px}
  .v-org-card{font-family:inherit}
  .v-org-branch-heading{box-sizing:border-box}
- .v-org-card.root{background:linear-gradient(135deg,#1b56d5,#343b9c)!important;color:white!important;border-color:#406fd3!important}
- .v-org-card.division{background:linear-gradient(135deg,#1254d4,#3734a8)!important;color:white!important;border-color:#3663cc!important}
- .v-org-card.person{background:#fff;color:#122a47;border-color:#d5dfeb}
+ .v-org-card.root{min-width:260px;min-height:85px}
+ .v-org-card.division{min-width:103px}
+ .v-org-card.person{min-height:64px}
  .v-staff-filters{margin:8px 0 12px;gap:8px}
  .v-staff-filters input,.v-staff-filters select{border:1px solid #d4deec;border-radius:9px;padding:9px 12px;min-height:39px;background:white;max-width:220px;font:inherit;font-size:12px}
  .v-staff-table{border-collapse:collapse;min-width:1150px;width:100%;font-size:12px}
@@ -132,7 +132,7 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
  <section id="v-orgstaff" class="v-extra" hidden>
   <div class="v-extra-head"><div><h2>PACIFIC 부산권역 임직원 명단</h2><p>조직도에 등록된 전체 조직원 목록입니다. 개인정보 보호를 위해 연락처는 공개하지 않습니다.</p></div>
   <strong id="v-staff-count" style="background:#e9f1ff;color:#215ddd;border-radius:7px;padding:6px 10px;font-size:13px">총 0명</strong></div>
-  <div class="v-filters v-staff-filters"><input id="v-staff-search" placeholder="성명·직급·소속 검색" aria-label="조직원 검색" type="search"><select id="v-staff-branch" aria-label="지사별 검색"><option value="all">전체 지사</option></select><select id="v-staff-status" aria-label="재직상태"><option value="all">전체 재직상태</option><option value="재직">재직</option><option value="휴직">휴직</option><option value="퇴사">퇴사</option></select></div>
+  <div class="v-filters v-staff-filters"><input id="v-staff-search" placeholder="성명·직급·소속 검색" aria-label="조직원 검색" type="search"><select id="v-staff-branch" aria-label="지사별 검색"><option value="all">전체 지사</option></select><select id="v-staff-status" aria-label="재직상태 (비공개)" disabled title="재직 상태는 관리자에게만 공개됩니다"><option value="all">재직상태 비공개</option></select></div>
   <div class="v-table-scroll"><table class="v-table v-staff-table" style="min-width:1150px"><thead><tr><th>No.</th><th>성명</th><th>직급</th><th>소속 지사</th><th>소속 본부/부서</th><th>연락처</th><th>입사년월</th><th>재직상태</th><th>관리</th></tr></thead><tbody id="v-staff-body"></tbody></table></div>
   <p class="v-note">관리자 화면과 동일한 조직원 목록입니다. 연락처와 재직상태는 개인정보 보호를 위해 공개하지 않으며, 수정 권한은 관리자에게만 있습니다.</p>
  </section>`;
@@ -326,7 +326,7 @@ el('v-months').addEventListener('change',e=>{
  branchSelector.innerHTML='<option value="all">전체 지사</option>'+['부산권역',...branches].map(b=>'<option value="'+safe(b)+'">'+safe(b)+'</option>').join('');
  if(assignedBranch&&branches.includes(assignedBranch))branchSelector.value=assignedBranch;
  branchSelector.addEventListener('change',renderStaff);
- el('v-staff-status').addEventListener('change',()=>{el('v-staff-status').value='all';});
+
  function refresh(){if(active==='yearboard')renderYear();if(active==='personal')renderPersonal();}
  return {refresh,refreshOrganization};
 }
