@@ -15,6 +15,9 @@ const normalizeDivision=value=>{const v=String(value||'').trim();const m=v.match
 let events=[],history=[],branchTargets=[],divisionTargets=[],orgNodes=[],signedRows=[];
 let currentYear=new Date().getFullYear(),currentBranch='all',yearHighlight=new Date().getMonth()+1,individualYear=currentYear,individualBranch='all',individualDivision='all',individualName='',individualSelectedMonths=new Set(),staffBranch='all',staffQuery='';
 const cache=new Map();
+let phoneDb=null,phoneAuthenticated=false,pendingPhoneId=null;
+let staffStatuses=new Map(),staffStatusAvailable=false;
+const phoneCache=new Map(),revealedPhones=new Set();
 const choices=(node,options,value)=>{node.innerHTML=options.map(([id,label])=>'<option value="'+safe(id)+'">'+safe(label)+'</option>').join('');node.value=String(value);};
 const allYears=()=>[...new Set([new Date().getFullYear(),...signedRows.map(r=>Number(r.goal_year)),...history.map(r=>Number(r.goal_year)),...branchTargets.map(r=>Number(r.goal_year)),...divisionTargets.map(r=>Number(r.goal_year))])].filter(y=>y>=2020&&y<=2100).sort((a,b)=>b-a);
 function goal(branch,year,month,division='all'){
@@ -138,26 +141,131 @@ function drawOrg(){
  el('orgTree').innerHTML=roots.map(root).join('')||'<p class="org-empty">등록된 조직도가 없습니다.</p>';
  requestAnimationFrame(()=>drawOrgConnectorLines(el('orgTree'),'admin'));
 }
-function drawStaff(){
- choices(el('staffBranch'),[['all','전체 지사'],...branches.map(b=>[b,b])],staffBranch);
- const roster=rosterPerformancePeople(orgNodes.filter(n=>n&&n.staffHidden!==true)).filter(p=>branches.includes(p.branch));
- const roleNames={regional:'권역대표',branch:'지사장',division:'본부장',manager:'매니저'};
- const nodes=orgNodes.filter(n=>n&&n.staffHidden!==true);
- const nameToRole=new Map();
- for(const n of nodes){
-  const name=String(n.label||'').trim(),title=String(n.subtitle||'').trim(),role=roleNames[n.headcountRole]||([...'지사장,본부장,매니저,권역대표'.split(',')].find(v=>title.includes(v))||'');
-  if(name&&role)nameToRole.set(name,role);
- }
- const filtered=roster.filter(p=>(staffBranch==='all'||p.branch===staffBranch)&&
-  (!staffQuery||(p.name+' '+p.branch+' '+p.division).replace(/\s+/g,'').includes(staffQuery.replace(/\s+/g,''))));
- filtered.sort((a,b)=>a.branch.localeCompare(b.branch,'ko')||a.division.localeCompare(b.division,'ko')||a.name.localeCompare(b.name,'ko'));
- el('staffCount').textContent='총 '+fmt(filtered.length)+'명';
- el('staffBody').innerHTML=filtered.length?filtered.map((p,i)=>{
-  const role=nameToRole.get(p.name)||'';
-  const dual=/\(\s*겸직\s*\)/.test(p.name+' '+role);
-  return '<tr><td>'+(i+1)+'</td><td><strong>'+safe(p.name)+'</strong></td><td>'+safe(role)+'</td><td>'+safe(p.branch)+'</td><td>'+safe(p.division)+'</td><td>'+(dual?'겸직':'—')+'</td></tr>';
- }).join(''):'<tr><td colspan="6">조회 가능한 조직원이 없습니다.</td></tr>';
+function staffRows(){
+ const list=orgNodes.filter(n=>n&&n.staffHidden!==true);
+ const byId=new Map(list.map(n=>[String(n.id),n]));
+ const roles={regional:'권역대표',branch:'지사장',division:'본부장',manager:'매니저'};
+ const placeholders=new Set(['구성원','새 구성원','이름 미입력','최상위 조직','새 지사 / 부서','새 본부 / 팀','지사장 / 담당자 입력']);
+ const roleOf=n=>{
+  if(Object.prototype.hasOwnProperty.call(n,'headcountRole'))return roles[n.headcountRole]?n.headcountRole:'';
+  if(n.type!=='person')return '';
+  const v=String(n.subtitle||'').replace(/\s+/g,'');
+  return Object.keys(roles).find(k=>v.includes(roles[k]))||'';
+ };
+ const hired=value=>{
+  const v=String(value||'').trim(),current=/^([0-9]{2})[.](0[1-9]|1[0-2])$/.exec(v);
+  if(current)return current[1]+'.'+current[2];
+  const legacy=/^([0-9]{4})-(0[1-9]|1[0-2])/.exec(v);
+  return legacy?legacy[1].slice(-2)+'.'+legacy[2]:'';
+ };
+ const orgBranch=n=>{
+  const v=String(n.branchName||n.label||'').trim(),m=v.match(/부산\s*([1-4])\s*지사/);
+  return m?'부산 '+m[1]+'지사':v;
+ };
+ return list.filter(n=>{
+  if(!['person','division','root','group'].includes(n.type))return false;
+  const label=String(n.label||'').trim();
+  return label&&!placeholders.has(label)&&n.type!=='group'&&(n.type==='person'||Boolean(roleOf(n)));
+ }).map(n=>{
+  let current=n,branch='',division='',depth=0;
+  while(current&&depth++<16){
+   if(current.type==='division')division=String(current.label||division);
+   if(current.type==='group')branch=orgBranch(current);
+   if(current.type==='root'&&!branch)branch='부산권역';
+   current=current.parent==null?null:byId.get(String(current.parent));
+  }
+  const role=roleOf(n);
+  const key=String(n.staffContactId||n.id);
+  const status=staffStatuses.get(key)||(staffStatusAvailable?'재직':'—');
+  return {id:String(n.id),name:String(n.label||''),role:roles[role]||n.subtitle||'미지정',branch,division,
+   hire:hired(n.joinDate),status};
+ }).sort((a,b)=>(['부산권역',...branches].indexOf(a.branch)-['부산권역',...branches].indexOf(b.branch))||
+   a.division.localeCompare(b.division,'ko')||a.name.localeCompare(b.name,'ko'));
 }
+function drawStaff(){
+ choices(el('staffBranch'),[['all','전체 지사'],['부산권역','부산권역'],...branches.map(b=>[b,b])],staffBranch);
+ const all=staffRows();
+ const query=staffQuery.toLocaleLowerCase('ko');
+ const statusFilter=el('staffStatusFilter').value;
+ const filtered=all.filter(r=>(staffBranch==='all'||r.branch===staffBranch)&&
+  (statusFilter==='all'||r.status===statusFilter)&&
+  (!query||[r.name,r.role,r.branch,r.division].join(' ').toLocaleLowerCase('ko').includes(query)));
+ el('staffCount').textContent='총 '+fmt(all.length)+'명';
+ el('staffMessage').textContent=phoneAuthenticated?
+  '연락처 조회 권한 확인 완료 · 번호를 더블클릭하면 표시됩니다. 드래그로도 선택하여 볼 수 있습니다.':
+  '연락처는 비공개 상태입니다. 더블클릭 또는 드래그 후 권한 있는 계정으로 인증하면 표시됩니다.';
+ el('staffPhoneLogout').hidden=!phoneAuthenticated;
+ el('staffBody').innerHTML=filtered.length?filtered.map((r,i)=>{
+  const st=r.status==='휴직'?' leave':r.status==='퇴사'?' left':'';
+  const number=phoneCache.get(r.id)||'';
+  const show=phoneAuthenticated&&revealedPhones.has(r.id)&&Boolean(number);
+  const phoneHtml=phoneAuthenticated&&phoneCache.has(r.id)?
+   '<span tabindex="0" class="staff-phone '+(show?'visible':'concealed')+'" title="더블클릭하거나 드래그하여 번호 표시" data-phone-id="'+safe(r.id)+'">'+safe(number||'—')+'</span>':
+   '<span tabindex="0" class="staff-phone locked" title="더블클릭하여 연락처 열람 인증" data-phone-id="'+safe(r.id)+'">•••-••••-••••</span>';
+  return '<tr><td class="staff-num">'+(i+1)+'</td><td class="staff-name">'+safe(r.name)+'</td>'+
+   '<td><span class="staff-pill">'+safe(r.role)+'</span></td><td>'+safe(r.branch||'—')+'</td>'+
+   '<td>'+safe(r.division||'—')+'</td><td>'+phoneHtml+'</td><td>'+safe(r.hire||'—')+'</td>'+
+   '<td><span class="staff-status'+st+'">'+safe(r.status)+'</span></td><td>—</td></tr>';
+ }).join(''):'<tr><td colspan="9">조회 가능한 조직원이 없습니다.</td></tr>';
+}
+function promptPhoneLogin(nodeId){
+ pendingPhoneId=nodeId;
+ el('staffPhoneError').textContent='';
+ el('staffPhonePassword').value='';
+ const dlg=el('staffPhoneDialog');
+ if(!dlg.open)dlg.showModal();
+}
+async function requestPhone(nodeId){
+ if(!phoneAuthenticated||!phoneDb){promptPhoneLogin(nodeId);return;}
+ if(!phoneCache.has(nodeId)){
+  const {data,error}=await phoneDb.rpc('kpi_manager_staff_phone',{p_node_id:nodeId});
+  if(error)throw error;
+  phoneCache.set(nodeId,typeof data==='string'?data:'');
+ }
+ revealedPhones.add(nodeId);
+ drawStaff();
+ const span=[...el('staffBody').querySelectorAll('[data-phone-id]')].find(n=>n.dataset.phoneId===nodeId);
+ if(span)span.focus({preventScroll:true});
+}
+el('staffBody').addEventListener('dblclick',async e=>{
+ const span=e.target.closest('[data-phone-id]');if(!span)return;
+ const nodeId=span.dataset.phoneId;
+ try{await requestPhone(nodeId);}catch(error){el('staffMessage').textContent='연락처 조회 실패: '+(error.message||'권한 확인 필요');}
+});
+el('staffBody').addEventListener('mouseup',async e=>{
+ const span=e.target.closest('[data-phone-id]');if(!span)return;
+ if(!window.getSelection()?.toString().trim())return;
+ try{await requestPhone(span.dataset.phoneId);}catch(error){el('staffMessage').textContent='연락처 조회 실패: '+(error.message||'권한 확인 필요');}
+});
+el('staffPhoneCancel').addEventListener('click',()=>el('staffPhoneDialog').close());
+el('staffPhoneLogin').addEventListener('submit',async e=>{
+ e.preventDefault();
+ if(!phoneDb||!pendingPhoneId)return;
+ const button=el('staffPhoneLoginButton');
+ button.disabled=true;
+ el('staffPhoneError').textContent='';
+ try{
+  const email=el('staffPhoneEmail').value.trim(),password=el('staffPhonePassword').value;
+  const {error}=await phoneDb.auth.signInWithPassword({email,password});
+  if(error)throw error;
+  phoneAuthenticated=true;
+  await requestPhone(pendingPhoneId);
+  el('staffPhoneDialog').close();
+  pendingPhoneId=null;
+  el('staffPhonePassword').value='';
+ }catch(error){
+  phoneAuthenticated=false;
+  phoneCache.clear();revealedPhones.clear();
+  await phoneDb.auth.signOut();
+  el('staffPhoneError').textContent='인증 또는 연락처 조회 실패: '+(error.message||'관리자에게 권한 확인을 요청하세요.');
+  drawStaff();
+ }finally{button.disabled=false;}
+});
+el('staffPhoneLogout').addEventListener('click',async()=>{
+ if(phoneDb)await phoneDb.auth.signOut();
+ phoneAuthenticated=false;phoneCache.clear();revealedPhones.clear();
+ drawStaff();
+});
 function showPage(page){
  const titles={year:'지사별 / 본부별 실적현황',personal:'개인별 실적현황',org:'조직도',orgstaff:'조직원 정보'};
  for(const p of Object.keys(titles))el(p).classList.toggle('hidden',p!==page);
@@ -174,6 +282,7 @@ el('personalBranch').addEventListener('change',e=>{individualBranch=e.target.val
 el('personalDivision').addEventListener('change',e=>{individualDivision=e.target.value;drawPersonal()});
 el('staffBranch').addEventListener('change',e=>{staffBranch=e.target.value;drawStaff();});
 el('staffSearch').addEventListener('input',e=>{staffQuery=e.target.value.trim();drawStaff();});
+el('staffStatusFilter').addEventListener('change',drawStaff);
 el('personalNameSearch').addEventListener('input',e=>{individualName=String(e.target.value||'').trim();drawPersonal()});
 el('personalMonthButtons').addEventListener('click',e=>{if(e.target.closest('[data-personal-all]')){individualSelectedMonths.clear();drawPersonal();}});
 el('personalMonthButtons').addEventListener('change',e=>{const input=e.target.closest('input[data-personal-month]');if(!input)return;const m=Number(input.dataset.personalMonth);if(input.checked)individualSelectedMonths.add(m);else individualSelectedMonths.delete(m);if(individualSelectedMonths.size===12)individualSelectedMonths.clear();drawPersonal();});
@@ -193,6 +302,7 @@ async function main(){
   const cfg=window.PLK_CONFIG||{};
   if(!/^https:\/\/[^/]+\.supabase\.co\/?$/.test(cfg.supabaseUrl||'')||!cfg.supabaseAnonKey)throw Error('Supabase 공개 연결 설정이 없습니다.');
   const db=createClient(cfg.supabaseUrl,cfg.supabaseAnonKey,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});
+  phoneDb=db;
   const [signups,historic,targets,divisionGoals,organization]=await Promise.all([
    readPages((from,to)=>db.rpc('kpi_manager_performance_signups').range(from,to)),
    readPages((from,to)=>db.from('kpi_historical_seats').select('branch,division,manager,goal_year,goal_month,target_seats,actual_seats,employment_status').range(from,to)),
@@ -209,7 +319,15 @@ async function main(){
    signupDate:String(r.goal_year)+'-'+String(r.goal_month).padStart(2,'0')+'-01'
   }]}));
   cache.clear();showPage('year');
-  el('status').textContent='온라인 실적 연동 완료 · 읽기 전용 · 매출/비용/연락처 데이터를 요청하지 않습니다.';
+  el('status').textContent='온라인 실적 연동 완료 · 읽기 전용 · 매출·비용 비공개 · 연락처는 권한 인증 후 개별 조회';
+  try{
+   const {data,error}=await db.from('kpi_org_staff_public_status').select('node_id,employment_status').limit(1000);
+   if(error)throw error;
+   staffStatuses=new Map((data||[]).filter(r=>r.node_id&&['재직','휴직','퇴사'].includes(r.employment_status))
+    .map(r=>[String(r.node_id),r.employment_status]));
+   staffStatusAvailable=true;
+  }catch(error){staffStatusAvailable=false;console.warn('공개 재직상태 조회 설정 확인 필요',error);}
+  if(!el('orgstaff').classList.contains('hidden'))drawStaff();
  }catch(error){
   el('status').classList.add('err');
   el('status').textContent='조회 설정 확인이 필요합니다: '+(error.message||'연결 오류')+' · Supabase SQL Editor에서 manager_viewer_setup.sql을 실행했는지 확인해 주세요.';
