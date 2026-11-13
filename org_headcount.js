@@ -3,7 +3,7 @@
  * annotation in the name/title for legacy records). Never infer a dual duty
  * assignment merely from an employee name.
  */
-export const ORG_ROLE_LABELS=Object.freeze({regional:'권역대표',branch:'지사장',division:'본부장',manager:'매니저',dual:'겸직'});
+export const ORG_ROLE_LABELS=Object.freeze({regional:'권역대표',branch:'지사장',division:'본부장',manager:'매니저',dual:'본부장 겸직'});
 const PLACEHOLDERS=new Set(['구성원','새 구성원','이름 미입력','최상위 조직','새 지사 / 부서','새 본부 / 팀','지사장 / 담당자 입력']);
 const DUAL_MARK=/[（(]?\s*겸\s*직\s*[)）]?/;
 export function orgEffectiveRoleShared(node){
