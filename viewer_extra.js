@@ -202,7 +202,8 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
   el('v-year-body').innerHTML=matrix.body;
   const total=selected.reduce((sum,b)=>sum+months.reduce((subtotal,m)=>subtotal+actual(b,year,m),0),0);
   el('v-year-note').textContent=year+'년 · '+(yearBranch==='all'?'전체 지사':yearBranch)+
-   ' · 목표: 회사 배정 DB / 실적: 온라인 등록 내역 (담당 지사·본부 기준) · 미배정 목표는 — 표시 · 가입일자 기준 집계 · 가입일 미입력 건 제외 · 합계 달성률은 연간 실적 ÷ 연간 배정 목표입니다. · 전체 '+fmt(total)+'구좌';
+   ' · 목표: 회사 배정 DB / 실적: 온라인 등록 내역 (담당 지사·본부 기준) · 미배정 목표는 — 표시 · 실제 가입일자 기준 · 합계 달성률은 연간 실적 ÷ 연간 배정 목표입니다. · 전체 '+fmt(total)+'구좌'+
+   (undatedSignupStats(getAllEvents()).records?' · 가입일 미입력 '+undatedSignupStats(getAllEvents()).records+'건 ('+fmt(undatedSignupStats(getAllEvents()).seats)+'구좌) 제외':'');
  }
  el('v-year').addEventListener('change',e=>{year=Number(e.target.value);renderYear()});
  el('v-year-branch').addEventListener('change',e=>{yearBranch=e.target.value;renderYear()});
@@ -249,7 +250,8 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
   else body='<tr><td colspan="'+(shown.length+4+(showTotal?1:0)+(oneMonth?3:0))+'">선택한 기간의 등록된 가입 실적이 없습니다.</td></tr>';
   el('v-person-body').innerHTML=body;
   el('v-person-body').onclick=e=>{const button=e.target.closest('[data-personal-revenue]');if(!button)return;const info=revenueActions.get(button.dataset.personalRevenue);if(info)showRevenueDetail(info.name,info.period,info.seats,info.revenue)};
-  el('v-person-note').textContent=pyear+'년 '+(full?'전체(1~12월)':shown.map(m=>m+'월').join('·'))+' · 부산 1~4지사 · '+rows.length+'명/소속 · '+fmt(total)+'구좌 · 실제 가입일자 기준 · 가입일 미입력 건 제외 · 동일 성명이라도 지사 또는 본부가 다르면 별도 집계합니다.';
+  el('v-person-note').textContent=pyear+'년 '+(full?'전체(1~12월)':shown.map(m=>m+'월').join('·'))+' · 부산 1~4지사 · '+rows.length+'명/소속 · '+fmt(total)+'구좌 · 실제 가입일자 기준 · 동일 성명이라도 지사 또는 본부가 다르면 별도 집계합니다.'+
+  (undatedSignupStats(getAllEvents()).records?' · 가입일 미입력 '+undatedSignupStats(getAllEvents()).records+'건 ('+fmt(undatedSignupStats(getAllEvents()).seats)+'구좌) 집계 제외':'');
  }
  el('v-pyear').addEventListener('change',e=>{pyear=Number(e.target.value);renderPersonal()});
  el('v-pbranch').addEventListener('change',e=>{pbranch=e.target.value;renderPersonal()});
