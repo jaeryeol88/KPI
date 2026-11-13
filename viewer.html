@@ -504,6 +504,7 @@ function renderCoreGoalKpi(filteredEvents){
  const possibleYears=[...new Set([
   ...monthlyTargets.map(t=>Number(t.goal_year)),
   ...monthlyDivisionTargets.map(t=>Number(t.goal_year)),
+  ...monthlyHistoricalSeats.map(t=>Number(t.goal_year)),
   ...allViewerEvents.flatMap(e=>timedSignupRows(e).map(r=>Number(r.signupDate.slice(0,4))))
  ].filter(y=>Number.isInteger(y)&&y>=2020&&y<=2100))];
  const years=yearFilter.size?[...yearFilter].map(Number):possibleYears;
@@ -516,7 +517,9 @@ function renderCoreGoalKpi(filteredEvents){
    if(value!==null)goal+=value;
   }
  }
- const achieved=signupSeatsForPeriod(allViewerEvents.filter(e=>multiMatch('type',e.type)),{years,months,branches,divisions:divisions.length===1&&divisions[0]==='all'?null:divisions,normalizeDivision});
+ const achieved=multiValues.type.size
+  ? signupSeatsForPeriod(allViewerEvents.filter(e=>multiMatch('type',e.type)),{years,months,branches,divisions:divisions.length===1&&divisions[0]==='all'?null:divisions,normalizeDivision})
+  : branches.reduce((sum,b)=>sum+years.reduce((ys,y)=>ys+months.reduce((ms,m)=>ms+divisions.reduce((ds,d)=>ds+monthlyActual(b,y,m,d),0),0),0);
  const percent=goal>0?(achieved/goal*100).toFixed(1)+'%':'—';
  const isYear=monthFilter.size===0;
  const scope=isYear?(yearFilter.size===1?'연간':yearFilter.size===0?'전체 기간':'선택 연도 합산'):(monthFilter.size===1?'월간':'선택 월 합산');
@@ -524,6 +527,10 @@ function renderCoreGoalKpi(filteredEvents){
  const periodName=(yearFilter.size===1?[...yearFilter][0]+'년 ':yearFilter.size===0?'전체 연도 ':'선택 연도 ')+(isYear?'전체 월':monthFilter.size===1?Number([...monthFilter][0])+'월':'선택 월');
  const branchName=fixed||(branches.length===1?branches[0]:'부산권역 전체');
  const divisionName=divisions.length===1&&divisions[0]!=='all'?' · '+divisions[0]:'';
+ if(!multiValues.type.size){
+  el('mAchievedSeats').textContent=fmt(achieved)+'구좌';
+  el('mAchievedSeatsSub').textContent='실제 가입일 및 과거 직접입력 실적 반영';
+ }
  el('mGoalSeats').textContent=fmt(goal)+'구좌';
  el('mGoalSeatsSub').textContent=periodName+' · '+branchName+divisionName;
  el('mRate').textContent=percent;
