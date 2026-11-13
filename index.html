@@ -1359,7 +1359,7 @@ function renderMonthlySignupReport(){
    if(fixed&&branch!==fixed)continue;
    const y=Number(signupDate.slice(0,4)),m=Number(signupDate.slice(5,7));
    const amounts=row.paymentType==='installment'&&Array.isArray(row.installmentAmounts)&&row.installmentAmounts.length?row.installmentAmounts:[Number(row.revenue)||0];
-   all.push({signupDate,branch,division,manager:row.manager||'',product:row.product||'',memberName:row.memberName||'',seats:Number(row.seats)||0,fee:Number(row.annualFee)||0,revenue:Number(amounts[0])||0,payYear:y,payMonth:m,installment:row.paymentType==='installment',sequence:1});
+   all.push({signupDate,branch,division,manager:row.manager||'',product:row.product||'',memberName:row.memberName||'',seats:Number(row.seats)||0,fee:Number(row.annualFee)||0,revenue:Number(amounts[0])||0,payYear:y,payMonth:m,installment:row.paymentType==='installment',installmentMonths:Number(row.installmentMonths)||amounts.length,sequence:1});
    if(row.paymentType==='installment')amounts.slice(1).forEach((amount,i)=>{const offset=i+1;prior.push({signupDate,branch,division,manager:row.manager||'',product:row.product||'',memberName:row.memberName||'',seats:0,fee:0,revenue:Number(amount)||0,payYear:y+Math.floor((m-1+offset)/12),payMonth:(m-1+offset)%12+1,installment:true,sequence:offset+1});});
   }
  }
@@ -1377,7 +1377,7 @@ function renderMonthlySignupReport(){
  const sum=k=>rows.reduce((n,x)=>n+x[k],0);
  const summary=el('signupReportSummary');
  summary.innerHTML='<div><span>해당 월 구좌</span><strong>'+fmt(sum('seats'))+'구좌</strong></div><div><span>입회금</span><strong>'+won(sum('revenue'))+'</strong></div><div><span>연회비</span><strong>'+won(sum('fee'))+'</strong></div><div><span>총 매출</span><strong>'+won(sum('revenue')+sum('fee'))+'</strong></div>';
- body.innerHTML=rows.length?rows.map(x=>'<tr><td>'+esc(x.signupDate)+'</td><td>'+esc(x.branch||'—')+'</td><td>'+esc(x.division||'—')+'</td><td>'+esc(x.manager||'—')+'</td><td>'+esc(x.product||'—')+(x.installment?'<small class="signup-report-badge">'+x.sequence+'회차 분납</small>':'')+'</td><td class="num">'+fmt(x.seats)+'</td><td class="num">'+won(x.revenue)+'</td><td class="num">'+won(x.fee)+'</td><td class="num strong">'+won(x.revenue+x.fee)+'</td><td>'+esc(x.memberName||'—')+'</td></tr>').join(''):'<tr><td colspan="10" class="signup-report-empty">선택한 월에 등록된 입회 또는 분납 내역이 없습니다.</td></tr>';
+ body.innerHTML=rows.length?rows.map(x=>'<tr><td>'+esc(x.signupDate)+'</td><td>'+esc(x.branch||'—')+'</td><td>'+esc(x.division||'—')+'</td><td>'+esc(x.manager||'—')+'</td><td>'+esc(x.product||'—')+'<small class="signup-report-badge">'+(x.installment?fmt(x.installmentMonths)+'개월 분납':'완납')+'</small>'+'</td><td class="num">'+fmt(x.seats)+'</td><td class="num">'+won(x.revenue)+'</td><td class="num">'+won(x.fee)+'</td><td class="num strong">'+won(x.revenue+x.fee)+'</td><td>'+esc(x.memberName||'—')+'</td></tr>').join(''):'<tr><td colspan="10" class="signup-report-empty">선택한 월에 등록된 입회 또는 분납 내역이 없습니다.</td></tr>';
  el('signupReportNote').textContent='총 '+fmt(rows.length)+'건의 해당 월 신규 가입 기록 · 분납 건은 가입월 1회차 금액만 반영합니다.';
  const priorRows=prior.filter(x=>x.payYear===signupReportYear&&x.payMonth===signupReportMonth&&(signupReportBranch==='all'||x.branch===signupReportBranch)&&(signupReportDivision==='all'||x.division===signupReportDivision)).sort((a,b)=>b.signupDate.localeCompare(a.signupDate)||a.manager.localeCompare(b.manager,'ko'));
  const priorSum=priorRows.reduce((n,x)=>n+x.revenue,0);
