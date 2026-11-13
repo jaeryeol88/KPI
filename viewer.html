@@ -818,11 +818,15 @@ el('mAchievedSeats').textContent=fmt(done)+'구좌';el('mAchievedSeatsSub').text
 el('sDone').textContent=fmt(done)+'구좌';el('sCorporate').textContent=fmt(corporate)+'구좌';el('sIndividual').textContent=fmt(individual)+'구좌';el('sCorporateProducts').innerHTML=productBreakdown(a.map(scopedProducts),'corporate');el('sIndividualProducts').innerHTML=productBreakdown(a.map(scopedProducts),'individual');
 el('sCpa').textContent=done?won(cost/done):'—';el('sPerson').textContent=people?won(cost/people):'—';el('count').textContent=fmt(count)+'건';
 el('rows').innerHTML=a.length?a.map(x=>`<tr data-record-id="${esc(x.id)}" tabindex="0" aria-label="${esc(x.name)} 상세보기"><td><button type="button" class="event-link" data-view="${esc(x.id)}" title="해당 행사 KPI 보기">${esc(x.name)}</button><small>${esc(x.place||'장소 미입력')}${x.memo?' · '+esc(x.memo):''}</small></td><td>${esc(eventAssignedBranches(x).join(' / ')||'미지정')}<small>${esc(eventAssignedDivisions(x).join(' / ')||'본부 미지정')}</small></td><td>${esc(x.date)}</td><td>${esc(x.type)}</td><td class="event-attendance-only" hidden><strong>${fmt(x.attendees)}명</strong><small>${classified(x.members,x.nonMembers)?'회원 '+fmt(x.members)+' / 비회원 '+fmt(x.nonMembers):'회원/비회원 미분류'}</small></td><td><strong>${won(x.cost)}</strong><small>${complete(x,costFields)?'대관 '+won(x.venueCost)+' / 식음 '+won(x.foodCost):'상세 미분류'}</small>${complete(x,costFields)?'<small>시상품 '+won(x.prizeCost)+' / 기타 '+won(x.otherCost)+'</small>':''}</td><td><strong>${known(x.eventIncome)?won(x.eventIncome):'미입력'}</strong></td><td><strong>${complete(x,revenueFields)?won(x.corporateRevenue+x.individualRevenue):'미입력'}</strong><small>${complete(x,revenueFields)?'법인 '+won(x.corporateRevenue)+' / 개인 '+won(x.individualRevenue):'매출 미입력'}</small><small style="color:#285e9b;font-weight:600;white-space:normal;max-width:250px">${[...(Array.isArray(x.corporateProducts)?x.corporateProducts:[]),...(Array.isArray(x.individualProducts)?x.individualProducts:[])].length?esc([...(Array.isArray(x.corporateProducts)?x.corporateProducts:[]),...(Array.isArray(x.individualProducts)?x.individualProducts:[])].join(' / ')):'상품 미선택'} · 연회비 ${known(x.annualFee)?won(x.annualFee):'미입력'}</small></td><td><strong>${known(x.annualFee)?won(x.annualFee):'미입력'}</strong></td><td>${complete(x,revenueFields)?profitText(x.corporateRevenue+x.individualRevenue+(known(x.eventIncome)?x.eventIncome:0)+(known(x.annualFee)?x.annualFee:0)-x.cost):'—'}</td><td class="event-goal-only" hidden>${fmt(x.goal)}</td><td><strong>${fmt(scopedSignupMetric(x,'corporate')+scopedSignupMetric(x,'individual'))}구좌</strong><small>${classified(x.corporate,x.individual)?'법인 '+fmt(x.corporate)+' / 개인 '+fmt(x.individual):'법인/개인 미분류'}</small></td><td class="event-goal-only" hidden><span class="pill ${x.goal>0&&(x.done/x.goal>=1)?'good':x.goal>0&&x.done/x.goal<.5?'low':''}">${rate(x.goal,x.done)}</span></td><td class="event-attendance-only" hidden><strong>${signupRate(x)}</strong><small>${signupCount(x)===null?'법인/개인 구분 미입력':fmt(signupCount(x))+'건 / '+fmt(x.attendees)+'명'}</small></td></tr>`).join(''):'<tr><td colspan="${10+(showAttendanceMetrics()?4:0)}" class="empty">공개된 행사 데이터가 없습니다.</td></tr>';
-renderMonthlyGoals();
-renderCoreGoalKpi(a);
-const signupPeriodEvents=items.filter(event=>multiMatch('type',event.type));
-renderManagerStats(signupPeriodEvents);
-renderProductBranchStats(signupPeriodEvents);
+// Independent sections: a KPI calculation error must not hide registration records.
+for(const [section,run] of [
+ ['월별·연간 목표',()=>renderMonthlyGoals()],
+ ['상단 목표·달성률',()=>renderCoreGoalKpi(a)],
+ ['매니저별 실적',()=>renderManagerStats(items.filter(event=>multiMatch('type',event.type)))],
+ ['상품별 실적',()=>renderProductBranchStats(items.filter(event=>multiMatch('type',event.type)))]
+]){
+ try{run();}catch(error){console.error('뷰어 '+section+' 표시 오류',error);const n=el('status');if(n){n.textContent='일부 실적 계산 오류 ('+section+'): '+(error?.message||error)+' · 등록내역은 계속 표시됩니다.';n.classList.add('error');}}
+}
 const attendanceVisible=showAttendanceMetrics();
 document.querySelectorAll('.event-attendance-only').forEach(node=>{node.hidden=!attendanceVisible;}); document.querySelectorAll('.event-goal-only').forEach(node=>{node.hidden=!attendanceVisible;}); const resultsOnly=multiValues.type.size===1&&multiValues.type.has('실적등록'); document.querySelectorAll('.hide-for-results-only').forEach(node=>{node.hidden=resultsOnly;});
 
@@ -946,7 +950,7 @@ async function loadPublic(){
     allViewerEvents=rows.map(r=>({...r.event_data,id:r.id}));
     items=allViewerEvents.filter(x=>!assignedBranch||eventAssignedBranches(x).includes(assignedBranch));
     await loadMonthlyTargets();
-    render();
+    try{render();}catch(error){console.error('초기 뷰어 표시 오류',error);status('뷰어 초기 표시 오류: '+(error?.message||error),true);}
     try {
       const historic=[];
       for(let start=0;;start+=1000){
@@ -963,11 +967,11 @@ async function loadPublic(){
       }
       monthlyHistoricalSeats=historic;
       viewerExtras.setHistoricalSeats(historic,cancellations);
-      render();
+      try{render();}catch(renderError){console.error('과거 실적 반영 오류',renderError);}
     } catch(error) {
       monthlyHistoricalSeats=[];
       viewerExtras.setHistoricalSeats([]);
-      render();
+      try{render();}catch(renderError){console.error('실적 재표시 오류',renderError);}
       console.warn('과거 수동 구좌 조회를 위해 historical_seats_setup.sql 설정이 필요합니다.',error);
     }
     viewerExtras.refresh();
