@@ -98,18 +98,35 @@ function drawOrg(){
   const title=String(n.subtitle||'').replace(/\s+/g,'');
   return Object.keys(roles).find(role=>title.includes(roles[role]))||'';
  };
- const ignored=new Set(['구성원','새 구성원','이름 미입력','최상위 조직','새 지사 / 부서','새 본부 / 팀','지사장 / 담당자 입력']);
- const counts={regional:0,branch:0,division:0,manager:0,dual:0};
+ const placeholders=new Set(['구성원','새 구성원','이름 미입력','최상위 조직','새 지사 / 부서','새 본부 / 팀','지사장 / 담당자 입력']);
+ const countable=n=>{
+  const name=String(n.label||'').trim();
+  if(!name||placeholders.has(name)||['group','root'].includes(n.type))return false;
+  return n.type==='person'||Object.prototype.hasOwnProperty.call(n,'headcountRole');
+ };
+ const marked=/[（(]\s*겸\s*직\s*[)）]/;
+ const cleanName=value=>String(value||'').replace(/[（(]\s*겸\s*직\s*[)）]/g,'')
+  .replace(/부산\s*[1-4]\s*지사|권역대표|지사장|본부장|매니저/g,'').replace(/[^가-힣a-zA-Z]/g,'').trim();
+ const dualNames=new Set(),dualIds=new Set(),counts={regional:0,branch:0,division:0,manager:0,dual:0};
  for(const n of visible){
-  if(!['person','division'].includes(n.type)||n.type==='division'&&!Object.prototype.hasOwnProperty.call(n,'headcountRole'))continue;
-  const name=String(n.label||'').trim(),role=roleOf(n);
-  if(!name||ignored.has(name)||!role)continue;
-  if(/\(\s*겸직\s*\)/.test(String(n.label||'')+' '+String(n.subtitle||'')))counts.dual++;
-  else counts[role]++;
+  const label=String(n.label||''),subtitle=String(n.subtitle||'');
+  const leader=roleOf(n)==='branch'&&['박영우','안선경'].includes(cleanName(label));
+  if(leader||!marked.test(label+' '+subtitle))continue;
+  const personName=marked.test(label)?cleanName(label):cleanName(subtitle);
+  if(!personName||/^(구성원|새구성원|이름미입력)$/.test(personName))continue;
+  dualNames.add(personName);dualIds.add(String(n.id));
  }
- const countedTotal=counts.regional+counts.branch+counts.division+counts.manager;
+ counts.dual=dualNames.size;
+ for(const n of visible){
+  if(!countable(n))continue;
+  const name=cleanName(n.label);
+  if(dualIds.has(String(n.id))||(name&&dualNames.has(name)))continue;
+  const role=roleOf(n);
+  if(Object.prototype.hasOwnProperty.call(counts,role))counts[role]++;
+ }
+ const total=counts.regional+counts.branch+counts.division+counts.manager;
  el('orgCount').textContent='조직도 카드 기준 · 자동 집계';
- el('orgHeadcount').innerHTML=[...Object.entries(roles).map(([key,label])=>[label,counts[key]]),['겸직',counts.dual],['총인원',countedTotal]]
+ el('orgHeadcount').innerHTML=[...Object.entries(roles).map(([key,label])=>[label,counts[key]]),['겸직',counts.dual],['총인원',total]]
   .map(([label,n])=>'<div class="org-headcount-stat'+(label==='총인원'?' org-headcount-total':'')+'"><span>'+safe(label)+'</span><strong>'+fmt(n)+'명</strong></div>').join('');
  const children=new Map();
  for(const n of visible){const parent=n.parent==null?'':String(n.parent);if(!children.has(parent))children.set(parent,[]);children.get(parent).push(n);}
@@ -126,7 +143,10 @@ function drawOrg(){
   const m=/^([0-9]{2})[.](0[1-9]|1[0-2])$/.exec(date)||/^([0-9]{4})-(0[1-9]|1[0-2])/.exec(date);
   const joined=m?m[1].slice(-2)+'.'+m[2]:'';
   const join=['group','person'].includes(n.type)&&joined?'<small class="org-join-date">입사 '+safe(joined)+'</small>':'';
-  return '<button type="button" disabled class="org-node org-node-'+safe(n.type)+col+'">'+roleTag+'<strong>'+safe(n.label||'이름 미입력')+'</strong>'+sub+join+'</button>';
+  const rawName=String(n.label||'').trim();
+  const branchLeader=roleOf(n)==='branch'&&['박영우','안선경'].includes(cleanName(rawName));
+  const shownName=branchLeader?rawName.replace(/[（(]\s*겸\s*직\s*[)）]/g,'').trim():rawName;
+  return '<button type="button" disabled class="org-node org-node-'+safe(n.type)+col+'">'+roleTag+'<strong>'+safe(shownName||'이름 미입력')+'</strong>'+sub+join+'</button>';
  };
  const person=n=>'<div class="org-person">'+card(n)+'</div>';
  const division=n=>'<div class="org-unit-col">'+card(n)+'<div class="org-person-list">'+kids(n.id).filter(x=>x.type==='person').map(person).join('')+'</div></div>';
