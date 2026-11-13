@@ -205,7 +205,7 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
  const main=document.querySelector('main.main'),side=document.querySelector('.sidebar');
  const nav=document.createElement('nav');nav.className='v-nav';nav.setAttribute('aria-label','실적 조회 메뉴');
  nav.innerHTML='<button type="button" data-vpage="dashboard" class="active">▦ &nbsp; 실적관리</button><div class="v-parent">▤ &nbsp; 실적현황</div><button type="button" data-vpage="yearboard" class="v-child">지사별 / 본부별 실적현황</button><button type="button" data-vpage="personal" class="v-child">개인별 실적현황</button><div class="v-parent">♧ &nbsp; 조직관리</div><button type="button" data-vpage="org" class="v-child">조직도</button><button type="button" data-vpage="orgstaff" class="v-child">조직원 정보</button>';
- const oldNav=side.querySelector('.nav-item');if(oldNav)oldNav.replaceWith(nav);else side.insertBefore(nav,side.querySelector('.aside-note'));
+ const oldNav=side.querySelector('.viewer-sidebar-fallback')||side.querySelector('.nav-item');if(oldNav)oldNav.replaceWith(nav);else side.insertBefore(nav,side.querySelector('.aside-note'));
  const originals=[...main.children].filter(n=>n.tagName!=='HEADER'&&n.id!=='status');
  originals.forEach(n=>n.classList.add('v-original'));
  const wrapper=document.createElement('div');wrapper.id='v-extra';wrapper.innerHTML=`
