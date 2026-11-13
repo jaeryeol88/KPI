@@ -87,7 +87,7 @@ BEGIN
          WHERE c.id=1
        ),
        descendants AS (
-         SELECT node_id,parent_id FROM all_nodes WHERE node->>'label'=v_branch
+         SELECT node_id,parent_id FROM all_nodes WHERE node->>'label'=v_branch OR node->>'branchName'=v_branch
          UNION
          SELECT n.node_id,n.parent_id FROM all_nodes n
          JOIN descendants d ON n.parent_id=d.node_id
@@ -101,8 +101,21 @@ BEGIN
        coalesce(jsonb_agg(n.node ORDER BY n.ord),'[]'::jsonb)))
      INTO v_rows FROM all_nodes n WHERE n.node_id IN (SELECT node_id FROM ancestors);
    END IF;
- ELSIF p_source='kpi_org_staff_public_status' AND a.role='manager' THEN
-   SELECT coalesce(jsonb_agg(to_jsonb(x)),'[]'::jsonb) INTO v_rows FROM public.kpi_org_staff_public_status x;
+ ELSIF p_source='kpi_org_staff_public_status' AND a.role IN ('all','branch','manager') THEN
+   SELECT coalesce(jsonb_agg(jsonb_build_object('node_id',x.node_id,'employment_status',x.employment_status)),'[]'::jsonb)
+   INTO v_rows FROM public.kpi_org_staff_public_status x
+   WHERE v_branch IS NULL OR x.node_id IN (
+     WITH RECURSIVE descendants AS (
+       SELECT n.node->>'id' AS node_id FROM public.kpi_org_chart c,
+       jsonb_array_elements(c.nodes) n(node)
+       WHERE c.id=1 AND (n.node->>'label'=v_branch OR n.node->>'branchName'=v_branch)
+       UNION
+       SELECT n.node->>'id' FROM public.kpi_org_chart c,
+       jsonb_array_elements(c.nodes) n(node)
+       JOIN descendants d ON n.node->>'parent'=d.node_id
+       WHERE c.id=1
+     ) SELECT node_id FROM descendants
+   );
  ELSE
    RAISE EXCEPTION '이 계정에 허용되지 않은 조회입니다';
  END IF;
