@@ -4,6 +4,7 @@ import {historicalActualSeats,historicValue} from './historical_seats.js?v=auto-
 import {timedSignupRows} from './signup_date_utils.js';
 import {rosterPerformancePeople} from './personal_roster.js';
 import {drawOrgConnectorLines} from './org_connector_lines.js';
+import {ORG_ROLE_LABELS,orgEffectiveRoleShared,countOrgHeadcount,isDualStaff} from './org_headcount.js?v=shared-dual-role-20261113';
 
 const el=id=>document.getElementById(id);
 const safe=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -160,52 +161,18 @@ async function loadSavedAdminOrg(db){
 
 function drawOrg(){
  const visible=orgNodes.filter(Boolean);
- const roles={regional:'권역대표',branch:'지사장',division:'본부장',manager:'매니저'};
- const roleOf=n=>{
-  if(Object.prototype.hasOwnProperty.call(n,'headcountRole'))return roles[n.headcountRole]?n.headcountRole:'';
-  if(n.type!=='person')return '';
-  const title=String(n.subtitle||'').replace(/\s+/g,'');
-  return Object.keys(roles).find(role=>title.includes(roles[role]))||'';
- };
- const placeholders=new Set(['구성원','새 구성원','이름 미입력','최상위 조직','새 지사 / 부서','새 본부 / 팀','지사장 / 담당자 입력']);
- const countable=n=>{
-  const name=String(n.label||'').trim();
-  if(!name||placeholders.has(name)||['group','root'].includes(n.type))return false;
-  return n.type==='person'||Object.prototype.hasOwnProperty.call(n,'headcountRole');
- };
- const marked=/[（(]\s*겸\s*직\s*[)）]/;
- const cleanName=value=>String(value||'').replace(/[（(]\s*겸\s*직\s*[)）]/g,'')
-  .replace(/부산\s*[1-4]\s*지사|권역대표|지사장|본부장|매니저/g,'').replace(/[^가-힣a-zA-Z]/g,'').trim();
- const dualNames=new Set(),dualIds=new Set(),counts={regional:0,branch:0,division:0,manager:0,dual:0};
- for(const n of visible){
-  if(n.staffHidden===true)continue;
-  const label=String(n.label||''),subtitle=String(n.subtitle||'');
-  const leader=roleOf(n)==='branch'&&['박영우','안선경'].includes(cleanName(label));
-  if(leader||!marked.test(label+' '+subtitle))continue;
-  const labelName=cleanName(label),subtitleName=cleanName(subtitle);
-  // 직급란에 '(겸직)'만 써 놓은 카드도 성명(label)을 기준으로 집계합니다.
-  const personName=labelName&&!/^(구성원|새구성원|이름미입력|최상위조직|새지사부서|새본부팀)$/.test(labelName)?labelName:subtitleName;
-  if(!personName||/^(구성원|새구성원|이름미입력)$/.test(personName))continue;
-  dualNames.add(personName);dualIds.add(String(n.id));
- }
- counts.dual=dualNames.size;
- for(const n of visible){
-  if(n.staffHidden===true||!countable(n))continue;
-  const name=cleanName(n.label);
-  if(dualIds.has(String(n.id))||(name&&dualNames.has(name)))continue;
-  const role=roleOf(n);
-  if(Object.prototype.hasOwnProperty.call(counts,role))counts[role]++;
- }
- const total=counts.regional+counts.branch+counts.division+counts.manager;
+ const roles=ORG_ROLE_LABELS;
+ const roleOf=orgEffectiveRoleShared;
+ const counts=countOrgHeadcount(orgNodes);
  el('orgCount').textContent='조직도 카드 기준 · 자동 집계';
- el('orgHeadcount').innerHTML=[...Object.entries(roles).map(([key,label])=>[label,counts[key]]),['겸직',counts.dual],['총인원',total]]
+ el('orgHeadcount').innerHTML=[...['regional','branch','division','manager','dual'].map(k=>[roles[k],counts[k]]),['총인원',counts.total]]
   .map(([label,n])=>'<div class="org-headcount-stat'+(label==='총인원'?' org-headcount-total':'')+'"><span>'+safe(label)+'</span><strong>'+fmt(n)+'명</strong></div>').join('');
  const children=new Map();
  for(const n of visible){const parent=n.parent==null?'':String(n.parent);if(!children.has(parent))children.set(parent,[]);children.get(parent).push(n);}
  for(const list of children.values())list.sort((a,b)=>(Number(a.order)||0)-(Number(b.order)||0));
  const kids=n=>children.get(n==null?'':String(n))||[];
  const card=n=>{
-  const role=roles[roleOf(n)]||'';
+  const role=roles[isDualStaff(n)?'dual':roleOf(n)]||'';
   const subtitle=String(n.subtitle||'').trim();
   const roleTag=role?'<small class="org-card-role">'+safe(role)+'</small>':'';
   const sub=subtitle&&subtitle.replace(/\s+/g,'')!==role?'<small>'+safe(subtitle)+'</small>':'';
@@ -216,7 +183,7 @@ function drawOrg(){
   const joined=m?m[1].slice(-2)+'.'+m[2]:'';
   const join=['group','person'].includes(n.type)&&joined?'<small class="org-join-date">입사 '+safe(joined)+'</small>':'';
   const rawName=String(n.label||'').trim();
-  const branchLeader=roleOf(n)==='branch'&&['박영우','안선경'].includes(cleanName(rawName));
+  const branchLeader=roleOf(n)==='branch'&&['박영우','안선경'].includes(rawName.replace(/[（(]\s*겸\s*직\s*[)）]/g,'').trim());
   const shownName=branchLeader?rawName.replace(/[（(]\s*겸\s*직\s*[)）]/g,'').trim():rawName;
   return '<button type="button" disabled class="org-node org-node-'+safe(n.type)+col+'">'+roleTag+'<strong>'+safe(shownName||'이름 미입력')+'</strong>'+sub+join+'</button>';
  };
@@ -236,7 +203,7 @@ function drawOrg(){
 function staffRows(){
  const list=orgNodes.filter(n=>n&&n.staffHidden!==true);
  const byId=new Map(list.map(n=>[String(n.id),n]));
- const roles={regional:'권역대표',branch:'지사장',division:'본부장',manager:'매니저'};
+ const roles=ORG_ROLE_LABELS;
  const placeholders=new Set(['구성원','새 구성원','이름 미입력','최상위 조직','새 지사 / 부서','새 본부 / 팀','지사장 / 담당자 입력']);
  const roleOf=n=>{
   if(Object.prototype.hasOwnProperty.call(n,'headcountRole'))return roles[n.headcountRole]?n.headcountRole:'';
