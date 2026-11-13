@@ -947,7 +947,7 @@ function showEventDetail(x){
    }).join('')+'</div>';
   }).join('')+'</details>';
  };
- const installmentLine=(label,group,amount)=>'<div class="detail-line"><span>'+label+'</span><strong>'+value(amount)+'</strong></div>'+installmentDetails(group);
+ const installmentLine=(label,group,amount)=>{const detail=installmentDetails(group);return detail?'<details style="margin:0;border-bottom:1px solid #e2e8f0"><summary class="detail-line" style="cursor:pointer;list-style:none"><span>'+label+' <small style="color:#2563eb">· 클릭하여 분납 내역</small></span><strong>'+value(amount)+'</strong></summary>'+detail+'</details>':'<div class="detail-line"><span>'+label+'</span><strong>'+value(amount)+'</strong></div>';};
  el('detailTitle').textContent=x.name||'등록 상세';
  el('detailContent').innerHTML=
  heading('기본 등록 정보')+
