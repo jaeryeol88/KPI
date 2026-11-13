@@ -1,5 +1,4 @@
--- 개인별 실적현황에 한해 타 지사 구좌 수와 과거 수기 실적을 조회합니다.
--- 타 지사 입회금·연회비·회원정보는 반환하지 않습니다.
+-- Replaces viewer read function to fix branch organization and staff status.
 CREATE OR REPLACE FUNCTION public.kpi_viewer_read(p_token text,p_source text)
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
 DECLARE a public.kpi_viewer_accounts%ROWTYPE;v_rows jsonb;v_branch text;
