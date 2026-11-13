@@ -529,7 +529,7 @@ function renderCoreGoalKpi(filteredEvents){
  }
  const achieved=multiValues.type.size
   ? signupSeatsForPeriod(allViewerEvents.filter(e=>multiMatch('type',e.type)),{years,months,branches,divisions:divisions.length===1&&divisions[0]==='all'?null:divisions,normalizeDivision})
-  : branches.reduce((sum,b)=>sum+years.reduce((ys,y)=>ys+months.reduce((ms,m)=>ms+divisions.reduce((ds,d)=>ds+monthlyActual(b,y,m,d),0),0),0);
+  : branches.reduce((sum,b)=>sum+years.reduce((ys,y)=>ys+months.reduce((ms,m)=>ms+divisions.reduce((ds,d)=>ds+monthlyActual(b,y,m,d),0),0),0),0);
  const percent=goal>0?(achieved/goal*100).toFixed(1)+'%':'—';
  const isYear=monthFilter.size===0;
  const scope=isYear?(yearFilter.size===1?'연간':yearFilter.size===0?'전체 기간':'선택 연도 합산'):(monthFilter.size===1?'월간':'선택 월 합산');
