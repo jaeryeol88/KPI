@@ -2,6 +2,7 @@ import { drawOrgConnectorLines } from './org_connector_lines.js';
 import { emptyRevenue,recordRevenue,oldRevenue,addRevenue,clickableSeats,revenueLabel,showRevenueDetail } from './personal_revenue_ui.js';
 import { rosterPerformancePeople,regionalRepresentativeNames } from './personal_roster.js';
 import { renderPerformanceMatrix } from './performance_matrix.js';
+import { timedSignupRows,signupSeatsForPeriod,undatedSignupStats } from './signup_date_utils.js';
 /* Read-only supplemental KPI views, shared by all public viewers. */
 export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTarget,countSeats,normalizeDivision,loadOrganization}) {
  const el=id=>document.getElementById(id);
@@ -184,7 +185,7 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
  nav.addEventListener('click',event=>{const b=event.target.closest('button[data-vpage]');if(b)show(b.dataset.vpage)});
  const selectOptions=(node,opts,value)=>{node.innerHTML=opts.map(([v,t])=>'<option value="'+safe(v)+'">'+safe(t)+'</option>').join('');node.value=String(value)};
  const years=()=>[...new Set([...getYears(),...getAllEvents().map(e=>Number(String(e.date||'').slice(0,4))),new Date().getFullYear()])].filter(y=>Number.isInteger(y)&&y>=2020&&y<=2100).sort((a,b)=>b-a);
- const actual=(branch,y,m,div='all')=>getAllEvents().reduce((sum,e)=>Number(String(e.date||'').slice(0,4))===y&&Number(String(e.date||'').slice(5,7))===m?sum+countSeats(e,[branch],div==='all'?null:[div]):sum,0);
+ const actual=(branch,y,m,div='all')=>signupSeatsForPeriod(getAllEvents(),{years:[y],months:[m],branches:[branch],divisions:div==='all'?null:[div],normalizeDivision});
  const months=Array.from({length:12},(_,i)=>i+1);
  function renderYear(){
   if(!years().includes(year))year=years()[0]||new Date().getFullYear();
@@ -201,7 +202,7 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
   el('v-year-body').innerHTML=matrix.body;
   const total=selected.reduce((sum,b)=>sum+months.reduce((subtotal,m)=>subtotal+actual(b,year,m),0),0);
   el('v-year-note').textContent=year+'년 · '+(yearBranch==='all'?'전체 지사':yearBranch)+
-   ' · 목표: 회사 배정 DB / 실적: 온라인 등록 내역 (담당 지사·본부 기준) · 미배정 목표는 — 표시 · 합계 달성률은 연간 실적 ÷ 연간 배정 목표입니다. · 전체 '+fmt(total)+'구좌';
+   ' · 목표: 회사 배정 DB / 실적: 온라인 등록 내역 (담당 지사·본부 기준) · 미배정 목표는 — 표시 · 가입일자 기준 집계 · 가입일 미입력 건 제외 · 합계 달성률은 연간 실적 ÷ 연간 배정 목표입니다. · 전체 '+fmt(total)+'구좌';
  }
  el('v-year').addEventListener('change',e=>{year=Number(e.target.value);renderYear()});
  el('v-year-branch').addEventListener('change',e=>{yearBranch=e.target.value;renderYear()});
@@ -231,14 +232,10 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
    byKey.get(key).revenues[m-1]=addRevenue(byKey.get(key).revenues[m-1],revenue);
   };
   for(const event of getAllEvents()){
-   const dat=String(event.date||''),y=Number(dat.slice(0,4)),m=Number(dat.slice(5,7));
-   if(y!==pyear||m<1||m>12||!shown.includes(m))continue;
-   const valid=Array.isArray(event.signupEntries)?event.signupEntries.filter(row=>row&&['corporate','individual'].includes(row.group)&&Number.isSafeInteger(row.seats)&&row.seats>=0):[];
+   const valid=timedSignupRows(event,pyear,shown);
    if(valid.length){
-    for(const r of valid)add(r.branch||event.branch,normalizeDivision(r.division||event.division),String(r.manager||'').trim()||'담당자 미지정',m,r.seats,recordRevenue(r));
-   }else{
-    const seats=Number(event.done);if(Number.isSafeInteger(seats)&&seats>0)add(event.branch,normalizeDivision(event.division),'담당자 미지정',m,seats,oldRevenue(event));
-   }
+    for(const r of valid)add(r.branch||event.branch,normalizeDivision(r.division||event.division),String(r.manager||'').trim()||'담당자 미지정',Number(r.signupDate.slice(5,7)),r.seats,recordRevenue(r));
+   } // Entries without a confirmed signup date are not counted in a reporting month.
   }
   const rows=[...byKey.values()].map(x=>({...x,total:shown.reduce((sum,m)=>sum+x.months[m-1],0)})).sort((a,b)=>b.total-a.total||a.b.localeCompare(b.b,'ko')||a.d.localeCompare(b.d,'ko')||a.name.localeCompare(b.name,'ko'));
   const t=Array(12).fill(0),revenueTotals=Array.from({length:12},emptyRevenue);
@@ -252,7 +249,7 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
   else body='<tr><td colspan="'+(shown.length+4+(showTotal?1:0)+(oneMonth?3:0))+'">선택한 기간의 등록된 가입 실적이 없습니다.</td></tr>';
   el('v-person-body').innerHTML=body;
   el('v-person-body').onclick=e=>{const button=e.target.closest('[data-personal-revenue]');if(!button)return;const info=revenueActions.get(button.dataset.personalRevenue);if(info)showRevenueDetail(info.name,info.period,info.seats,info.revenue)};
-  el('v-person-note').textContent=pyear+'년 '+(full?'전체(1~12월)':shown.map(m=>m+'월').join('·'))+' · 부산 1~4지사 · '+rows.length+'명/소속 · '+fmt(total)+'구좌 · 동일 성명이라도 지사 또는 본부가 다르면 별도 집계합니다.';
+  el('v-person-note').textContent=pyear+'년 '+(full?'전체(1~12월)':shown.map(m=>m+'월').join('·'))+' · 부산 1~4지사 · '+rows.length+'명/소속 · '+fmt(total)+'구좌 · 실제 가입일자 기준 · 가입일 미입력 건 제외 · 동일 성명이라도 지사 또는 본부가 다르면 별도 집계합니다.';
  }
  el('v-pyear').addEventListener('change',e=>{pyear=Number(e.target.value);renderPersonal()});
  el('v-pbranch').addEventListener('change',e=>{pbranch=e.target.value;renderPersonal()});
