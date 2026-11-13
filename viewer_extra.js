@@ -449,14 +449,14 @@ el('v-months').addEventListener('change',e=>{
   };
   const data=orgNodes.filter(n=>n&&n.staffHidden!==true&&['person','root','group','division'].includes(n.type)&&String(n.label||'').trim()&&!placeholder.includes(n.label)&&(n.type==='person'||(n.type!=='group'&&n.type!=='root'&&effectiveRole(n)))).map(n=>{
    const loc=tree(n);const status=staffStatuses.get(String(n.staffContactId||n.id))|| (staffStatusLoaded?'재직':'—');
-   return {id:String(n.id),name:n.label,role:roles[effectiveRole(n)]||n.subtitle||'미지정',branch:loc.b,division:loc.d,hire:join(n),status};
+   return {id:String(n.id),name:n.label,role:effectiveRole(n)==='dual'?'본부장 겸직':(roles[effectiveRole(n)]||n.subtitle||'미지정'),branch:loc.b,division:loc.d,hire:join(n),status};
   }).sort((a,b)=>a.branch.localeCompare(b.branch,'ko')||a.division.localeCompare(b.division,'ko')||a.name.localeCompare(b.name,'ko'));
   el('v-staff-count').textContent='총 '+data.length+'명';
   const query=el('v-staff-search').value.trim().toLocaleLowerCase('ko');
   const selectedBranch=el('v-staff-branch').value,selectedStatus=el('v-staff-status').value;
   const filtered=data.filter(r=>(selectedBranch==='all'||r.branch===selectedBranch)&&(selectedStatus==='all'||r.status===selectedStatus)&&(!query||[r.name,r.role,r.branch,r.division].join(' ').toLocaleLowerCase('ko').includes(query)));
   el('v-staff-status-note').textContent=staffStatusError?'재직상태 표시를 위해 Supabase에서 org_staff_status_public.sql을 실행해야 합니다. '+staffStatusError:staffStatusLoaded?'재직상태는 관리자 등록 DB와 연동됩니다.':'';
-  el('v-staff-body').innerHTML=filtered.map((r,i)=>'<tr><td>'+(i+1)+'</td><td class="v-staff-name">'+safe(r.name)+'</td><td><span class="v-staff-pill">'+safe(r.role)+'</span></td><td>'+safe(r.branch||'—')+'</td><td>'+safe(r.division||'—')+'</td><td>비공개</td><td>'+safe(r.hire||'—')+'</td><td><span class="v-staff-status '+(r.status==='휴직'?'leave':r.status==='퇴사'?'left':'')+'">'+safe(r.status)+'</span></td><td>조회 전용</td></tr>').join('')||'<tr><td colspan="9">조직원 정보가 없습니다.</td></tr>';
+  el('v-staff-body').innerHTML=filtered.map((r,i)=>'<tr><td>'+(i+1)+'</td><td class="v-staff-name">'+safe(r.name)+'</td><td><span class="v-staff-pill">'+safe(r.role)+'</span></td><td>'+safe(r.branch||'—')+'</td><td>'+safe(r.division||'—')+'</td><td class="v-staff-phone" data-v-staff-phone="'+safe(r.id)+'" title="더블클릭하면 연락처가 표시됩니다" style="cursor:pointer;user-select:none">'+(staffPhoneShown.has(r.id)?safe(staffPhoneCache.get(r.id)||'등록된 번호 없음'):'•••-••••-••••')+'</td><td>'+safe(r.hire||'—')+'</td><td><span class="v-staff-status '+(r.status==='휴직'?'leave':r.status==='퇴사'?'left':'')+'">'+safe(r.status)+'</span></td><td>조회 전용</td></tr>').join('')||'<tr><td colspan="9">조직원 정보가 없습니다.</td></tr>';
  }
  async function checkStaffPhoneAccess(){
   const cfg=window.PLK_CONFIG||{};
@@ -479,10 +479,11 @@ el('v-months').addEventListener('change',e=>{
      const {data,error}=await db.rpc('kpi_public_branch_staff_phones',{p_branch:assignedBranch});
      if(error)throw error;
      for(const row of data||[])staffPhoneCache.set(String(row.node_id),String(row.phone||''));
-     if(!staffPhoneCache.has(nodeId))note.textContent='해당 조직원의 연락처가 등록되지 않았거나 공개 조회 대상에서 제외되었습니다.';
+     const noPublicPhone=!staffPhoneCache.has(nodeId);
      staffPhoneAllowed=true;
      staffPhoneShown.add(nodeId);
      renderStaff();
+     if(noPublicPhone)note.textContent='해당 조직원의 연락처가 등록되지 않았거나 공개 조회 대상에서 제외되었습니다.';
      return;
     }catch(error){
      note.textContent='지사 공개 연락처는 서버 공개 설정이 완료되어야 표시됩니다. ('+(error.message||'설정 대기')+')';
