@@ -9,13 +9,13 @@ export function createHistoricalEditor({getDb,getRole,onRecords}){
  section.id='historicalEditorPanel';section.className='perf-yearboard';section.hidden=true;
  section.style.cssText='margin:18px 0;padding:18px;border:1px solid #d5dfea;border-radius:12px';
  section.innerHTML=`<details><summary style="cursor:pointer;font-weight:800;font-size:17px">과거 실적 구좌 직접 입력 · 수정</summary>
- <p style="font-size:13px;line-height:1.8">지난 월의 목표·실적 구좌를 숫자로만 입력합니다. 입력한 범위와 월은 기존 자동 집계 대신 수동값이 표시됩니다. 행사 등록·입회 기록·매출 통계는 변경되지 않습니다. 지사·본부·개인별 숫자는 각각 별도 입력합니다. 개인의 재직/계약해지 상태는 구분만 하며 구좌 실적은 모두 합산됩니다.</p>
+ <p style="font-size:13px;line-height:1.8">지난 월의 목표·실적 구좌를 숫자로만 입력합니다. 입력한 범위와 월은 기존 자동 집계 대신 수동값이 표시됩니다. 행사 등록·입회 기록·매출 통계는 변경되지 않습니다. 지사·본부·개인별 숫자는 각각 별도 입력합니다. <strong>재직 / 계약해지</strong> 두 가지 중 선택할 수 있으며, 계약해지 선택 시 개인별 입력으로 전환됩니다. 계약해지자 구좌도 정상 실적에 합산됩니다.</p>
  <form id="histForm"><div style="display:flex;flex-wrap:wrap;gap:12px;align-items:end">
  <label>연도 <input id="histYear" type="number" min="2020" max="2100" required style="width:92px"></label>
  <label>월 <select id="histMonth"></select></label>
  <label>지사 <select id="histBranch"></select></label>
  <label>구분 <select id="histScope"><option value="branch">지사 합계</option><option value="division">본부</option><option value="person">개인</option></select></label>
- <label>재직 상태 <select id="histEmployment"><option value="active">재직</option><option value="cancelled">계약해지</option></select></label>
+ <label style="font-weight:700">재직 구분 <select id="histEmployment" aria-label="재직 또는 계약해지 선택"><option value="active">재직</option><option value="cancelled">계약해지</option></select></label>
  <label id="histDivisionWrap" hidden>본부 <select id="histDivision"></select></label>
  <label id="histManagerWrap" hidden>매니저 성명 <input id="histManager" maxlength="80" placeholder="성명 정확히 입력"></label>
  <label id="histTargetWrap">목표 구좌 <input id="histTarget" type="number" min="0" max="1000000" step="1" placeholder="미입력" style="width:95px"></label>
@@ -49,7 +49,7 @@ export function createHistoricalEditor({getDb,getRole,onRecords}){
  }
  function updateScope(){
   const person=el('histScope').value==='person';
-  el('histEmployment').closest('label').hidden=!person;
+  el('histEmployment').closest('label').hidden=false;
   el('histDivisionWrap').hidden=el('histScope').value==='branch';
   el('histManagerWrap').hidden=!person;
   el('histTargetWrap').hidden=person;
@@ -58,7 +58,14 @@ export function createHistoricalEditor({getDb,getRole,onRecords}){
  }
  for(const id of ['histYear','histMonth','histBranch','histDivision','histManager'])el(id).addEventListener('change',fill);
  el('histScope').addEventListener('change',updateScope);
- el('histEmployment').addEventListener('change',rate);
+ el('histEmployment').addEventListener('change',()=>{
+  if(el('histEmployment').value==='cancelled'&&el('histScope').value!=='person'){
+   el('histScope').value='person';
+   updateScope();
+   el('histEmployment').value='cancelled';
+  }
+  rate();
+ });
  updateScope();
  for(const id of ['histTarget','histActual'])el(id).addEventListener('input',rate);
  async function load(){
