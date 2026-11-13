@@ -1561,6 +1561,7 @@ async function monthlySaveGoal(event){
 monthlySetup();
 historicalCancellationPanel=cancellationPanel(el('personalYearBoard'));
 const historicalEditor=createHistoricalEditor({getDb:()=>db,getRole:()=>access.role,onRecords:records=>{historicalSeats=records;renderPerformanceYearboard();renderPersonalYearboard();}});
+window.addEventListener('plk-historical-bulk-saved',()=>{loadMonthlyTargets();});
 const productBranchExpanded=new Set();
 function renderProductBranchStats(events){
  const products=new Map();
