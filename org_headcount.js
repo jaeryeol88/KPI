@@ -36,7 +36,8 @@ export function countOrgHeadcount(nodes){
   if(!n||n.staffHidden===true||!isDualStaff(n))continue;
   const name=orgIdentityName(n.label);
   // An organizational group label or a placeholder is not a person.
-  if(!name||['group','root'].includes(n.type)||/^(구성원|새구성원|이름미입력|새본부팀)$/.test(name))continue;
+  if(!name||/^(구성원|새구성원|이름미입력|새본부팀)$/.test(name))continue;
+  // A dual-duty role can be assigned to an organizational card as well as a person card.
   names.add(name);ids.add(String(n.id));
  }
  counts.dual=names.size;
