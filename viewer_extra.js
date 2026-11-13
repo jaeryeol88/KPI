@@ -384,10 +384,13 @@ el('v-months').addEventListener('change',e=>{
   let colors=palette[n.color]||palette.default;
   if(n.type==='group'&&(!n.color||n.color==='default'))colors=palette.default;
   if(!n.color||n.color==='default'){if(n.type==='root'||n.type==='division')colors=palette.blue;else if(n.type==='group')colors=palette.default}
-  const role=roles[effectiveRole(n)]||'',subtitle=String(n.subtitle||'').trim();
+  const rawName=String(n.label||'').trim();
+  const isDual=/[（(]\s*겸\s*직\s*[)）]/.test(rawName+' '+String(n.subtitle||''));
+  const role=isDual?'본부장 겸직':(roles[effectiveRole(n)]||'');
+  const subtitle=String(n.subtitle||'').trim();
   const sub=subtitle&&subtitle.replace(/\s+/g,'')!==role?'<small>'+safe(subtitle)+'</small>':'';
   const date=join(n);
-  return '<div class="v-org-card '+safe(n.type||'')+'" style="background:'+colors[0]+';color:'+colors[1]+';border-color:'+colors[2]+'">'+(role?'<small class="v-org-role">'+safe(role)+'</small>':'')+'<strong>'+safe(n.type==='group'?branchLeaderName(n):(n.label||'이름 미입력'))+'</strong>'+sub+(date?'<small class="v-org-date">입사 '+safe(date)+'</small>':'')+'</div>';
+  return '<div class="v-org-card '+safe(n.type||'')+'" style="background:'+colors[0]+';color:'+colors[1]+';border-color:'+colors[2]+'">'+(role?'<small class="v-org-role">'+safe(role)+'</small>':'')+'<strong>'+safe(n.type==='group'?branchLeaderName(n):(effectiveRole(n)==='branch'?rawName.replace(/[（(]\s*겸\s*직\s*[)）]/g,'').trim():(n.label||'이름 미입력')))+'</strong>'+sub+(date?'<small class="v-org-date">입사 '+safe(date)+'</small>':'')+'</div>';
  }
  function alignOrgConnectors(){
   const canvas=el('v-org-canvas');
