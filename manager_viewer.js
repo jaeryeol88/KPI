@@ -418,7 +418,7 @@ async function main(){
   orgFingerprint=JSON.stringify(orgNodes);lastOrgSync=Date.now();lastPerformanceSync=Date.now();
   // Re-check the saved organization regularly while this viewer is open.
   window.setInterval(()=>void syncOrganization(),15000);
-  window.setInterval(()=>void syncPerformance(),60000);
+  window.setInterval(()=>{if(!document.hidden)void syncPerformance();},20000);
   // Reconstitute only non-financial signup attribution fields for shared seat aggregation.
   events=signedRows.map(r=>({branch:r.branch,division:normalizeDivision(r.division),signupEntries:[{
    group:'individual',manager:r.manager,seats:Number(r.seats),branch:r.branch,division:normalizeDivision(r.division),
