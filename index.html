@@ -1133,7 +1133,10 @@ function orgNodeMarkup(node){
  const joinMonth=['group','person'].includes(node.type)?orgJoinYearMonth(node.joinDate):'';
  const join=joinMonth?'<small class="org-join-date">입사 '+esc(joinMonth)+'</small>':'';
  const col=node.color==='default'?'':' color-'+esc(node.color);
- return '<button type="button" class="org-node org-node-'+esc(node.type)+col+'" data-org-node="'+esc(node.id)+'" title="카드 선택 후 편집">'+roleTag+'<strong>'+esc(node.label||'이름 미입력')+'</strong>'+sub+join+'</button>';
+ const rawName=String(node.label||'').trim();
+ const confirmedDual=['박영우','안선경'].includes(rawName.replace(/[（(]\s*겸\s*직\s*[)）]/g,'').trim());
+ const shownName=confirmedDual&&!/겸\s*직/.test(rawName)?rawName+'(겸직)':rawName;
+ return '<button type="button" class="org-node org-node-'+esc(node.type)+col+'" data-org-node="'+esc(node.id)+'" title="카드 선택 후 편집">'+roleTag+'<strong>'+esc(shownName||'이름 미입력')+'</strong>'+sub+join+'</button>';
 }
 function orgDraw(){
  const canvas=el('orgCanvas');if(!canvas)return;
