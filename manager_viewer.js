@@ -12,7 +12,7 @@ const divisions=['1본부','2본부','3본부','지사장','기타'];
 const monthNumbers=Array.from({length:12},(_,i)=>i+1);
 const normalizeDivision=value=>{const v=String(value||'').trim();const m=v.match(/^부산\s*[1-4]\s*지사\s+([123]본부)$/);return m?m[1]:v;};
 let events=[],history=[],branchTargets=[],divisionTargets=[],orgNodes=[],signedRows=[];
-let currentYear=new Date().getFullYear(),currentBranch='all',individualYear=currentYear,individualBranch='all',individualDivision='all';
+let currentYear=new Date().getFullYear(),currentBranch='all',individualYear=currentYear,individualBranch='all',individualDivision='all',individualName='';
 const cache=new Map();
 const choices=(node,options,value)=>{node.innerHTML=options.map(([id,label])=>'<option value="'+safe(id)+'">'+safe(label)+'</option>').join('');node.value=String(value);};
 const allYears=()=>[...new Set([new Date().getFullYear(),...signedRows.map(r=>Number(r.goal_year)),...history.map(r=>Number(r.goal_year)),...branchTargets.map(r=>Number(r.goal_year)),...divisionTargets.map(r=>Number(r.goal_year))])].filter(y=>y>=2020&&y<=2100).sort((a,b)=>b-a);
@@ -54,7 +54,7 @@ function managerData(){
   if(row.actual_seats!==null&&row.actual_seats!==undefined){person.months[month-1]=Number(row.actual_seats);person.manual.add(month);}
   person.status=row.employment_status==='계약해지'?'계약해지':'재직';
  }
- return [...map.values()].filter(r=>(individualBranch==='all'||r.branch===individualBranch)&&(individualDivision==='all'||r.division===individualDivision))
+ return [...map.values()].filter(r=>(individualBranch==='all'||r.branch===individualBranch)&&(individualDivision==='all'||r.division===individualDivision)&&(!individualName||r.manager.replace(/\s+/g,'').includes(individualName.replace(/\s+/g,''))))
   .map(r=>({...r,total:r.months.reduce((a,b)=>a+b,0)}))
   .sort((a,b)=>b.total-a.total||a.branch.localeCompare(b.branch,'ko')||a.division.localeCompare(b.division,'ko')||a.manager.localeCompare(b.manager,'ko'));
 }
@@ -72,7 +72,28 @@ function drawPersonal(){
 function drawOrg(){
  const visible=orgNodes.filter(n=>n&&n.staffHidden!==true);
  const people=rosterPerformancePeople(visible).filter(p=>branches.includes(p.branch));
- const host=el('orgTree');el('orgCount').textContent='조직도 등록 인원 '+fmt(people.length)+'명';
+ const roles={regional:'권역대표',branch:'지사장',division:'본부장',manager:'매니저'};
+ const roleOf=n=>{
+  if(Object.prototype.hasOwnProperty.call(n,'headcountRole'))return roles[n.headcountRole]?n.headcountRole:'';
+  if(n.type!=='person')return '';
+  const title=String(n.subtitle||'').replace(/\s+/g,'');
+  return Object.keys(roles).find(role=>title.includes(roles[role]))||'';
+ };
+ const ignored=new Set(['구성원','새 구성원','이름 미입력','최상위 조직','새 지사 / 부서','새 본부 / 팀','지사장 / 담당자 입력']);
+ const counts={regional:0,branch:0,division:0,manager:0,dual:0};
+ for(const n of visible){
+  if(!['person','division'].includes(n.type)||n.type==='division'&&!Object.prototype.hasOwnProperty.call(n,'headcountRole'))continue;
+  const name=String(n.label||'').trim(),role=roleOf(n);
+  if(!name||ignored.has(name)||!role)continue;
+  if(/\(\s*겸직\s*\)/.test(String(n.label||'')+' '+String(n.subtitle||'')))counts.dual++;
+  else counts[role]++;
+ }
+ const countedTotal=Object.values(counts).reduce((a,b)=>a+b,0);
+ const host=el('orgTree');
+ el('orgCount').textContent='조직도 집계 '+fmt(countedTotal)+'명';
+ el('orgHeadcount').innerHTML='<strong>조직 인원 현황</strong><div style="display:flex;flex-wrap:wrap;gap:9px;margin-top:10px">'+
+  [...Object.entries(roles).map(([key,label])=>[label,counts[key]]),['겸직',counts.dual],['총인원',countedTotal]]
+   .map(([label,n])=>'<span style="padding:8px 12px;border:1px solid #d0dded;border-radius:8px;background:white"><b>'+safe(label)+'</b> '+fmt(n)+'명</span>').join('')+'</div>';
  const children=new Map();
  for(const n of visible){const parent=n.parent===null||n.parent===undefined?'':String(n.parent);if(!children.has(parent))children.set(parent,[]);children.get(parent).push(n);}
  const branchLabel=n=>{const v=String(n.branchName||n.label||'').trim();const m=v.match(/부산\s*([1-4])\s*지사/);return m?'부산 '+m[1]+'지사':v;};
@@ -109,6 +130,7 @@ el('yearBranch').addEventListener('change',e=>{currentBranch=e.target.value;draw
 el('personalYear').addEventListener('change',e=>{individualYear=Number(e.target.value);drawPersonal()});
 el('personalBranch').addEventListener('change',e=>{individualBranch=e.target.value;drawPersonal()});
 el('personalDivision').addEventListener('change',e=>{individualDivision=e.target.value;drawPersonal()});
+el('personalNameSearch').addEventListener('input',e=>{individualName=String(e.target.value||'').trim();drawPersonal()});
 
 async function readPages(query,fields){
  const all=[];
