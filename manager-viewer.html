@@ -270,23 +270,14 @@ th{background:#edf2fa;font-weight:750}td{background:white}td:last-child,th:last-
    <select id="staffStatusFilter" aria-label="재직상태">
     <option value="all">전체 재직상태</option><option value="재직">재직</option><option value="휴직">휴직</option><option value="퇴사">퇴사</option>
    </select>
-   <button type="button" id="staffPhoneLogout" hidden class="btn">연락처 인증 해제</button>
+   
   </div>
   <p id="staffMessage" class="staff-message" role="status">연락처는 권한이 있는 계정으로 인증한 뒤에만 확인할 수 있습니다.</p>
   <div class="staff-scroll"><table class="staff-table">
    <thead><tr><th>No.</th><th>성명</th><th>직급</th><th>소속 지사</th><th>소속 본부/부서</th><th>연락처</th><th>입사년월</th><th>재직상태</th><th>관리</th></tr></thead>
    <tbody id="staffBody"></tbody></table></div>
-  <p class="staff-tip">관리자 조직원 정보와 같은 명단입니다. 연락처는 공개 데이터에 포함되지 않으며, 권한 인증 후 번호를 더블클릭하거나 드래그하면 표시됩니다. 이 페이지에서는 조직원 정보를 수정할 수 없습니다.</p>
+  <p class="staff-tip">관리자 조직원 정보와 같은 명단입니다. 기존 관리자 로그인 권한이 있는 사용자는 별도 로그인창 없이 번호를 더블클릭하거나 드래그하면 표시됩니다. 일반 접속자는 번호를 볼 수 없습니다.</p>
  </div>
 </section>
-<dialog id="staffPhoneDialog" aria-labelledby="staffPhoneTitle" class="staff-phone-dialog">
- <form id="staffPhoneLogin">
-  <h2 id="staffPhoneTitle">연락처 열람 인증</h2>
-  <p>개인 연락처는 보호되는 정보입니다. 권한이 등록된 관리자·지사 계정으로 로그인하면 필요한 번호만 조회할 수 있습니다.</p>
-  <label>이메일<input id="staffPhoneEmail" type="email" required autocomplete="username" placeholder="계정 이메일"></label>
-  <label>비밀번호<input id="staffPhonePassword" type="password" required autocomplete="current-password" placeholder="비밀번호"></label>
-  <p id="staffPhoneError" class="staff-message" role="alert"></p>
-  <div class="staff-phone-actions"><button class="btn primary" type="submit" id="staffPhoneLoginButton">인증하고 번호 보기</button><button type="button" class="btn" id="staffPhoneCancel">취소</button></div>
- </form>
-</dialog>
-</main></div><script src="./config.js"></script><script type="module" src="./manager_viewer.js?v=staff-roster-auth-phone-20261113"></script></body></html>
+
+</main></div><script src="./config.js"></script><script type="module" src="./manager_viewer.js?v=reuse-admin-session-phone-20261113"></script></body></html>
