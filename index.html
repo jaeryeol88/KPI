@@ -1040,14 +1040,16 @@ function orgRenderHeadcount(){
  // 해당 두 인원은 겸직임이 확인되었지만 기존 저장 데이터에는 표시가 빠져 있습니다.
  // 기존 데이터가 변경되기 전까지도 올바르게 집계하도록 명시적 예외를 둡니다.
  const confirmedDualNames=new Set(['박영우','안선경']);
- const dualNames=new Set(confirmedDualNames);
+ const dualNames=new Set();
  const dualIds=new Set();
  for(const node of orgNodes){
   if(!node||node.staffHidden===true)continue;
   const label=String(node.label||''),subtitle=String(node.subtitle||'');
-  if(!marked.test(label+' '+subtitle))continue;
+  // Explicitly confirmed dual-duty staff can have the suffix missing in saved data.
+  const confirmed=confirmedDualNames.has(cleanName(label));
+  if(!marked.test(label+' '+subtitle)&&!confirmed)continue;
   // 직책명만 있는 조직 제목은 인원으로 계산하지 않습니다.
-  const personName=marked.test(label)?cleanName(label):cleanName(subtitle);
+  const personName=marked.test(label)||confirmed?cleanName(label):cleanName(subtitle);
   if(!personName||/^(구성원|새구성원|이름미입력)$/.test(personName))continue;
   dualNames.add(personName);
   dualIds.add(String(node.id));
