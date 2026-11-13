@@ -293,7 +293,7 @@
  <section class="org-headcount" aria-label="조직 인원 현황">
  <div class="org-headcount-top"><h3>조직 인원 현황</h3><span>조직도 카드 기준 · 자동 집계</span></div>
  <div id="orgHeadcountGrid" class="org-headcount-grid" aria-live="polite"></div>
- <p class="org-headcount-note">이름이 입력된 직책 지정 인원만 집계합니다. 이름·직급에 (겸직)이 표시된 인원은 별도 겸직 항목으로 집계하고 총인원에서는 제외합니다.</p>
+ <p class="org-headcount-note">이름·직급의 (겸직) 표시 또는 카드 편집의 ‘인원 집계 직책 → 겸직’ 지정으로 별도 집계합니다. 겸직은 총인원에서 제외하며 변경 후 조직도 저장이 필요합니다.</p>
  </section>
  <p class="org-help">위계: 최상위 → 지사 / 부서 → 본부 / 팀 → 구성원. 카드 클릭 시 이름·직급·직책 구분 수정, 하위 카드 추가, 순서 변경, 삭제가 가능합니다.</p>
  <div id="orgEditor" class="org-editor" hidden>
@@ -301,7 +301,7 @@
   <form id="orgEditForm">
    <label><span id="orgLabelCaption">제목 / 이름</span><input id="orgLabel" maxlength="60" required placeholder="조직명 또는 이름"></label>
    <label>부제목 / 직급<input id="orgSubtitle" maxlength="80" placeholder="직급, 담당 업무 등 (선택)"></label>
-   <label>인원 집계 직책<select id="orgRole"><option value="">집계 제외 (조직명 / 빈 카드)</option><option value="regional">권역대표</option><option value="branch">지사장</option><option value="division">본부장</option><option value="manager">매니저</option></select></label>
+   <label>인원 집계 직책<select id="orgRole"><option value="">집계 제외 (조직명 / 빈 카드)</option><option value="regional">권역대표</option><option value="branch">지사장</option><option value="division">본부장</option><option value="manager">매니저</option><option value="dual">겸직 (총인원 제외)</option></select></label>
    <label id="orgJoinDateField" hidden>입사 연월<input id="orgJoinDate" type="text" inputmode="numeric" maxlength="5" pattern="[0-9]{2}[.](0[1-9]|1[0-2])" title="연도.월 형식으로 입력하세요 (예: 26.09)" aria-label="입사 연월"></label>
    <label>카드 색상<select id="orgColor"><option value="default">기본</option><option value="blue">파랑</option><option value="navy">남색</option><option value="mint">민트</option><option value="white">흰색</option><option value="sky">하늘색</option><option value="teal">청록색</option><option value="green">초록색</option><option value="purple">보라색</option><option value="lavender">연보라색</option><option value="pink">분홍색</option><option value="coral">코랄색</option><option value="orange">주황색</option><option value="yellow">노란색</option><option value="gray">회색</option></select></label>
    <div class="org-edit-buttons"><button type="submit" class="btn primary">변경 적용</button><button type="button" class="btn" id="orgAddChild">+ 하위 카드</button><button type="button" class="btn" id="orgAddDirectPerson" hidden>+ 지사 소속 구성원</button><button type="button" class="btn" id="orgAddSibling">+ 같은 단계</button><button type="button" class="btn" id="orgMovePrev">← 앞 순서</button><button type="button" class="btn" id="orgMoveNext">뒤 순서 →</button><button type="button" class="btn org-danger" id="orgDelete">삭제</button></div>
@@ -328,6 +328,7 @@
 </script>
 <script type="module">
 import { drawOrgConnectorLines } from './org_connector_lines.js';
+import {ORG_ROLE_LABELS,orgEffectiveRoleShared,countOrgHeadcount,isDualStaff} from './org_headcount.js?v=shared-dual-role-20261113';
 import { emptyRevenue,recordRevenue,oldRevenue,addRevenue,clickableSeats,revenueLabel,showRevenueDetail } from './personal_revenue_ui.js';
 import { rosterPerformancePeople,regionalRepresentativeNames } from './personal_roster.js';
 import { renderPerformanceMatrix } from './performance_matrix.js?v=year-to-date-totals-20261113';
@@ -1007,19 +1008,7 @@ function orgJoinYearMonth(value){
  const legacy=v.match(/^([0-9]{4})-(0[1-9]|1[0-2])(?:-[0-9]{2})?$/);
  return legacy?legacy[1].slice(-2)+'.'+legacy[2]:'';
 }
-function orgEffectiveRole(node){
- const valid=['regional','branch','division','manager'];
- // Explicit selection, including an explicit opt-out, always takes precedence.
- if(Object.prototype.hasOwnProperty.call(node,'headcountRole'))return valid.includes(node.headcountRole)?node.headcountRole:'';
- // Older saved member cards can be classified from their existing job-title text.
- if(node.type!=='person')return '';
- const title=String(node.subtitle||'').trim().replace(/\s+/g,'');
- if(/권역대표/.test(title))return 'regional';
- if(/지사장/.test(title))return 'branch';
- if(/본부장/.test(title))return 'division';
- if(/매니저/.test(title))return 'manager';
- return '';
-}
+function orgEffectiveRole(node){return orgEffectiveRoleShared(node);}
 function orgCountable(node){
  const name=String(node.label||'').trim();
  if(!name||['구성원','새 구성원','이름 미입력','최상위 조직','새 지사 / 부서','새 본부 / 팀','지사장 / 담당자 입력'].includes(name))return false;
@@ -1030,43 +1019,10 @@ function orgCountable(node){
 }
 function orgRenderHeadcount(){
  const target=el('orgHeadcountGrid');if(!target)return;
- const counts={regional:0,branch:0,division:0,manager:0,dual:0};
- // 겸직 표기는 직원 카드뿐 아니라 이전 데이터의 지사장/본부 제목 카드에도
- // 들어갈 수 있으므로 모든 조직 카드에서 먼저 확인합니다.
- const marked=/[（(]\s*겸\s*직\s*[)）]/;
- const cleanName=value=>String(value||'').replace(/[（(]\s*겸\s*직\s*[)）]/g,'')
-  .replace(/부산\s*[1-4]\s*지사|권역대표|지사장|본부장|매니저/g,'')
-  .replace(/[^가-힣a-zA-Z]/g,'').trim();
- // (겸직)으로 실제 표시된 구성원만 겸직으로 계산합니다.
- const dualNames=new Set();
- const dualIds=new Set();
- for(const node of orgNodes){
-  if(!node||node.staffHidden===true)continue;
-  const label=String(node.label||''),subtitle=String(node.subtitle||'');
-  // 박영우·안선경의 지사장 카드는 지사장 인원으로 집계합니다.
-  const isBranchLeader=orgEffectiveRole(node)==='branch'&&['박영우','안선경'].includes(cleanName(label));
-  if(isBranchLeader||!marked.test(label+' '+subtitle))continue;
-  // 직책명만 있는 조직 제목은 인원으로 계산하지 않습니다.
-  const labelName=cleanName(label),subtitleName=cleanName(subtitle);
-  // 직급란에 '(겸직)'만 써 놓은 카드도 성명(label)을 기준으로 집계합니다.
-  const personName=labelName&&!/^(구성원|새구성원|이름미입력|최상위조직|새지사부서|새본부팀)$/.test(labelName)?labelName:subtitleName;
-  if(!personName||/^(구성원|새구성원|이름미입력)$/.test(personName))continue;
-  dualNames.add(personName);
-  dualIds.add(String(node.id));
- }
- counts.dual=dualNames.size;
- for(const node of orgNodes){
-  if(!node||node.staffHidden===true||!orgCountable(node))continue;
-  const name=cleanName(node.label);
-  // 겸직으로 표시된 직원이 별도 직책 카드에도 있으면 중복 카운팅 방지.
-  if(dualIds.has(String(node.id))||(name&&dualNames.has(name)))continue;
-  const role=orgEffectiveRole(node);
-  if(Object.prototype.hasOwnProperty.call(counts,role))counts[role]++;
- }
+ const counts=countOrgHeadcount(orgNodes);
  const labels=[['regional','권역대표'],['branch','지사장'],['division','본부장'],['manager','매니저'],['dual','겸직']];
- const total=counts.regional+counts.branch+counts.division+counts.manager;
  target.innerHTML=labels.map(([key,label])=>'<div class="org-headcount-stat"><span>'+label+'</span><strong>'+fmt(counts[key])+'명</strong></div>').join('')+
-  '<div class="org-headcount-stat org-headcount-total"><span>총인원</span><strong>'+fmt(total)+'명</strong></div>';
+  '<div class="org-headcount-stat org-headcount-total"><span>총인원</span><strong>'+fmt(counts.total)+'명</strong></div>';
 }
 function orgGroupBranchName(group){
  const explicit=String(group.branchName||'').trim();
@@ -1125,8 +1081,8 @@ function orgNormalizeBranches(nodes){
  return changed;
 }
 function orgNodeMarkup(node){
- const roleNames={regional:'권역대표',branch:'지사장',division:'본부장',manager:'매니저'};
- const role=roleNames[orgEffectiveRole(node)]||'';
+ const roleNames=ORG_ROLE_LABELS;
+ const role=roleNames[isDualStaff(node)?'dual':orgEffectiveRole(node)]||'';
  const subtitle=String(node.subtitle||'').trim();
  const roleTag=role?'<small class="org-card-role">'+esc(role)+'</small>':'';
  const sub=subtitle&&subtitle.replace(/\s+/g,'')!==role?'<small>'+esc(subtitle)+'</small>':'';
