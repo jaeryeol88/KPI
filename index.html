@@ -871,6 +871,10 @@ function renderCoreGoalKpi(filteredEvents){
  const periodName=(yearFilter.size===1?[...yearFilter][0]+'년 ':yearFilter.size===0?'전체 연도 ':'선택 연도 ')+(isYear?'전체 월':monthFilter.size===1?Number([...monthFilter][0])+'월':'선택 월');
  const branchName=fixed||(branches.length===1?branches[0]:'부산권역 전체');
  const divisionName=divisions.length===1&&divisions[0]!=='all'?' · '+divisions[0]:'';
+ if(!multiValues.type.size){
+  el('mAchievedSeats').textContent=fmt(achieved)+'구좌';
+  el('mAchievedSeatsSub').textContent='실제 가입일 및 과거 직접입력 실적 반영';
+ }
  el('mGoalSeats').textContent=fmt(goal)+'구좌';
  el('mGoalSeatsSub').textContent=periodName+' · '+branchName+divisionName;
  el('mRate').textContent=percent;
