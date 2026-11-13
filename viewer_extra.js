@@ -350,6 +350,16 @@ el('v-months').addEventListener('change',e=>{
   }catch(error){staffStatusError=error.message||'재직상태를 불러오지 못했습니다.';console.warn('Public staff status unavailable',error);}
   orgLoaded=true;if(active==='org')renderOrg();if(active==='orgstaff')renderStaff();if(active==='personal')renderPersonal();
  }
+ // Same-origin PowerPoint preview: render the EXACT read-only viewer organization markup
+ // using the currently logged-in administrator's in-memory nodes. Never uploads data.
+ if(new URLSearchParams(window.location.search).has('ppt-preview')){
+  window.PLK_RENDER_PPT_ORG_PREVIEW=nodes=>{
+   if(!Array.isArray(nodes))throw new Error('조직도 데이터가 올바르지 않습니다.');
+   orgNodes=nodes;orgLoaded=true;orgMessage='부산권역 전체 조직도 · PPT 미리보기';
+   show('org');renderOrg();
+   return document.getElementById('v-org-canvas');
+  };
+ }
  function renderStaff(){
   if(!orgLoaded){el('v-staff-body').innerHTML='<tr><td colspan="9">조직원 정보를 불러오는 중…</td></tr>';return;}
   const placeholder=['구성원','새 구성원','이름 미입력','최상위 조직','새 지사 / 부서','새 본부 / 팀','지사장 / 담당자 입력'];
