@@ -331,7 +331,7 @@ import { drawOrgConnectorLines } from './org_connector_lines.js';
 import { emptyRevenue,recordRevenue,oldRevenue,addRevenue,clickableSeats,revenueLabel,showRevenueDetail } from './personal_revenue_ui.js';
 import { rosterPerformancePeople,regionalRepresentativeNames } from './personal_roster.js';
 import { renderPerformanceMatrix } from './performance_matrix.js';
-import { historicValue,historicalPast } from './historical_seats.js';
+import { historicValue,historicalPast,historicalActualSeats } from './historical_seats.js';
 import { createHistoricalEditor } from './historical_editor.js?v=employment-selector-visible-20261113';
 import { cancellationPanel } from './historical_cancellations_ui.js';
 import { validSignupDate,timedSignupRows,signupSeatsForPeriod,undatedSignupStats } from './signup_date_utils.js';
@@ -820,7 +820,8 @@ function monthlyTarget(b,y,m,division='all'){
  return old?Number(old.target_seats):null;
 }
 function monthlyActual(b,y,m,division='all'){
- return signupSeatsForPeriod(items,{years:[y],months:m===null?null:[m],branches:[b],divisions:division==='all'?null:[division],normalizeDivision});
+ if(m===null)return Array.from({length:12},(_,i)=>historicalActualSeats({history:historicalSeats,events:items,branch:b,year:y,month:i+1,division,normalizeDivision,timedSignupRows})).reduce((sum,n)=>sum+n,0);
+ return historicalActualSeats({history:historicalSeats,events:items,branch:b,year:y,month:m,division,normalizeDivision,timedSignupRows});
 }
 function monthlyRollup(branches,y,months,division='all'){
  let goal=0,done=0,missing=0;
@@ -845,6 +846,7 @@ function renderCoreGoalKpi(filteredEvents){
  const possibleYears=[...new Set([
   ...monthlyTargets.map(t=>Number(t.goal_year)),
   ...monthlyDivisionTargets.map(t=>Number(t.goal_year)),
+  ...historicalSeats.map(t=>Number(t.goal_year)),
   ...items.flatMap(e=>timedSignupRows(e).map(row=>Number(row.signupDate.slice(0,4))))
  ].filter(y=>Number.isInteger(y)&&y>=2020&&y<=2100))];
  const years=yearFilter.size?[...yearFilter].map(Number):possibleYears;
@@ -858,7 +860,7 @@ function renderCoreGoalKpi(filteredEvents){
   }
  }
  const coreEvents=items.filter(e=>multiMatch('type',e.type));
- const achieved=signupSeatsForPeriod(coreEvents,{years,months,branches,divisions:divisions.length===1&&divisions[0]==='all'?null:divisions,normalizeDivision});
+ const achieved=branches.reduce((sum,b)=>sum+years.reduce((ys,y)=>ys+months.reduce((ms,m)=>ms+divisions.reduce((ds,d)=>ds+monthlyActual(b,y,m,d),0),0),0),0);
  const percent=goal>0?(achieved/goal*100).toFixed(1)+'%':'—';
  const isYear=monthFilter.size===0;
  const scope=isYear?(yearFilter.size===1?'연간':yearFilter.size===0?'전체 기간':'선택 연도 합산'):(monthFilter.size===1?'월간':'선택 월 합산');
@@ -1297,7 +1299,7 @@ function perfGoalValue(branch,year,month,division){
  return historicValue(historicalSeats,branch,division==='all'?'':division,'',year,month,'target_seats')??monthlyTarget(branch,year,month,division);
 }
 function perfActualValue(branch,year,month,division){
- return historicValue(historicalSeats,branch,division==='all'?'':division,'',year,month,'actual_seats')??monthlyActual(branch,year,month,division);
+ return monthlyActual(branch,year,month,division);
 }
 function perfDisplayNumber(n){return fmt(n);}
 function perfDisplayRate(goal,actual,anyTarget){
