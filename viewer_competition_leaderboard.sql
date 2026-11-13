@@ -94,7 +94,7 @@ BEGIN
        ancestors AS (
          SELECT n.node_id,n.parent_id FROM all_nodes n JOIN descendants d ON n.node_id=d.node_id
          UNION
-         SELECT n.node_id,n.parent_id FROM all_nodes n JOIN ancestors a ON a.parent_id=n.node_id
+         SELECT n.node_id,n.parent_id FROM all_nodes n JOIN ancestors ancestor_node ON ancestor_node.parent_id=n.node_id
        )
      SELECT jsonb_build_array(jsonb_build_object('id',1,'nodes',
        coalesce(jsonb_agg(n.node ORDER BY n.ord),'[]'::jsonb)))
