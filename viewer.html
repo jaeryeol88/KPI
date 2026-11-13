@@ -115,7 +115,7 @@ if(assignedBranch){
   branchSelect.value=assignedBranch;
   branchSelect.disabled=true;
   for(const opt of branchSelect.options) opt.hidden=opt.value!==assignedBranch;
-  document.querySelector('.top-user').textContent=assignedBranch+' 행사만 표시 · 로그인 불필요 · 읽기 전용';
+  document.querySelector('.top-user').textContent=assignedBranch+' 전용 · 계정 인증 완료 · 읽기 전용';
 }
 const years=()=>{const select=el('year'),prev=select.value||'all';const ys=[...new Set([String(new Date().getFullYear()),...items.map(x=>String(x.date||'').slice(0,4))])].sort().reverse();const valid=new Set(ys);for(const v of [...multiValues.year])if(!valid.has(v))multiValues.year.delete(v);const html='<option value="all">전체 연도</option>'+ys.map(y=>`<option value="${y}">${y}년</option>`).join('');if(select.innerHTML!==html)select.innerHTML=html;select.value=[...ys,'all'].includes(prev)?prev:'all';};
 for(let m=1;m<=12;m++)el('month').insertAdjacentHTML('beforeend',`<option value="${String(m).padStart(2,'0')}">${m}월</option>`);
