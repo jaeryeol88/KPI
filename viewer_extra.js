@@ -79,7 +79,7 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
  let historicalSeats=[];
  let active='dashboard',year=new Date().getFullYear(),yearBranch='all',highlightedYearMonth=0,pyear=year,pmonths=new Set(),pbranch='all',pdivision='all',orgNodes=[],orgLoaded=false,orgMessage='',staffStatuses=new Map(),staffStatusLoaded=false,staffStatusError='';
  const css=`
-.v-multi-slot{display:inline-block;vertical-align:middle}.v-signup-multi{position:relative;min-width:100px}.v-signup-multi>summary{list-style:none;cursor:pointer;border:1px solid #dce6f2;border-radius:8px;padding:9px 12px;background:#fff;color:#172840;font-weight:650;white-space:nowrap}.v-signup-multi>summary::-webkit-details-marker{display:none}.v-signup-multi>summary:after{content:'⌄';margin-left:9px;color:#64748b}.v-signup-multi-menu{position:absolute;top:calc(100% + 5px);right:0;z-index:90;min-width:150px;max-height:280px;overflow:auto;padding:6px;background:#fff;border:1px solid #dce6f2;border-radius:10px;box-shadow:0 8px 22px #0b204022}.v-signup-multi-menu label{display:flex!important;align-items:center;gap:7px;white-space:nowrap;padding:8px 10px;cursor:pointer;font-size:12px}.v-signup-multi-menu label:hover{background:#f1f6ff}.v-signup-multi-menu input{accent-color:#145dc5}.v-signup-locked{pointer-events:none;opacity:.85}
+.v-multi-slot{display:inline-block;vertical-align:middle}.v-signup-filter{display:inline-flex;align-items:center;gap:6px;font-size:12px!important;font-weight:600;color:#385477;white-space:nowrap}.v-multi-slot{font-size:12px!important}.v-signup-multi{position:relative;min-width:92px;font-size:12px!important}.v-signup-multi>summary{list-style:none;cursor:pointer;border:1px solid #dce6f2;border-radius:8px;padding:7px 10px;background:#fff;color:#172840;font-size:12px!important;line-height:1.35;font-weight:600;white-space:nowrap}.v-signup-multi>summary::-webkit-details-marker{display:none}.v-signup-multi>summary:after{content:'⌄';margin-left:9px;color:#64748b}.v-signup-multi-menu{position:absolute;top:calc(100% + 5px);right:0;z-index:90;min-width:150px;max-height:280px;overflow:auto;padding:6px;background:#fff;border:1px solid #dce6f2;border-radius:10px;box-shadow:0 8px 22px #0b204022}.v-signup-multi-menu label{display:flex!important;align-items:center;gap:7px;white-space:nowrap;padding:8px 10px;cursor:pointer;font-size:12px}.v-signup-multi-menu label:hover{background:#f1f6ff}.v-signup-multi-menu input{accent-color:#145dc5}.v-signup-locked{pointer-events:none;opacity:.85}
 
  .v-nav{display:flex;flex-direction:column;gap:8px}
  .v-nav button{border:0;border-radius:11px;background:transparent;color:#dce9ff;text-align:left;font:inherit;font-size:13px;padding:12px 12px;cursor:pointer;line-height:1.5}
@@ -273,11 +273,13 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
   for(const value of [...selected])if(!valid.has(value))selected.delete(value);
   if(key==='branch'&&assignedBranch){selected.clear();selected.add(assignedBranch);}
   const prev=root.querySelector('details'),open=!!prev?.open;
+  const scrollTop=prev?.querySelector('.v-signup-multi-menu')?.scrollTop||0;
   const all=!selected.size;
   const names=opts.filter(([value])=>selected.has(String(value))).map(([,label])=>label);
   const title=all?signupFilterDefs[key]:names.length===1?names[0]:names.length+'개 선택';
   root.innerHTML='<details class="v-signup-multi"'+(open?' open':'')+'><summary>'+safe(title)+'</summary><div class="v-signup-multi-menu"><label><input type="checkbox" data-all="1" '+(all?'checked':'')+'> '+signupFilterDefs[key]+'</label>'+opts.map(([value,label])=>'<label><input type="checkbox" data-value="'+safe(value)+'" '+(selected.has(String(value))?'checked':'')+'> '+safe(label)+'</label>').join('')+'</div></details>';
   if(key==='branch'&&assignedBranch)root.querySelector('details').classList.add('v-signup-locked');
+  const menu=root.querySelector('.v-signup-multi-menu');if(menu)menu.scrollTop=scrollTop;
  }
  document.addEventListener('change',e=>{
   const input=e.target.closest('.v-signup-multi input');if(!input)return;
@@ -287,7 +289,9 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
   if(input.dataset.all){selected.clear();}
   else{const v=input.dataset.value;if(input.checked)selected.add(v);else selected.delete(v);}
   if(key==='branch')signupSelections.division.clear();
+  const pageY=window.scrollY;
   renderSignupReport();
+  window.scrollTo({top:pageY,behavior:'instant'});
  });
  document.addEventListener('click',e=>{if(e.target.closest('.v-signup-multi'))return;document.querySelectorAll('.v-signup-multi[open]').forEach(d=>d.open=false)});
  function renderSignupReport(){
