@@ -786,6 +786,38 @@ function renderManagerStats(events){
  const totals=sorted.reduce((t,x)=>({records:t.records+x.records,seats:t.seats+x.seats,revenue:t.revenue+x.revenue,fee:t.fee+x.fee}),{records:0,seats:0,revenue:0,fee:0});
  el('managerStatsFoot').textContent='합계 '+fmt(totals.records)+'건 · '+fmt(totals.seats)+'구좌 · 가입매출 '+won(totals.revenue)+' · 연회비 '+won(totals.fee)+(unassigned?' · 매니저 미지정 '+fmt(unassigned)+'건':'')+' (기존 가입 건별 기록 없는 행사 제외)';
 }
+function recognizedSignupRevenue(group,legacyRows){
+ const years=multiValues.year.size?[...multiValues.year].map(Number):null;
+ const months=multiValues.month.size?[...multiValues.month].map(Number):null;
+ const fixed=restrictedBranch(),branches=fixed?[fixed]:(multiValues.branch.size?[...multiValues.branch]:null);
+ const divisions=multiValues.division.size?[...multiValues.division].map(normalizeDivision):null;
+ let total=0;
+ for(const event of items){
+  if(multiValues.type.size&&!multiMatch('type',event.type))continue;
+  for(const row of Array.isArray(event.signupEntries)?event.signupEntries:[]){
+   if(!row||row.withdrawn||row.group!==group)continue;
+   if(branches&&!branches.includes(row.branch||event.branch))continue;
+   if(divisions&&!divisions.includes(normalizeDivision(row.division||event.division)))continue;
+   const date=validSignupDate(row.signupDate);
+   if(!date){if(!years&&!months)total+=Number(row.revenue)||0;continue;}
+   const y=Number(date.slice(0,4)),m=Number(date.slice(5,7));
+   const amounts=row.paymentType==='installment'&&Array.isArray(row.installmentAmounts)&&row.installmentAmounts.length?row.installmentAmounts:[row.revenue];
+   for(let i=0;i<amounts.length;i++){
+    const year=y+Math.floor((m-1+i)/12),month=(m-1+i)%12+1;
+    if(years&&!years.includes(year))continue;
+    if(months&&!months.includes(month))continue;
+    const amount=Number(amounts[i]);
+    if(Number.isSafeInteger(amount)&&amount>=0)total+=amount;
+   }
+  }
+ }
+ // Legacy events without itemized contracts keep their original event-date accounting.
+ for(const event of legacyRows){
+  if(Array.isArray(event.signupEntries)&&event.signupEntries.some(r=>r&&['corporate','individual'].includes(r.group)))continue;
+  total+=scopedSignupMetric(event,group+'Revenue');
+ }
+ return total;
+}
 function render(){years();syncLegacyTypes();refreshMultiFilters();const a=filtered();el('activeFilters').textContent='조회 조건: '+multiLabel('branch')+' · '+multiLabel('division')+' · '+multiLabel('year')+' · '+multiLabel('month')+' · '+multiLabel('type')+' · '+a.length+'건';const sum=k=>a.reduce((z,x)=>z+Number(x[k]||0),0),count=a.length,people=sum('attendees'),cost=sum('cost'),goal=sum('goal'),done=a.reduce((z,x)=>z+scopedSignupMetric(x,'corporate')+scopedSignupMetric(x,'individual'),0);
 const members=a.reduce((z,x)=>z+(known(x.members)?x.members:0),0),nonMembers=a.reduce((z,x)=>z+(known(x.nonMembers)?x.nonMembers:0),0);
 const corporate=a.reduce((z,x)=>z+scopedSignupMetric(x,'corporate'),0),individual=a.reduce((z,x)=>z+scopedSignupMetric(x,'individual'),0);
@@ -800,7 +832,7 @@ el('sSignupCount').textContent=missingSignup?'—':fmt(signupTotal)+'건';
 el('mEvents').textContent=fmt(count)+'건';el('mAttendees').textContent=fmt(people)+'명';el('mAttendeesSub').textContent='PLK 회원 '+fmt(members)+'명 · 비회원 '+fmt(nonMembers)+'명'+(unclassifiedPeople?' · 미분류 '+fmt(unclassifiedPeople)+'명':'');
 const venue=sumKnown(a,'venueCost'), food=sumKnown(a,'foodCost'),prize=sumKnown(a,'prizeCost'),other=sumKnown(a,'otherCost');
 const legacyCost=a.reduce((z,x)=>z+(complete(x,costFields)?0:Number(x.cost||0)),0);
-const corpRevenue=a.reduce((z,x)=>z+scopedSignupMetric(x,'corporateRevenue'),0),indRevenue=a.reduce((z,x)=>z+scopedSignupMetric(x,'individualRevenue'),0),hasMissingRevenue=a.some(x=>!complete(x,revenueFields));
+const corpRevenue=recognizedSignupRevenue('corporate',a),indRevenue=recognizedSignupRevenue('individual',a),hasMissingRevenue=a.some(x=>!complete(x,revenueFields));
 const revenue=corpRevenue+indRevenue,eventIncome=sumKnown(a,'eventIncome'),annualFee=a.reduce((z,x)=>z+scopedSignupMetric(x,'annualFee'),0),missingAnnualFee=a.filter(x=>!known(x.annualFee)).length,missingEventIncome=a.filter(x=>!known(x.eventIncome)).length,profit=revenue+eventIncome+annualFee-cost;
 el('mCost').textContent=won(sumKnown(a,'headOfficeSupport'));
 const points=sumKnown(a,'promoPoints'),hq=sumKnown(a,'headOfficeSupport');
