@@ -911,6 +911,18 @@ function monthlyManagerBreakdown(branch,division,years,months){
    }
   } // Undated legacy totals cannot be assigned to a month.
  }
+ // Reconcile each historical personal override against the exact month's live signups.
+ for(const h of historicalSeats){
+  const y=Number(h.goal_year),m=Number(h.goal_month);
+  if(h.branch!==branch||h.division!==division||!h.manager||h.actual_seats===null||h.actual_seats===undefined||!yearSet.has(y)||!monthSet.has(m))continue;
+  const live=items.reduce((total,event)=>total+timedSignupRows(event,y,[m]).reduce((n,r)=>
+   n+((r.branch||event.branch)===branch&&normalizeDivision(r.division||event.division)===division&&(String(r.manager||'').trim()||'매니저 미지정')===h.manager?r.seats:0),0),0);
+  const item=rowFor(h.manager);
+  item.seats+=Number(h.actual_seats)-live;
+  item.manual=true;
+  // Products/record counts cannot be inferred from seat-only historic entries.
+  item.products.clear();
+ }
  return [...managerRows.values()].map(item=>({...item,products:[...item.products.values()].sort((a,b)=>b.seats-a.seats||a.product.localeCompare(b.product,'ko'))})).sort((a,b)=>b.seats-a.seats||b.records-a.records||a.manager.localeCompare(b.manager,'ko'));
 }
 function renderMonthlyGoals(){
@@ -954,8 +966,9 @@ function renderMonthlyGoals(){
    const managers=monthlyManagerBreakdown(br,d,ys,months);
    const managerDetails=managers.length?managers.map(row=>{
     const managerKey=JSON.stringify([br,d,row.manager]),managerOpened=expandedMonthlyManagers.has(managerKey);
-    const managerLine='<tr class="monthly-manager-detail"><td><button type="button" class="monthly-manager-toggle" data-expand-monthly-manager="1" data-branch="'+esc(br)+'" data-division="'+esc(d)+'" data-manager="'+esc(row.manager)+'" aria-expanded="'+managerOpened+'"><span aria-hidden="true">'+(managerOpened?'▾':'▸')+'</span> '+esc(row.manager)+'</button> <small>('+fmt(row.records)+'건)</small></td><td>—</td><td>'+fmt(row.seats)+'구좌</td><td>—</td></tr>';
+    const managerLine='<tr class="monthly-manager-detail"><td><button type="button" class="monthly-manager-toggle" data-expand-monthly-manager="1" data-branch="'+esc(br)+'" data-division="'+esc(d)+'" data-manager="'+esc(row.manager)+'" aria-expanded="'+managerOpened+'"><span aria-hidden="true">'+(managerOpened?'▾':'▸')+'</span> '+esc(row.manager)+'</button> <small>'+(row.manual?'(과거 수동 구좌 포함)':'('+fmt(row.records)+'건)')+'</small></td><td>—</td><td>'+fmt(row.seats)+'구좌</td><td>—</td></tr>';
     if(!managerOpened)return managerLine;
+    if(row.manual)return managerLine+'<tr class="monthly-manager-product"><td>└ 과거 수동 구좌 (상품정보 미등록)</td><td>—</td><td>'+fmt(row.seats)+'구좌</td><td>—</td></tr>';
     return managerLine+row.products.map(p=>'<tr class="monthly-manager-product"><td>└ '+esc(p.product)+' <small>('+fmt(p.records)+'건)</small></td><td>—</td><td>'+fmt(p.seats)+'구좌</td><td>—</td></tr>').join('');
    }).join(''):'<tr class="monthly-manager-detail"><td>└ 가입 담당 매니저 실적 없음</td><td>—</td><td>0구좌</td><td>—</td></tr>';
    return divisionRow+managerDetails;
