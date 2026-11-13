@@ -20,7 +20,8 @@ AS $$
     'memberName', item.value->'memberName',
     'signupDate', item.value->'signupDate',
     'paymentType', item.value->'paymentType',
-    'installmentMonths', item.value->'installmentMonths'
+    'installmentMonths', item.value->'installmentMonths',
+    'note', item.value->'note'
  ) ORDER BY item.ordinality), '[]'::jsonb)
  FROM jsonb_array_elements(
   CASE WHEN jsonb_typeof(raw->'signupEntries')='array' THEN raw->'signupEntries' ELSE '[]'::jsonb END
