@@ -104,7 +104,7 @@ function drawOrg(){
   if(/\(\s*겸직\s*\)/.test(String(n.label||'')+' '+String(n.subtitle||'')))counts.dual++;
   else counts[role]++;
  }
- const countedTotal=Object.values(counts).reduce((a,b)=>a+b,0);
+ const countedTotal=counts.regional+counts.branch+counts.division+counts.manager;
  el('orgCount').textContent='조직도 카드 기준 · 자동 집계';
  el('orgHeadcount').innerHTML=[...Object.entries(roles).map(([key,label])=>[label,counts[key]]),['겸직',counts.dual],['총인원',countedTotal]]
   .map(([label,n])=>'<div class="org-headcount-stat'+(label==='총인원'?' org-headcount-total':'')+'"><span>'+safe(label)+'</span><strong>'+fmt(n)+'명</strong></div>').join('');
