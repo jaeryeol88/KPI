@@ -3,19 +3,35 @@
 (function(){
  'use strict';
  const orgApi=window.PLK_ORG;
- const SCRIPT_URL='https://cdn.jsdelivr.net/gh/gitbrent/pptxgenjs@3.12.0/dist/pptxgen.bundle.js';
+ const SCRIPT_URLS=[
+  'https://cdn.jsdelivr.net/gh/gitbrent/pptxgenjs@3.12.0/dist/pptxgen.bundle.js',
+  'https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js',
+  'https://unpkg.com/pptxgenjs@3.12.0/dist/pptxgen.bundle.js'
+ ];
  const W=13.333,H=7.5, FONT='Malgun Gothic';
  let loadPromise=null;
  function getPptx(){
-  if(typeof window.pptxgen==='function')return Promise.resolve(window.pptxgen);
+  const ctor=()=>window.pptxgen||window.PptxGenJS;
+  if(typeof ctor()==='function')return Promise.resolve(ctor());
   if(loadPromise)return loadPromise;
-  loadPromise=new Promise((resolve,reject)=>{
-   const script=document.createElement('script');
-   script.src=SCRIPT_URL;script.async=true;
-   script.onload=()=>typeof window.pptxgen==='function'?resolve(window.pptxgen):reject(new Error('PPT 생성 라이브러리를 확인할 수 없습니다.'));
-   script.onerror=()=>reject(new Error('PPT 라이브러리를 불러오지 못했습니다. 인터넷 연결을 확인해 주세요.'));
-   document.head.appendChild(script);
-  }).catch(err=>{loadPromise=null;throw err;});
+  loadPromise=(async()=>{
+   let lastError=null;
+   for(const url of SCRIPT_URLS){
+    try{
+     await new Promise((resolve,reject)=>{
+      const script=document.createElement('script');
+      script.src=url;script.async=true;
+      const timeout=setTimeout(()=>{script.remove();reject(new Error('라이브러리 연결 시간 초과'));},12000);
+      script.onload=()=>{clearTimeout(timeout);resolve();};
+      script.onerror=()=>{clearTimeout(timeout);script.remove();reject(new Error('라이브러리 경로 연결 실패'));};
+      document.head.appendChild(script);
+     });
+     if(typeof ctor()==='function')return ctor();
+     lastError=new Error('PPT 생성 라이브러리 형식을 확인할 수 없습니다.');
+    }catch(e){lastError=e;}
+   }
+   throw new Error('PPT 라이브러리를 불러오지 못했습니다. 네트워크 연결이나 브라우저의 CDN 차단 설정을 확인해 주세요. '+(lastError?.message||''));
+  })().catch(error=>{loadPromise=null;throw error;});
   return loadPromise;
  }
  const palettes={
@@ -179,13 +195,13 @@
    pptx.theme={headFontFace:FONT,bodyFontFace:FONT,lang:'ko-KR'};
    const pageCounter={value:0};
    const roots=orgApi.children(null);
-   for(const root of roots){
-    const groups=getDirect(root.id);
+   for(const root of roots.filter(node=>node.type==='root')){
+    const groups=getDirect(root.id).filter(node=>node.type==='group');
     overview(pptx,root,groups,pageCounter);
     for(const group of groups)detail(pptx,group,root,pageCounter);
    }
-   if(!roots.length)throw new Error('최상위 조직이 없습니다.');
-   const title=String(roots[0].label||'PLK').replace(/[\\/:*?"<>|]/g,'_').slice(0,36);
+   if(!roots.some(node=>node.type==='root'))throw new Error('최상위 조직이 없습니다.');
+   const title=String(roots.find(node=>node.type==='root').label||'PLK').replace(/[\\/:*?"<>|]/g,'_').slice(0,36);
    const name=title+'_조직도.pptx';
    await pptx.writeFile({fileName:name});
    orgApi.status('조직도 PPT 다운로드를 완료했습니다. 현재 화면의 카드 정보가 반영되어 있습니다.');
