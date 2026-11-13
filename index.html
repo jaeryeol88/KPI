@@ -1859,13 +1859,15 @@ function signupEntryHTML(row={}){
  const paymentType=row.paymentType===undefined?(row.group?'unknown':'full'):row.paymentType;
  const payOptions=[['full','완납'],['installment','분납'],['unknown','기존 미지정']].map(([value,label])=>'<option value="'+value+'"'+(paymentType===value?' selected':'')+'>'+label+'</option>').join('');
  const installmentMonths=Number.isSafeInteger(row.installmentMonths)&&row.installmentMonths>0?row.installmentMonths:'';
- return '<div class="entry-row"><div class="entry-row-header"><strong class="entry-number">가입 건</strong><button type="button" class="entry-remove">삭제</button></div>'+
- '<div class="entry-row-fields"><label>가입상품<select class="entry-product">'+options+'</select></label>'+
+ const withdrawn=Boolean(row.withdrawn);
+ return '<div class="entry-row"><div class="entry-row-header"><strong class="entry-number">가입 건</strong><button type="button" class="entry-withdraw" style="margin-right:8px;color:#b91c1c">'+(withdrawn?'탈회 취소':'탈회 처리')+'</button><button type="button" class="entry-remove">삭제</button></div>'+
+ '<div class="entry-withdraw-status"'+(withdrawn?'':' hidden')+' style="color:#b91c1c;font-weight:700;padding:8px 0">탈회 처리됨 · 구좌 및 매출 실적 제외</div><div class="entry-row-fields"><label>가입상품<select class="entry-product">'+options+'</select></label>'+
  '<label>가입구좌<input class="entry-seats" type="number" min="0" step="1" placeholder="구좌" value="'+esc(numberValue('seats'))+'"></label>'+
  '<label>구좌 매출액 (원)<input class="entry-revenue" type="number" min="0" step="1" placeholder="매출액" value="'+esc(numberValue('revenue'))+'"><span class="entry-currency-readable entry-revenue-preview" aria-live="polite"></span></label>'+
  '<label>연회비 금액 (원)<input class="entry-fee" type="number" min="0" step="1" placeholder="연회비" value="'+esc(numberValue('annualFee'))+'"><span class="entry-currency-readable entry-fee-preview" aria-live="polite"></span></label></div>'+
  '<div class="entry-assignment"><label>가입 담당 지사<select class="entry-branch"><option value="">지사 선택</option>'+eventBranchOptions.map(b=>'<option value="'+b+'"'+(row.branch===b?' selected':'')+'>'+b+'</option>').join('')+'</select></label><label>가입 담당 본부<select class="entry-division"><option value="">본부 미지정</option>'+divisionBranches.map(d=>'<option value="'+d+'"'+(row.division===d?' selected':'')+'>'+d+'</option>').join('')+'</select></label><label>가입 담당 매니저<input class="entry-manager" type="text" maxlength="60" placeholder="예: 홍길동" value="'+esc(row.manager||'')+'"></label><label>입회자 성함<input class="entry-member-name" type="text" maxlength="80" autocomplete="off" placeholder="입회자 성함" value="'+esc(row.memberName||'')+'"></label><label>가입일자 *<input class="entry-signup-date" type="date" value="'+esc(validSignupDate(row.signupDate))+'" aria-label="실제 가입일자"></label></div>'+
  '<div class="entry-payment"><label>납부 방식<select class="entry-payment-type">'+payOptions+'</select></label><label class="entry-installment-wrap"'+(paymentType==='installment'?'':' hidden')+'>분납 개월 수<input type="number" min="1" max="360" step="1" class="entry-installment-months" placeholder="개월" value="'+installmentMonths+'"'+(paymentType==='installment'?'':' disabled')+'></label></div>'+
+ '<div class="entry-installment-schedule"'+(paymentType==='installment'?'':' hidden')+'><strong>월별 분납 매출액 (가입월부터 매월)</strong><div class="entry-installment-amounts" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px">'+Array.from({length:Number(installmentMonths)||0},(_,i)=>'<label>'+(i+1)+'회차 <input type="number" class="entry-installment-amount" min="0" step="1" value="'+esc(String(Array.isArray(row.installmentAmounts)?row.installmentAmounts[i]??'':''))+'" style="width:100%"></label>').join('')+'</div><strong class="entry-installment-total">분납 합계 0원</strong></div>'+ 
  '<div class="entry-promo-title">프로모션 적용</div><div class="entry-calculator"><span>매출액 조정</span><select class="entry-calc-mode"><option value="-">− 할인</option><option value="+">+ 할증</option></select><input class="entry-percent" type="number" min="0" max="100" step="0.1" value="5" aria-label="할인 할증 비율"> % <input class="entry-adjust" type="number" step="1" value="0" aria-label="추가 금액 조정"><span>원 조정</span><button type="button" class="entry-apply">적용</button></div>'+ 
  '<label class="entry-special-note">가입 건별 메모 (수기 입력)<textarea class="entry-note-input" maxlength="500" placeholder="예: 할인 프로모션 외 별도 상품 조건, 특별 협의사항 등">'+esc(row.note||'')+'</textarea></label></div>';
 }
@@ -1884,6 +1886,8 @@ function readSignupEntries(strict=false){
   const paymentType=element.querySelector('.entry-payment-type').value;
   const monthsRaw=element.querySelector('.entry-installment-months').value.trim();
   const note=element.querySelector('.entry-note-input').value.trim();
+  const withdrawn=!element.querySelector('.entry-withdraw-status').hidden;
+  const installmentAmounts=[...element.querySelectorAll('.entry-installment-amount')].map(input=>input.value.trim()===''?null:Number(input.value));
   if(blankEntryRow(raw)&&!note)continue;
   if(!group){if(strict)throw Error((idx+1)+'번째 가입 건의 상품을 선택해 주세요.');continue;}
   if(strict&&!validSignupDate(raw.signupDate))throw Error((idx+1)+'번째 가입 건의 실제 가입일자를 입력해 주세요. 행사일과 달라도 괜찮습니다.');
@@ -1893,18 +1897,21 @@ function readSignupEntries(strict=false){
   if(![seats,revenue,annualFee].every(n=>Number.isSafeInteger(n)&&n>=0)){if(strict)throw Error((idx+1)+'번째 가입 건의 금액과 구좌는 0 이상의 정수로 입력해 주세요.');continue;}
   if(strict&&paymentType==='installment'&&(monthsRaw===''||!Number.isSafeInteger(Number(monthsRaw))||Number(monthsRaw)<1||Number(monthsRaw)>360))throw Error((idx+1)+'번째 가입 건의 분납 개월 수(1~360)를 입력해 주세요.');
   const installmentMonths=paymentType==='installment'&&Number.isSafeInteger(Number(monthsRaw))&&Number(monthsRaw)>0&&Number(monthsRaw)<=360?Number(monthsRaw):null;
+  if(strict&&paymentType==='installment'&&(installmentAmounts.length!==installmentMonths||installmentAmounts.some(v=>!Number.isSafeInteger(v)||v<0)))throw Error((idx+1)+'번째 가입 건의 모든 분납 금액을 입력해 주세요.');
+  if(strict&&paymentType==='installment'&&installmentAmounts.reduce((a,b)=>a+(b||0),0)!==revenue)throw Error((idx+1)+'번째 가입 건의 분납 합계와 구좌 매출액이 일치해야 합니다.');
   if(strict&&!raw.branch)throw Error((idx+1)+'번째 가입 건의 담당 지사를 선택해 주세요.');
-  entries.push({group,product,seats,revenue,annualFee,branch:raw.branch,division:raw.division,manager:raw.manager,memberName:raw.memberName,signupDate:validSignupDate(raw.signupDate),paymentType,installmentMonths,note});
+  entries.push({group,product,seats,revenue,annualFee,branch:raw.branch,division:raw.division,manager:raw.manager,memberName:raw.memberName,signupDate:validSignupDate(raw.signupDate),paymentType,installmentMonths,installmentAmounts:paymentType==='installment'?installmentAmounts:[],withdrawn,note});
  }
  return entries;
 }
 function signupEntrySummary(entries){
- return entries.reduce((acc,x)=>{acc[x.group]+=x.seats;acc[x.group+'Revenue']+=x.revenue;acc.annualFee+=x.annualFee;return acc;},{corporate:0,individual:0,corporateRevenue:0,individualRevenue:0,annualFee:0});
+ return entries.reduce((acc,x)=>{if(!x.withdrawn){acc[x.group]+=x.seats;acc[x.group+'Revenue']+=x.revenue;acc.annualFee+=x.annualFee;}return acc;},{corporate:0,individual:0,corporateRevenue:0,individualRevenue:0,annualFee:0});
 }
 function refreshSignupEntryTotals(){
  const rows=[...el('signupEntryRows').querySelectorAll('.entry-row')];
  rows.forEach((element,i)=>{
   element.querySelector('.entry-number').textContent='가입 '+(i+1)+'건';
+  const amounts=[...element.querySelectorAll('.entry-installment-amount')].map(n=>n.value.trim()===''?0:Number(n.value));const total=element.querySelector('.entry-installment-total');if(total)total.textContent='분납 합계 '+won(amounts.reduce((a,b)=>a+(Number.isFinite(b)?b:0),0));
   for(const [inputClass,previewClass] of [['entry-revenue','entry-revenue-preview'],['entry-fee','entry-fee-preview']]){
    const input=element.querySelector('.'+inputClass),preview=element.querySelector('.'+previewClass);
    const raw=input.value.trim(),amount=Number(raw);
@@ -1946,6 +1953,7 @@ el('addSignupEntry').addEventListener('click',()=>appendSignupEntry());
 entryContainer.addEventListener('click',e=>{
  const row=e.target.closest('.entry-row');if(!row)return;
  if(e.target.closest('.entry-remove')){row.remove();refreshSignupEntryTotals();return;}
+ if(e.target.closest('.entry-withdraw')){const badge=row.querySelector('.entry-withdraw-status');badge.hidden=!badge.hidden;e.target.textContent=badge.hidden?'탈회 처리':'탈회 취소';refreshSignupEntryTotals();return;}
  if(e.target.closest('.entry-apply')){
   const amountInput=row.querySelector('.entry-revenue'),percent=Number(row.querySelector('.entry-percent').value),adjust=Number(row.querySelector('.entry-adjust').value);
   if(amountInput.value.trim()===''||!Number.isFinite(percent)||percent<0||percent>100||!Number.isSafeInteger(adjust)){alert('매출액과 계산 비율 및 조정액을 확인해 주세요.');return;}
@@ -1959,7 +1967,7 @@ entryContainer.addEventListener('change',e=>{
  const paymentSelect=e.target.closest('.entry-payment-type');
  if(paymentSelect){
   const row=paymentSelect.closest('.entry-row'),wrap=row.querySelector('.entry-installment-wrap'),input=row.querySelector('.entry-installment-months'),installment=paymentSelect.value==='installment';
-  wrap.hidden=!installment;input.disabled=!installment;if(!installment)input.value='';
+  wrap.hidden=!installment;input.disabled=!installment;if(!installment)input.value='';refreshInstallmentInputs(row);
   refreshSignupEntryTotals();return;
  }
  const select=e.target.closest('.entry-product');if(!select)return;
@@ -1970,7 +1978,13 @@ entryContainer.addEventListener('change',e=>{
  if(row.querySelector('.entry-fee').value==='')row.querySelector('.entry-fee').value=0;
  refreshSignupEntryTotals();
 });
-entryContainer.addEventListener('input',e=>{if(e.target.matches('.entry-seats,.entry-revenue,.entry-fee,.entry-installment-months'))refreshSignupEntryTotals();});
+entryContainer.addEventListener('input',e=>{if(e.target.matches('.entry-installment-months'))refreshInstallmentInputs(e.target.closest('.entry-row'));if(e.target.matches('.entry-seats,.entry-revenue,.entry-fee,.entry-installment-months,.entry-installment-amount'))refreshSignupEntryTotals();});
+function refreshInstallmentInputs(row){
+ const count=Math.min(360,Math.max(0,Number(row.querySelector('.entry-installment-months').value)||0));
+ const box=row.querySelector('.entry-installment-amounts'),old=[...box.querySelectorAll('input')].map(e=>e.value);
+ box.innerHTML=Array.from({length:count},(_,i)=>'<label>'+(i+1)+'회차 <input type="number" class="entry-installment-amount" min="0" step="1" value="'+esc(old[i]??'')+'" style="width:100%"></label>').join('');
+ row.querySelector('.entry-installment-schedule').hidden=row.querySelector('.entry-payment-type').value!=='installment';
+}
 function refreshDivisionForm(saved=''){
  const branch=el('fBranch').value,sel=el('fDivision');
  const region=branch==='부산권역';
