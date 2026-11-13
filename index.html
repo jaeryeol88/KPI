@@ -1032,10 +1032,14 @@ function orgRenderHeadcount(){
  const target=el('orgHeadcountGrid');if(!target)return;
  const counts={regional:0,branch:0,division:0,manager:0,dual:0};
  for(const node of orgNodes){
-  if(!orgCountable(node)||node.staffHidden===true)continue;
-  // 겸직은 직책과 관계없이 별도 집계하고, 총인원에 포함하지 않습니다.
-  const concurrent=/겸직/.test(String(node.label||'')+' '+String(node.subtitle||''));
-  if(concurrent){counts.dual++;continue;}
+  if(node.staffHidden===true)continue;
+  // 조직도 카드의 이름 또는 직급에 "(겸직)" 표시가 있다면 직책 설정 유무와 관계없이 집계.
+  const label=String(node.label||'').trim();
+  const subtitle=String(node.subtitle||'').trim();
+  const marked=/\(\s*겸직\s*\)/.test(label+' '+subtitle);
+  const isMemberCard=node.type==='person'||node.type==='division';
+  if(marked&&isMemberCard&&label){counts.dual++;continue;}
+  if(!orgCountable(node))continue;
   const role=orgEffectiveRole(node);
   if(Object.prototype.hasOwnProperty.call(counts,role))counts[role]++;
  }
