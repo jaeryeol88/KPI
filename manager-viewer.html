@@ -209,6 +209,42 @@ th{background:#edf2fa;font-weight:750}td{background:white}td:last-child,th:last-
 .org-canvas .org-node-root{min-width:260px;min-height:85px}
 .org-canvas .org-node-person strong{font-size:17px}
 .org-canvas .org-group-row.org-single:before{display:none}
+
+/* Same roster presentation as the administrator, minus editing controls. */
+.staff-shell{border:1px solid #e2e9f3;border-radius:13px;background:#fff;padding:18px}
+.staff-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;border-bottom:1px solid #e7ecf3;padding-bottom:14px;margin-bottom:14px}
+.staff-header h2{margin:0;font-size:18px;color:#182d4d}
+.staff-header h2:before{content:'♧';color:#2361dd;margin-right:8px}
+.staff-count{background:#e9f1ff;color:#215ddd;border-radius:7px;padding:6px 10px;font-size:13px;font-weight:850}
+.staff-tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:8px 0 12px}
+.staff-tools input,.staff-tools select{border:1px solid #d4deec;border-radius:9px;padding:9px 12px;min-height:39px;background:white;max-width:220px}
+.staff-tools input{font-size:13px}
+.staff-scroll{overflow:auto;border:1px solid #e2e8f0;border-radius:11px}
+.staff-table{border-collapse:collapse;min-width:1150px;width:100%;font-size:12px}
+.staff-table th{background:#f7f9fc;color:#526179;font-size:12px;font-weight:800;padding:15px 8px;border-bottom:1px solid #dce5f2;text-align:center}
+.staff-table td{padding:13px 8px;text-align:center;border-bottom:1px solid #eef2f8;color:#364962}
+.staff-table tbody tr:hover td{background:#f8fbff}
+.staff-table .staff-num{color:#8ea0bb}.staff-table .staff-name{font-size:13px;color:#14253f;font-weight:800}
+.staff-pill{display:inline-block;color:#235fe0;background:#edf4ff;border:1px solid #cfddf5;padding:3px 8px;border-radius:4px;font-size:11px;font-weight:800}
+.staff-status{display:inline-block;color:#2158cc;background:#eff5ff;border:1px solid #cbdcff;border-radius:18px;font-weight:750;padding:2px 9px}
+.staff-status.leave{color:#9c6700;background:#fff7e2;border-color:#ffe0a0}
+.staff-status.left{color:#8691a0;background:#eff2f5;border-color:#dce2e9}
+.staff-message{font-size:12px;color:#57718c;margin:6px 0 10px}
+.staff-tip{margin:12px 1px 0;color:#71819a;font-size:12px;line-height:1.7}
+.staff-phone{display:inline-block;min-width:105px;cursor:text;padding:4px;border:1px dashed #cbd9e9;border-radius:5px}
+.staff-phone.locked{font-size:11px;color:#8a9bb1;cursor:pointer}
+.staff-phone.concealed{color:transparent;text-shadow:none;user-select:text}
+.staff-phone.concealed::selection{color:#163b73;background:#cde2ff}
+.staff-phone.visible{color:#163b73;background:#eaf2ff}
+.staff-phone-dialog{border:1px solid #d4dfec;border-radius:14px;padding:25px;max-width:min(440px,92vw);box-shadow:0 14px 55px #14284435;color:#172c4d;background:#fff}
+.staff-phone-dialog::backdrop{background:#10213b9c}
+.staff-phone-dialog h2{font-size:19px;margin:0 0 12px}
+.staff-phone-dialog p{font-size:12px;color:#718098;line-height:1.65}
+.staff-phone-dialog label{display:block;font-size:12px;font-weight:750;margin-top:14px}
+.staff-phone-dialog input{width:100%;padding:10px;border:1px solid #d0daea;border-radius:8px;margin-top:6px}
+.staff-phone-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:18px}
+.staff-phone-actions button{font-size:12px}
+@media(max-width:700px){.staff-shell{padding:12px}.staff-table{min-width:1150px}}
 </style>
 </head><body><div class="shell"><aside><div class="brand">PLK <span style="color:#71afff">KPI</span><small>EVENT PERFORMANCE</small></div>
 <nav aria-label="조회 메뉴"><div class="nav-section">▤ &nbsp; 실적현황</div><button type="button" data-page="year" class="active nav-child">지사별 / 본부별 실적현황</button><button type="button" data-page="personal" class="nav-child">개인별 실적현황</button><div class="nav-section">♧ &nbsp; 조직관리</div><button type="button" data-page="org" class="nav-child">조직도</button><button type="button" data-page="orgstaff" class="nav-child">조직원 정보</button></nav>
@@ -225,5 +261,32 @@ th{background:#edf2fa;font-weight:750}td{background:white}td:last-child,th:last-
 <p>개인별 구좌와 합계만 표시합니다. 재직/계약해지 모두 실적에 합산되며 매출 항목은 없습니다.</p>
 <div class="perf-yearboard-months" id="personalMonthButtons" aria-label="개인별 실적 월 선택"></div><div class="table-wrap perf-yearboard-scroll"><table class="personal perf-yearboard-table personal-matrix"><colgroup id="personalCols"></colgroup><thead id="personalHead"></thead><tbody id="personalBody"></tbody><tfoot id="personalFoot"></tfoot></table></div></section>
 <section id="org" class="hidden org-page"><div class="org-toolbar"><div><h2>조직도 <span class="perf-linked">조직관리</span></h2><p>관리자가 등록한 조직도와 조직원 정보를 조회할 수 있습니다. 수정 기능은 제공되지 않습니다.</p></div></div><div class="org-scroll"><div id="orgTree" class="org-canvas"></div></div><section class="org-headcount"><div class="org-headcount-top"><h3>조직 인원 현황</h3><span id="orgCount">조직도 카드 기준 · 자동 집계</span></div><div id="orgHeadcount" class="org-headcount-grid"></div><p class="org-headcount-note">이름·직책 기준 인원 집계 · (겸직) 인원은 별도 분류</p></section></section>
-<section id="orgstaff" class="panel hidden"><div class="toolbar"><h2>PACIFIC 부산권역 임직원 명단</h2><span class="org-count" id="staffCount"></span><div class="filters"><label>지사 <select id="staffBranch"></select></label><label>성명 검색 <input type="search" id="staffSearch" placeholder="성명·소속 검색" aria-label="조직원 검색"></label></div></div><p>조직도에 등록된 구성원을 조회합니다. 연락처와 수정 기능은 제공하지 않습니다.</p><div class="table-wrap"><table style="min-width:760px"><thead><tr><th>No.</th><th>성명</th><th>직책</th><th>소속 지사</th><th>소속 본부/부서</th><th>구분</th></tr></thead><tbody id="staffBody"></tbody></table></div></section>
-</main></div><script src="./config.js"></script><script type="module" src="./manager_viewer.js?v=admin-org-exact-layout-20261113"></script></body></html>
+<section id="orgstaff" class="org-page hidden" aria-label="조직원 정보">
+ <div class="staff-shell">
+  <div class="staff-header"><h2>PACIFIC 부산권역 임직원 명단</h2><strong id="staffCount" class="staff-count">총 0명</strong></div>
+  <div class="staff-tools">
+   <input id="staffSearch" type="search" placeholder="성명·직급·소속 검색" aria-label="조직원 검색">
+   <select id="staffBranch" aria-label="지사별 검색"></select>
+   <select id="staffStatusFilter" aria-label="재직상태">
+    <option value="all">전체 재직상태</option><option value="재직">재직</option><option value="휴직">휴직</option><option value="퇴사">퇴사</option>
+   </select>
+   <button type="button" id="staffPhoneLogout" hidden class="btn">연락처 인증 해제</button>
+  </div>
+  <p id="staffMessage" class="staff-message" role="status">연락처는 권한이 있는 계정으로 인증한 뒤에만 확인할 수 있습니다.</p>
+  <div class="staff-scroll"><table class="staff-table">
+   <thead><tr><th>No.</th><th>성명</th><th>직급</th><th>소속 지사</th><th>소속 본부/부서</th><th>연락처</th><th>입사년월</th><th>재직상태</th><th>관리</th></tr></thead>
+   <tbody id="staffBody"></tbody></table></div>
+  <p class="staff-tip">관리자 조직원 정보와 같은 명단입니다. 연락처는 공개 데이터에 포함되지 않으며, 권한 인증 후 번호를 더블클릭하거나 드래그하면 표시됩니다. 이 페이지에서는 조직원 정보를 수정할 수 없습니다.</p>
+ </div>
+</section>
+<dialog id="staffPhoneDialog" aria-labelledby="staffPhoneTitle" class="staff-phone-dialog">
+ <form id="staffPhoneLogin">
+  <h2 id="staffPhoneTitle">연락처 열람 인증</h2>
+  <p>개인 연락처는 보호되는 정보입니다. 권한이 등록된 관리자·지사 계정으로 로그인하면 필요한 번호만 조회할 수 있습니다.</p>
+  <label>이메일<input id="staffPhoneEmail" type="email" required autocomplete="username" placeholder="계정 이메일"></label>
+  <label>비밀번호<input id="staffPhonePassword" type="password" required autocomplete="current-password" placeholder="비밀번호"></label>
+  <p id="staffPhoneError" class="staff-message" role="alert"></p>
+  <div class="staff-phone-actions"><button class="btn primary" type="submit" id="staffPhoneLoginButton">인증하고 번호 보기</button><button type="button" class="btn" id="staffPhoneCancel">취소</button></div>
+ </form>
+</dialog>
+</main></div><script src="./config.js"></script><script type="module" src="./manager_viewer.js?v=staff-roster-auth-phone-20261113"></script></body></html>
