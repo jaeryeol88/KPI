@@ -1097,7 +1097,7 @@ async function fetchViewerPublicData(silent){
 }
 let viewerExtras={refresh:()=>{},refreshOrganization:async()=>{},setHistoricalSeats:()=>{},setCompetitionData:()=>{}};
 try{
- const {installViewerExtras}=await import('./viewer_extra.js?v=competition-leaderboard-syntaxfix-20261114');
+ const {installViewerExtras}=await import('./viewer_extra.js?v=org-secure-status-fix-20261114');
  viewerExtras=installViewerExtras({
  assignedBranch,
  getAllEvents:()=>allViewerEvents,
@@ -1110,6 +1110,11 @@ try{
   const {data,error}=await client.from('kpi_org_chart').select('nodes').eq('id',1).maybeSingle();
   if(error)throw error;
   return Array.isArray(data?.nodes)?data.nodes:[];
+ },
+ loadStaffStatuses:async()=>{
+  const {data,error}=await secureViewerDb.from('kpi_org_staff_public_status').select('node_id,employment_status');
+  if(error)throw error;
+  return data||[];
  }
 });
 }catch(error){console.error('뷰어 메뉴 초기화 오류',error);status('실적 메뉴 로딩 오류: '+(error?.message||error),true);}
