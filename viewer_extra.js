@@ -202,9 +202,10 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
  @media(max-width:650px){.v-headcount-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.v-hc:last-child{grid-column:1/-1}}
  `;
  const stylesheet=document.createElement('style');stylesheet.textContent=css;document.head.appendChild(stylesheet);
+ const monthlyStyle=document.createElement('style');monthlyStyle.textContent="\n.v-signup-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:18px 0}.v-signup-summary>div{border:1px solid #e2e8f0;border-radius:10px;padding:15px;background:#fff;display:flex;flex-direction:column;gap:7px}.v-signup-summary span{font-size:12px;color:#718098}.v-signup-summary strong{font-size:20px;color:#172840}.v-signup-table{min-width:1220px;width:100%;border-collapse:collapse;font-size:12px}.v-signup-table th{background:#eaf2ff;color:#24466e;padding:13px 11px;text-align:left;white-space:nowrap}.v-signup-table td{padding:12px 11px;border-bottom:1px solid #edf1f6;white-space:nowrap}.v-signup-table tbody tr:nth-child(even){background:#f8fbff}.v-signup-table th:nth-child(6),.v-signup-table td:nth-child(6){text-align:center!important;width:76px}.v-signup-table th:nth-child(7),.v-signup-table th:nth-child(8),.v-signup-table th:nth-child(9),.v-signup-table td:nth-child(7),.v-signup-table td:nth-child(8),.v-signup-table td:nth-child(9){text-align:right!important}.v-signup-table td:nth-child(9){font-weight:800}.v-payment-label{display:block;margin-top:4px;color:#2563eb;font-size:11px}.v-signup-prior{display:flex;align-items:center;justify-content:space-between;margin:30px 0 12px;gap:12px}.v-signup-prior h3{margin:0;font-size:17px}.v-signup-prior strong{color:#145dc5;font-size:16px}@media(max-width:750px){.v-signup-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}\n";document.head.appendChild(monthlyStyle);
  const main=document.querySelector('main.main'),side=document.querySelector('.sidebar');
  const nav=document.createElement('nav');nav.className='v-nav';nav.setAttribute('aria-label','실적 조회 메뉴');
- nav.innerHTML='<button type="button" data-vpage="dashboard" class="active">▦ &nbsp; 실적관리</button><div class="v-parent">▤ &nbsp; 실적현황</div><button type="button" data-vpage="yearboard" class="v-child">지사별 / 본부별 실적현황</button><button type="button" data-vpage="personal" class="v-child">개인별 실적현황</button><div class="v-parent">♧ &nbsp; 조직관리</div><button type="button" data-vpage="org" class="v-child">조직도</button><button type="button" data-vpage="orgstaff" class="v-child">조직원 정보</button>';
+ nav.innerHTML='<button type="button" data-vpage="dashboard" class="active">▦ &nbsp; 실적관리</button><div class="v-parent">▤ &nbsp; 실적현황</div><button type="button" data-vpage="yearboard" class="v-child">지사별 / 본부별 실적현황</button><button type="button" data-vpage="personal" class="v-child">개인별 실적현황</button><button type="button" data-vpage="monthlysignups" class="v-child">월별 입회 현황</button><div class="v-parent">♧ &nbsp; 조직관리</div><button type="button" data-vpage="org" class="v-child">조직도</button><button type="button" data-vpage="orgstaff" class="v-child">조직원 정보</button>';
  const oldNav=side.querySelector('.viewer-sidebar-fallback')||side.querySelector('.nav-item');if(oldNav)oldNav.replaceWith(nav);else side.insertBefore(nav,side.querySelector('.aside-note'));
  const originals=[...main.children].filter(n=>n.tagName!=='HEADER'&&n.id!=='status');
  originals.forEach(n=>n.classList.add('v-original'));
@@ -219,6 +220,13 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
   <div class="v-extra-head"><div><h2>개인별 실적현황</h2><p>부산 1~4지사 매니저별 가입 구좌와 순위를 확인합니다.</p></div><div class="v-filters"><label>조회 연도 <select id="v-pyear"></select></label><label>지사 <select id="v-pbranch"></select></label><label>본부 <select id="v-pdivision"></select></label></div></div>
   <div id="v-months" class="v-months"></div><div class="v-table-scroll"><table class="v-table" id="v-person-table"><thead id="v-person-head"></thead><tbody id="v-person-body"></tbody></table></div>
   <p class="v-note" id="v-person-note"></p>
+ </section>
+ <section id="v-monthlysignups" class="v-extra" hidden>
+ <div class="v-extra-head"><div><h2>월별 입회 현황 <span class="v-linked">가입 건별 등록 연동</span></h2><p>실제 가입일 기준 신규 입회만 표시하며, 이전 가입자의 해당 월 분납금은 아래 별도 표에 표시합니다.</p></div><div class="v-filters"><label>조회 연도 <select id="v-syear"></select></label><label>조회 월 <select id="v-smonth"></select></label><label>소속지사 <select id="v-sbranch"></select></label><label>소속본부 <select id="v-sdivision"></select></label></div></div>
+ <div id="v-ssummary" class="v-signup-summary"></div>
+ <div class="v-table-scroll"><table class="v-table v-signup-table"><thead><tr><th>가입 일자</th><th>소속지사</th><th>소속본부</th><th>가입 담당 매니저</th><th>가입상품</th><th>구좌</th><th>입회금</th><th>연회비</th><th>총 매출</th><th>입회자 성함</th></tr></thead><tbody id="v-snew"></tbody></table></div><p class="v-note" id="v-snewnote"></p>
+ <div class="v-signup-prior"><h3>전월 이전 가입자 분납금</h3><strong id="v-spriortotal"></strong></div>
+ <div class="v-table-scroll"><table class="v-table v-signup-table"><thead><tr><th>가입 일자</th><th>소속지사</th><th>소속본부</th><th>가입 담당 매니저</th><th>가입상품</th><th>구좌</th><th>입회금</th><th>연회비</th><th>총 매출</th><th>입회자 성함</th></tr></thead><tbody id="v-sprior"></tbody></table></div><p class="v-note" id="v-spriornote"></p>
  </section>
  <section id="v-org" class="v-extra" hidden>
   <div class="v-extra-head"><div><h2>조직도 <span style="font-size:12px;color:#7b8ca4">조회 전용</span></h2><p>부산권역 조직도와 직책별 인원 현황입니다.</p></div></div>
@@ -236,10 +244,10 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
  main.appendChild(wrapper);
  // The source spreadsheet has no branch for cancellations; do not disclose unassigned names in individual district viewers.
  const cancelPanel=assignedBranch&&assignedBranch!=='부산권역'?{setRows(){},render(){}}:cancellationPanel(el('v-personal'));
- const pages={yearboard:el('v-yearboard'),personal:el('v-personal'),org:el('v-org'),orgstaff:el('v-orgstaff')};
- const labels={dashboard:'KPI · 실적관리',yearboard:'지사별 / 본부별 실적현황',personal:'개인별 실적현황',org:'조직도',orgstaff:'조직원 정보'};
+ const pages={yearboard:el('v-yearboard'),personal:el('v-personal'),monthlysignups:el('v-monthlysignups'),org:el('v-org'),orgstaff:el('v-orgstaff')};
+ const labels={dashboard:'KPI · 실적관리',yearboard:'지사별 / 본부별 실적현황',personal:'개인별 실적현황',monthlysignups:'월별 입회 현황',org:'조직도',orgstaff:'조직원 정보'};
  function show(page){
-  if(!['dashboard','yearboard','personal','org','orgstaff'].includes(page))return;
+  if(!['dashboard','yearboard','personal','monthlysignups','org','orgstaff'].includes(page))return;
   active=page;
   originals.forEach(n=>n.hidden=page!=='dashboard');
   Object.entries(pages).forEach(([key,element])=>element.hidden=page!==key);
@@ -248,10 +256,54 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
   document.querySelector('.top .sub').textContent=page==='dashboard'?(assignedBranch?assignedBranch+' 전용 · 로그인 없이 조회':'행사 투입 비용과 실적을 한곳에서 관리하세요.'):'부산 1~4지사 전체 · 조회 전용';
   if(page==='yearboard')renderYear();
   if(page==='personal')renderPersonal();
+  if(page==='monthlysignups')renderSignupReport();
   if(page==='org')renderOrg();
   if(page==='orgstaff')renderStaff();
  }
  nav.addEventListener('click',event=>{const b=event.target.closest('button[data-vpage]');if(b)show(b.dataset.vpage)});
+ let sy=new Date().getFullYear(),sm=new Date().getMonth()+1,sb=assignedBranch||'all',sd='all';
+ function renderSignupReport(){
+  const all=[],prior=[];
+  for(const event of getAllEvents()){
+   for(const row of Array.isArray(event.signupEntries)?event.signupEntries:[]){
+    if(!row||row.withdrawn||!['corporate','individual'].includes(row.group))continue;
+    const date=String(row.signupDate||'').trim();
+    if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(date))continue;
+    const branch=row.branch||event.branch||'',division=normalizeDivision(row.division||event.division)||'';
+    if(assignedBranch&&branch!==assignedBranch)continue;
+    const y=Number(date.slice(0,4)),m=Number(date.slice(5,7));
+    if(m<1||m>12)continue;
+    const amounts=row.paymentType==='installment'&&Array.isArray(row.installmentAmounts)&&row.installmentAmounts.length?row.installmentAmounts:[Number(row.revenue)||0];
+    const base={date,branch,division,manager:row.manager||'',product:row.product||'',member:row.memberName||'',installment:row.paymentType==='installment',months:Number(row.installmentMonths)||amounts.length};
+    all.push({...base,y,m,seats:Number(row.seats)||0,fee:Number(row.annualFee)||0,revenue:Number(amounts[0])||0,sequence:1});
+    if(row.paymentType==='installment')amounts.slice(1).forEach((amount,i)=>{const offset=i+1;prior.push({...base,y:y+Math.floor((m-1+offset)/12),m:(m-1+offset)%12+1,seats:0,fee:0,revenue:Number(amount)||0,sequence:offset+1});});
+   }
+  }
+  const ys=[...new Set([new Date().getFullYear(),...all.map(r=>r.y),...prior.map(r=>r.y)])].sort((a,b)=>b-a);
+  if(!ys.includes(sy))sy=ys[0];
+  selectOptions(el('v-syear'),ys.map(y=>[y,y+'년']),sy);
+  selectOptions(el('v-smonth'),Array.from({length:12},(_,i)=>[i+1,(i+1)+'월']),sm);
+  const branches=[...new Set([...all,...prior].map(x=>x.branch).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko'));
+  if(assignedBranch)sb=assignedBranch;
+  else if(sb!=='all'&&!branches.includes(sb))sb='all';
+  selectOptions(el('v-sbranch'),assignedBranch?[[assignedBranch,assignedBranch]]:[['all','전체 지사'],...branches.map(b=>[b,b])],sb);
+  el('v-sbranch').disabled=!!assignedBranch;
+  const divs=[...new Set([...all,...prior].filter(x=>sb==='all'||x.branch===sb).map(x=>x.division).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko'));
+  if(sd!=='all'&&!divs.includes(sd))sd='all';
+  selectOptions(el('v-sdivision'),[['all','전체 본부'],...divs.map(d=>[d,d])],sd);
+  const matching=x=>x.y===sy&&x.m===sm&&(sb==='all'||x.branch===sb)&&(sd==='all'||x.division===sd);
+  const news=all.filter(matching).sort((a,b)=>b.date.localeCompare(a.date));
+  const prev=prior.filter(matching).sort((a,b)=>b.date.localeCompare(a.date));
+  const sum=(arr,key)=>arr.reduce((n,x)=>n+x[key],0);
+  el('v-ssummary').innerHTML=[['해당 월 구좌',fmt(sum(news,'seats'))+'구좌'],['입회금',won(sum(news,'revenue'))],['연회비',won(sum(news,'fee'))],['총 매출',won(sum(news,'revenue')+sum(news,'fee'))]].map(([label,value])=>'<div><span>'+label+'</span><strong>'+value+'</strong></div>').join('');
+  const rowHtml=(x,isPrior)=>'<tr><td>'+safe(x.date)+'</td><td>'+safe(x.branch||'—')+'</td><td>'+safe(x.division||'—')+'</td><td>'+safe(x.manager||'—')+'</td><td>'+safe(x.product||'—')+'<small class="v-payment-label">'+(isPrior?x.sequence+'회차 분납':x.installment?fmt(x.months)+'개월 분납':'완납')+'</small></td><td>'+fmt(x.seats)+'</td><td>'+won(x.revenue)+'</td><td>'+won(x.fee)+'</td><td>'+won(x.revenue+x.fee)+'</td><td>'+safe(x.member||'—')+'</td></tr>';
+  el('v-snew').innerHTML=news.map(x=>rowHtml(x,false)).join('')||'<tr><td colspan="10">선택한 월의 신규 입회 내역이 없습니다.</td></tr>';
+  el('v-sprior').innerHTML=prev.map(x=>rowHtml(x,true)).join('')||'<tr><td colspan="10">해당 월의 이전 가입자 분납금이 없습니다.</td></tr>';
+  el('v-spriortotal').textContent='분납금 합계 '+won(sum(prev,'revenue'));
+  el('v-snewnote').textContent='총 '+fmt(news.length)+'건 · 해당 월 실제 가입일 기준';
+  el('v-spriornote').textContent='총 '+fmt(prev.length)+'건 · 신규 구좌 및 연회비와 중복 집계하지 않습니다.';
+ }
+ [['v-syear',v=>sy=Number(v)],['v-smonth',v=>sm=Number(v)],['v-sbranch',v=>{sb=v;sd='all'}],['v-sdivision',v=>sd=v]].forEach(([id,fn])=>el(id).addEventListener('change',e=>{fn(e.target.value);renderSignupReport()}));
  const selectOptions=(node,opts,value)=>{node.innerHTML=opts.map(([v,t])=>'<option value="'+safe(v)+'">'+safe(t)+'</option>').join('');node.value=String(value)};
  const years=()=>[...new Set([...getYears(),...historicalSeats.map(x=>Number(x.goal_year)),...getAllEvents().map(e=>Number(String(e.date||'').slice(0,4))),new Date().getFullYear()])].filter(y=>Number.isInteger(y)&&y>=2020&&y<=2100).sort((a,b)=>b-a);
  const actual=(branch,y,m,div='all')=>historicalActualSeats({history:historicalSeats,events:getAllEvents(),branch,year:y,month:m,division:div,normalizeDivision,timedSignupRows});
@@ -521,7 +573,7 @@ el('v-months').addEventListener('change',e=>{
  branchSelector.addEventListener('change',renderStaff);
  el('v-staff-status').addEventListener('change',renderStaff);
 
- function refresh(){if(active==='yearboard')renderYear();if(active==='personal')renderPersonal();}
+ function refresh(){if(active==='yearboard')renderYear();if(active==='personal')renderPersonal();if(active==='monthlysignups')renderSignupReport();}
  function setHistoricalSeats(data,cancellations=[]){historicalSeats=Array.isArray(data)?data:[];cancelPanel.setRows(cancellations);refresh();}
  return {refresh,refreshOrganization,setHistoricalSeats};
 }
