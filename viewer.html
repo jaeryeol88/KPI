@@ -994,7 +994,7 @@ async function loadPublic(){
 }
 let viewerExtras={refresh:()=>{},refreshOrganization:async()=>{},setHistoricalSeats:()=>{}};
 try{
- const {installViewerExtras}=await import('./viewer_extra.js?v=sidebar-recovery-20261113');
+ const {installViewerExtras}=await import('./viewer_extra.js?v=sidebar-fallback-fix-20261113');
  viewerExtras=installViewerExtras({
  assignedBranch,
  getAllEvents:()=>allViewerEvents,
