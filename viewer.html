@@ -1013,7 +1013,14 @@ el('rows').onclick=e=>{
 };
 el('rows').addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.matches('tr[data-record-id]')){e.preventDefault();const entry=items.find(x=>x.id===e.target.dataset.recordId);if(entry)showEventDetail(entry);}});
 el('search').addEventListener('input',render);
-async function loadPublic(){
+let publicSyncBusy=false;
+let publicSyncFingerprint='';
+async function loadPublic({silent=false}={}){
+  if(publicSyncBusy)return;
+  publicSyncBusy=true;
+  try{await fetchViewerPublicData(silent);}finally{publicSyncBusy=false;}
+}
+async function fetchViewerPublicData(silent){
   if(!/^https:\/\/[^/]+\.supabase\.co\/?$/.test(cfg.supabaseUrl||'')||!cfg.supabaseAnonKey){
     status('Supabase 공개 연결 설정을 찾을 수 없습니다.',true);return;
   }
@@ -1026,6 +1033,9 @@ async function loadPublic(){
       rows.push(...(data||[]));
       if((data||[]).length<1000)break;
     }
+    const nextFingerprint=JSON.stringify(rows);
+    if(silent&&nextFingerprint===publicSyncFingerprint)return;
+    publicSyncFingerprint=nextFingerprint;
     allViewerEvents=rows.map(r=>({...r.event_data,id:r.id}));
     items=allViewerEvents.filter(x=>!assignedBranch||eventAssignedBranches(x).includes(assignedBranch));
     try{render();}catch(earlyError){console.error('공개 행사 초기 표시 오류',earlyError);status('행사 표시 오류: '+(earlyError?.message||earlyError),true);}
@@ -1056,9 +1066,10 @@ async function loadPublic(){
     }
     viewerExtras.refresh();
     await viewerExtras.refreshOrganization();
-    if(!el('status').classList.contains('error'))status((assignedBranch?assignedBranch+' 전용 · ':'')+'공개 KPI 데이터 조회 완료 · '+fmt(items.length)+'건 · 읽기 전용');
+    if(!silent&&!el('status').classList.contains('error'))status((assignedBranch?assignedBranch+' 전용 · ':'')+'공개 KPI 데이터 조회 완료 · '+fmt(items.length)+'건 · 읽기 전용');
   }catch(error){
-    status('공개 데이터 설정이 완료되지 않았거나 조회에 실패했습니다. 관리자에게 Supabase viewer_setup.sql 실행 여부를 확인해 주세요. ('+(error?.message||'연결 오류')+')',true);
+    if(silent)console.warn('뷰어 자동 갱신 실패',error);
+    else status('공개 데이터 설정이 완료되지 않았거나 조회에 실패했습니다. 관리자에게 Supabase viewer_setup.sql 실행 여부를 확인해 주세요. ('+(error?.message||'연결 오류')+')',true);
   }
 }
 let viewerExtras={refresh:()=>{},refreshOrganization:async()=>{},setHistoricalSeats:()=>{}};
@@ -1080,4 +1091,7 @@ try{
 });
 }catch(error){console.error('뷰어 메뉴 초기화 오류',error);status('실적 메뉴 로딩 오류: '+(error?.message||error),true);}
 loadPublic();
+window.setInterval(()=>{if(!document.hidden)void loadPublic({silent:true});},20000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)void loadPublic({silent:true});});
+window.addEventListener('focus',()=>void loadPublic({silent:true}));
 </script></body></html>
