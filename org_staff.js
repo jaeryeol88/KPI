@@ -6,7 +6,7 @@ if(!host)return;
 const orgApi=window.PLK_ORG;
 if(!orgApi)throw new Error('조직관리 연결을 초기화하지 못했습니다.');
 const safe=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
-const roles={regional:'권역대표',branch:'지사장',division:'본부장',manager:'매니저'};
+const roles={regional:'권역대표',branch:'지사장',division:'본부장',manager:'매니저',dual:'겸직'};
 const branches=['부산권역','부산 1지사','부산 2지사','부산 3지사','부산 4지사'];
 const placeholders=new Set(['구성원','새 구성원','이름 미입력','최상위 조직','새 지사 / 부서','새 본부 / 팀','지사장 / 담당자 입력']);
 let contacts=new Map(),loaded=false,available=false,loading=null,editingId=null,staffSaving=false,showExcluded=false,importPending=[];
@@ -72,7 +72,7 @@ host.innerHTML=`
   <h3 id="staffFormTitle">조직원 등록</h3>
   <form id="staffForm"><div class="staff-form-grid">
    <label>성명 *<input id="staffName" maxlength="60" required></label>
-   <label>직급 *<select id="staffRole" required><option value="">선택</option><option value="regional">권역대표</option><option value="branch">지사장</option><option value="division">본부장</option><option value="manager">매니저</option></select></label>
+   <label>직급 *<select id="staffRole" required><option value="">선택</option><option value="regional">권역대표</option><option value="branch">지사장</option><option value="division">본부장</option><option value="manager">매니저</option><option value="dual">겸직 (총인원 제외)</option></select></label>
    <label>소속 지사 *<select id="staffBranch" required></select></label>
    <label>소속 본부/부서 *<select id="staffDivision" required></select></label>
    <label>연락처<input id="staffPhone" type="tel" maxlength="30" placeholder="010-0000-0000"></label>
