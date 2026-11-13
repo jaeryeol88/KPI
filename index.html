@@ -838,7 +838,7 @@ function renderCoreGoalKpi(filteredEvents){
  const possibleYears=[...new Set([
   ...monthlyTargets.map(t=>Number(t.goal_year)),
   ...monthlyDivisionTargets.map(t=>Number(t.goal_year)),
-  ...items.map(e=>Number(String(e.date||'').slice(0,4)))
+  ...items.flatMap(e=>timedSignupRows(e).map(row=>Number(row.signupDate.slice(0,4))))
  ].filter(y=>Number.isInteger(y)&&y>=2020&&y<=2100))];
  const years=yearFilter.size?[...yearFilter].map(Number):possibleYears;
  const monthFilter=multiValues.month;
@@ -850,7 +850,8 @@ function renderCoreGoalKpi(filteredEvents){
    if(value!==null)goal+=value;
   }
  }
- const achieved=filteredEvents.reduce((total,e)=>total+attributedSeats(e,branches,divisions.length===1&&divisions[0]==='all'?null:divisions),0);
+ const coreEvents=items.filter(e=>multiMatch('type',e.type));
+ const achieved=signupSeatsForPeriod(coreEvents,{years,months,branches,divisions:divisions.length===1&&divisions[0]==='all'?null:divisions,normalizeDivision});
  const percent=goal>0?(achieved/goal*100).toFixed(1)+'%':'—';
  const isYear=monthFilter.size===0;
  const scope=isYear?(yearFilter.size===1?'연간':yearFilter.size===0?'전체 기간':'선택 연도 합산'):(monthFilter.size===1?'월간':'선택 월 합산');
@@ -1332,7 +1333,7 @@ function renderPerformanceYearboard(){
  note.textContent=perfSelectedYear+'년 · '+(perfSelectedBranch==='all'?'전체 지사':perfSelectedBranch)+
   ' · 목표: 회사 배정 DB / 실적: 온라인 등록 내역 (담당 지사·본부 기준) · 미배정 목표는 — 표시'+
   (!monthlyReady?' · 목표 DB 연결 상태를 아래 월별·연간 목표 현황에서 확인하세요.':'')+
-  ' · 합계 달성률은 연간 실적 ÷ 연간 배정 목표입니다.';
+  ' · 실제 가입일자 기준 · 가입일 미입력 건 제외 · 합계 달성률은 연간 실적 ÷ 연간 배정 목표입니다.';
 }
 el('perfYearSelect').addEventListener('change',e=>{perfSelectedYear=Number(e.target.value);renderPerformanceYearboard();});
 el('perfBranchSelect').addEventListener('change',e=>{perfSelectedBranch=e.target.value;renderPerformanceYearboard();});
@@ -1424,7 +1425,7 @@ function renderPersonalYearboard(){
  el('personalYearNote').textContent=personalSelectedYear+'년 '+(fullYear?'전체(1~12월)':visibleMonths.map(m=>m+'월').join('·'))+' · 총 '+rows.length+'개 담당자/소속 조합 · '+fmt(sum)+'구좌'+
   (unassignedSeats?' · 담당자 미지정 '+fmt(unassignedSeats)+'구좌 (기존 기록 포함)':'')+
   (excludedLegacy?' · 가입 건별 정보가 없는 기존 실적 '+fmt(excludedLegacy)+'구좌는 담당자 미지정으로 표시':'')+
-  ' · 동일 성명이라도 소속 지사·본부가 다르면 별도 집계합니다.';
+  ' · 가입일자 기준 집계 (가입일 미입력 건 제외) · 동일 성명이라도 소속 지사·본부가 다르면 별도 집계합니다.';
 }
 el('personalYearBody').addEventListener('click',e=>{const button=e.target.closest('[data-personal-revenue]');if(!button)return;const info=personalRevenueActions.get(button.dataset.personalRevenue);if(info)showRevenueDetail(info.name,info.period,info.seats,info.revenue);});
 el('personalYearSelect').addEventListener('change',e=>{personalSelectedYear=Number(e.target.value);renderPersonalYearboard();});
@@ -2042,7 +2043,7 @@ function showEventDetail(x){
     '<div><span>가입구좌</span><strong>'+count(r.seats)+'</strong></div>'+
     '<div><span>구좌 매출액</span><strong>'+value(r.revenue)+'</strong></div>'+
     '<div><span>연회비 금액</span><strong>'+value(r.annualFee)+'</strong></div>'+
-    '<div><span>가입 담당 지사</span><strong>'+esc(r.branch||x.branch||'미지정')+'</strong></div>'+ '<div><span>가입 담당 본부</span><strong>'+esc(normalizeDivision(r.division||x.division)||'미지정')+'</strong></div>'+'<div><span>가입 담당 매니저</span><strong>'+esc(r.manager||'미지정')+'</strong></div>'+'<div><span>입회자 성함</span><strong>'+esc(r.memberName||'미입력')+'</strong></div>'+'<div><span>납부 방식</span><strong>'+esc(payment)+'</strong></div>'+
+    '<div><span>가입 담당 지사</span><strong>'+esc(r.branch||x.branch||'미지정')+'</strong></div>'+ '<div><span>가입 담당 본부</span><strong>'+esc(normalizeDivision(r.division||x.division)||'미지정')+'</strong></div>'+'<div><span>가입 담당 매니저</span><strong>'+esc(r.manager||'미지정')+'</strong></div>'+'<div><span>입회자 성함</span><strong>'+esc(r.memberName||'미입력')+'</strong></div>'+'<div><span>실제 가입일자</span><strong>'+esc(validSignupDate(r.signupDate)||'미입력 · 월별 실적 제외')+'</strong></div>'+'<div><span>납부 방식</span><strong>'+esc(payment)+'</strong></div>'+
     '<div><span>분납 개월 수</span><strong>'+esc(months)+'</strong></div>'+
     '</div>'+((typeof r.note==='string'&&r.note.trim())?'<div class="detail-entry-note"><span>가입 건별 메모</span><p>'+esc(r.note)+'</p></div>':'<div class="detail-entry-note"><span>가입 건별 메모</span><p>미입력</p></div>')+'</div>';
   }).join('');
