@@ -77,6 +77,7 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
  let staffPhoneDb=null,staffPhoneAllowed=false;
  const staffPhoneCache=new Map(),staffPhoneShown=new Set();
  let historicalSeats=[];
+ let competitionEvents=null,competitionHistoricalSeats=null;
  let active='dashboard',year=new Date().getFullYear(),yearBranch='all',highlightedYearMonth=0,pyear=year,pmonths=new Set(),pbranch='all',pdivision='all',orgNodes=[],orgLoaded=false,orgMessage='',staffStatuses=new Map(),staffStatusLoaded=false,staffStatusError='';
  const css=`
 .v-multi-slot{display:inline-block;vertical-align:middle}.v-signup-filter{display:inline-flex;align-items:center;gap:6px;font-size:12px!important;font-weight:600;color:#385477;white-space:nowrap}.v-multi-slot{font-size:12px!important}.v-signup-multi{position:relative;min-width:92px;font-size:12px!important}.v-signup-multi>summary{list-style:none;cursor:pointer;border:1px solid #dce6f2;border-radius:8px;padding:7px 10px;background:#fff;color:#172840;font-size:12px!important;line-height:1.35;font-weight:600;white-space:nowrap;max-width:260px;overflow:hidden;text-overflow:ellipsis}.v-signup-multi>summary::-webkit-details-marker{display:none}.v-signup-multi>summary:after{content:'⌄';margin-left:9px;color:#64748b}.v-signup-multi-menu{position:absolute;top:calc(100% + 5px);right:0;z-index:90;min-width:150px;max-height:280px;overflow:auto;padding:6px;background:#fff;border:1px solid #dce6f2;border-radius:10px;box-shadow:0 8px 22px #0b204022}.v-signup-multi-menu label{display:flex!important;align-items:center;gap:7px;white-space:nowrap;padding:8px 10px;cursor:pointer;font-size:12px}.v-signup-multi-menu label:hover{background:#f1f6ff}.v-signup-multi-menu input{accent-color:#145dc5}.v-signup-locked{pointer-events:none;opacity:.85}
@@ -332,7 +333,7 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
   el('v-spriornote').textContent='총 '+fmt(prev.length)+'건 · 신규 구좌 및 연회비와 중복 집계하지 않습니다.';
  }
  const selectOptions=(node,opts,value)=>{node.innerHTML=opts.map(([v,t])=>'<option value="'+safe(v)+'">'+safe(t)+'</option>').join('');node.value=String(value)};
- const years=()=>[...new Set([...getYears(),...historicalSeats.map(x=>Number(x.goal_year)),...getAllEvents().map(e=>Number(String(e.date||'').slice(0,4))),new Date().getFullYear()])].filter(y=>Number.isInteger(y)&&y>=2020&&y<=2100).sort((a,b)=>b-a);
+ const years=()=>[...new Set([...getYears(),...(competitionHistoricalSeats||historicalSeats).map(x=>Number(x.goal_year)),...(competitionEvents||getAllEvents()).map(e=>Number(String(e.date||'').slice(0,4))),new Date().getFullYear()])].filter(y=>Number.isInteger(y)&&y>=2020&&y<=2100).sort((a,b)=>b-a);
  const actual=(branch,y,m,div='all')=>historicalActualSeats({history:historicalSeats,events:getAllEvents(),branch,year:y,month:m,division:div,normalizeDivision,timedSignupRows});
  const goal=(branch,y,m,div='all')=>getTarget(branch,y,m,div)??historicValue(historicalSeats,branch,div==='all'?'':div,'',y,m,'target_seats');
  const months=Array.from({length:12},(_,i)=>i+1);
@@ -382,13 +383,13 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
    byKey.get(key).months[m-1]+=seats;
    byKey.get(key).revenues[m-1]=addRevenue(byKey.get(key).revenues[m-1],revenue);
   };
-  for(const event of getAllEvents()){
+  for(const event of (competitionEvents||getAllEvents())){
    const valid=timedSignupRows(event,pyear,shown);
    if(valid.length){
     for(const r of valid)add(r.branch||event.branch,normalizeDivision(r.division||event.division),String(r.manager||'').trim()||'담당자 미지정',Number(r.signupDate.slice(5,7)),r.seats,recordRevenue(r));
    } // Entries without a confirmed signup date are not counted in a reporting month.
   }
-  for(const h of historicalSeats){
+  for(const h of (competitionHistoricalSeats||historicalSeats)){
    if(!h.manager||Number(h.goal_year)!==pyear||!shown.includes(Number(h.goal_month)))continue;
    if(!branches.includes(h.branch)||pbranch!=='all'&&pbranch!==h.branch||pdivision!=='all'&&pdivision!==h.division)continue;
    const key=JSON.stringify([h.branch,h.division,h.manager]);
@@ -601,6 +602,7 @@ el('v-months').addEventListener('change',e=>{
  el('v-staff-status').addEventListener('change',renderStaff);
 
  function refresh(){if(active==='yearboard')renderYear();if(active==='personal')renderPersonal();if(active==='monthlysignups')renderSignupReport();}
- function setHistoricalSeats(data,cancellations=[]){historicalSeats=Array.isArray(data)?data:[];cancelPanel.setRows(cancellations);refresh();}
+ function setHistoricalSeats(data,cancellations=[]){historicalSeats=Array.isArray(data)?data:[];cancelPanel.setRows(cancellations);refresh();},
+ setCompetitionData(events,history){competitionEvents=Array.isArray(events)?events:null;competitionHistoricalSeats=Array.isArray(history)?history:null;refresh();}
  return {refresh,refreshOrganization,setHistoricalSeats};
 }
