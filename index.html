@@ -626,7 +626,7 @@ function productCardSummary(rows){
   rows.forEach(x=>{
    const total=known(x[cfg.seats])?Number(x[cfg.seats]):0;
    if(Array.isArray(x.signupEntries)){
-    x.signupEntries.filter(r=>r&&r.group===group).forEach(r=>{
+    x.signupEntries.filter(r=>r&&!r.withdrawn&&r.group===group).forEach(r=>{
      const seats=known(r.seats)?Number(r.seats):0;
      if(stats[r.product]){stats[r.product].count++;stats[r.product].seats+=seats;}
      else{missingCount++;missingSeats+=seats;}
@@ -658,7 +658,7 @@ function productBreakdown(rows,group){
  let unselectedRecords=0,unselectedSeats=0,unallocatedSeats=0;
  rows.forEach(x=>{
   if(Array.isArray(x.signupEntries)){
-   x.signupEntries.filter(row=>row&&row.group===group).forEach(row=>{
+   x.signupEntries.filter(row=>row&&!row.withdrawn&&row.group===group).forEach(row=>{
     const name=cfg.names.includes(row.product)?row.product:null;
     const seats=known(row.seats)?Number(row.seats):0;
     if(name){stats[name].records++;stats[name].seats+=seats;}
