@@ -929,7 +929,7 @@ async function loadPublic(){
     try {
       const historic=[];
       for(let start=0;;start+=1000){
-        const {data,error}=await client.from('kpi_historical_seats').select('branch,division,manager,goal_year,goal_month,target_seats,actual_seats').range(start,start+999);
+        const {data,error}=await client.from('kpi_historical_seats').select('branch,division,manager,goal_year,goal_month,target_seats,actual_seats,employment_status').range(start,start+999);
         if(error)throw error;
         historic.push(...(data||[]));
         if((data||[]).length<1000)break;
