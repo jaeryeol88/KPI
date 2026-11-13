@@ -13,7 +13,7 @@ const divisions=['1본부','2본부','3본부','지사장','기타'];
 const monthNumbers=Array.from({length:12},(_,i)=>i+1);
 const normalizeDivision=value=>{const v=String(value||'').trim();const m=v.match(/^부산\s*[1-4]\s*지사\s+([123]본부)$/);return m?m[1]:v;};
 let events=[],history=[],branchTargets=[],divisionTargets=[],orgNodes=[],signedRows=[];
-let currentYear=new Date().getFullYear(),currentBranch='all',yearHighlight=new Date().getMonth()+1,individualYear=currentYear,individualBranch='all',individualDivision='all',individualName='',individualSelectedMonths=new Set();
+let currentYear=new Date().getFullYear(),currentBranch='all',yearHighlight=new Date().getMonth()+1,individualYear=currentYear,individualBranch='all',individualDivision='all',individualName='',individualSelectedMonths=new Set(),staffBranch='all',staffQuery='';
 const cache=new Map();
 const choices=(node,options,value)=>{node.innerHTML=options.map(([id,label])=>'<option value="'+safe(id)+'">'+safe(label)+'</option>').join('');node.value=String(value);};
 const allYears=()=>[...new Set([new Date().getFullYear(),...signedRows.map(r=>Number(r.goal_year)),...history.map(r=>Number(r.goal_year)),...branchTargets.map(r=>Number(r.goal_year)),...divisionTargets.map(r=>Number(r.goal_year))])].filter(y=>y>=2020&&y<=2100).sort((a,b)=>b-a);
@@ -132,12 +132,32 @@ function drawOrg(){
  el('orgTree').innerHTML=roots.map(root).join('')||'<p class="org-empty">등록된 조직도가 없습니다.</p>';
  requestAnimationFrame(()=>drawOrgConnectorLines(el('orgTree'),'admin'));
 }
+function drawStaff(){
+ choices(el('staffBranch'),[['all','전체 지사'],...branches.map(b=>[b,b])],staffBranch);
+ const roster=rosterPerformancePeople(orgNodes.filter(n=>n&&n.staffHidden!==true)).filter(p=>branches.includes(p.branch));
+ const roleNames={regional:'권역대표',branch:'지사장',division:'본부장',manager:'매니저'};
+ const nodes=orgNodes.filter(n=>n&&n.staffHidden!==true);
+ const nameToRole=new Map();
+ for(const n of nodes){
+  const name=String(n.label||'').trim(),title=String(n.subtitle||'').trim(),role=roleNames[n.headcountRole]||([...'지사장,본부장,매니저,권역대표'.split(',')].find(v=>title.includes(v))||'');
+  if(name&&role)nameToRole.set(name,role);
+ }
+ const filtered=roster.filter(p=>(staffBranch==='all'||p.branch===staffBranch)&&
+  (!staffQuery||(p.name+' '+p.branch+' '+p.division).replace(/\s+/g,'').includes(staffQuery.replace(/\s+/g,''))));
+ filtered.sort((a,b)=>a.branch.localeCompare(b.branch,'ko')||a.division.localeCompare(b.division,'ko')||a.name.localeCompare(b.name,'ko'));
+ el('staffCount').textContent='총 '+fmt(filtered.length)+'명';
+ el('staffBody').innerHTML=filtered.length?filtered.map((p,i)=>{
+  const role=nameToRole.get(p.name)||'';
+  const dual=/\(\s*겸직\s*\)/.test(p.name+' '+role);
+  return '<tr><td>'+(i+1)+'</td><td><strong>'+safe(p.name)+'</strong></td><td>'+safe(role)+'</td><td>'+safe(p.branch)+'</td><td>'+safe(p.division)+'</td><td>'+(dual?'겸직':'—')+'</td></tr>';
+ }).join(''):'<tr><td colspan="6">조회 가능한 조직원이 없습니다.</td></tr>';
+}
 function showPage(page){
- const titles={year:'지사별 / 본부별 실적현황',personal:'개인별 실적현황',org:'조직도 · 조직관리 조회'};
+ const titles={year:'지사별 / 본부별 실적현황',personal:'개인별 실적현황',org:'조직도',orgstaff:'조직원 정보'};
  for(const p of Object.keys(titles))el(p).classList.toggle('hidden',p!==page);
  document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('active',x.dataset.page===page));
  el('pageTitle').textContent=titles[page];
- if(page==='year')drawYear();if(page==='personal')drawPersonal();if(page==='org')drawOrg();
+ if(page==='year')drawYear();if(page==='personal')drawPersonal();if(page==='org')drawOrg();if(page==='orgstaff')drawStaff();
 }
 document.querySelector('nav').addEventListener('click',e=>{const b=e.target.closest('button[data-page]');if(b)showPage(b.dataset.page);});
 el('yearSelect').addEventListener('change',e=>{currentYear=Number(e.target.value);drawYear()});
@@ -146,6 +166,8 @@ el('yearMonthButtons').addEventListener('click',e=>{const button=e.target.closes
 el('personalYear').addEventListener('change',e=>{individualYear=Number(e.target.value);drawPersonal()});
 el('personalBranch').addEventListener('change',e=>{individualBranch=e.target.value;drawPersonal()});
 el('personalDivision').addEventListener('change',e=>{individualDivision=e.target.value;drawPersonal()});
+el('staffBranch').addEventListener('change',e=>{staffBranch=e.target.value;drawStaff();});
+el('staffSearch').addEventListener('input',e=>{staffQuery=e.target.value.trim();drawStaff();});
 el('personalNameSearch').addEventListener('input',e=>{individualName=String(e.target.value||'').trim();drawPersonal()});
 el('personalMonthButtons').addEventListener('click',e=>{if(e.target.closest('[data-personal-all]')){individualSelectedMonths.clear();drawPersonal();}});
 el('personalMonthButtons').addEventListener('change',e=>{const input=e.target.closest('input[data-personal-month]');if(!input)return;const m=Number(input.dataset.personalMonth);if(input.checked)individualSelectedMonths.add(m);else individualSelectedMonths.delete(m);if(individualSelectedMonths.size===12)individualSelectedMonths.clear();drawPersonal();});
