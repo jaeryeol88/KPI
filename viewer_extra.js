@@ -1,6 +1,7 @@
 import { drawOrgConnectorLines } from './org_connector_lines.js';
 import { emptyRevenue,recordRevenue,oldRevenue,addRevenue,clickableSeats,revenueLabel,showRevenueDetail } from './personal_revenue_ui.js';
 import { rosterPerformancePeople,regionalRepresentativeNames } from './personal_roster.js';
+import { renderPerformanceMatrix } from './performance_matrix.js';
 /* Read-only supplemental KPI views, shared by all public viewers. */
 export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTarget,countSeats,normalizeDivision,loadOrganization}) {
  const el=id=>document.getElementById(id);
@@ -9,7 +10,7 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
  const branches=['부산 1지사','부산 2지사','부산 3지사','부산 4지사','부산권역'];
  const divisions=['1본부','2본부','3본부','지사장','기타','권역대표'];
  const roles={regional:'권역대표',branch:'지사장',division:'본부장',manager:'매니저'};
- let active='dashboard',year=new Date().getFullYear(),pyear=year,pmonths=new Set(),pbranch='all',pdivision='all',orgNodes=[],orgLoaded=false,orgMessage='';
+ let active='dashboard',year=new Date().getFullYear(),yearBranch='all',highlightedYearMonth=0,pyear=year,pmonths=new Set(),pbranch='all',pdivision='all',orgNodes=[],orgLoaded=false,orgMessage='';
  const css=`
  .v-nav{display:flex;flex-direction:column;gap:8px}
  .v-nav button{border:0;border-radius:11px;background:transparent;color:#dce9ff;text-align:left;font:inherit;font-size:13px;padding:12px 12px;cursor:pointer;line-height:1.5}
@@ -74,6 +75,29 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
  .v-hc:last-child{background:#e7efff;border-color:#b8d0ff}
  .v-hc span{font-size:13px;color:#526782;font-weight:700;display:block;margin-bottom:5px}.v-hc strong{display:block;font-size:29px;line-height:1.3;font-weight:850;color:#1c4d9a;font-variant-numeric:tabular-nums}.v-hc:last-child strong{color:#1449b4}
 
+
+ /* Identical annual branch/division KPI matrix geometry, color and interactions as admin. */
+ .v-year-months{display:flex;gap:5px;overflow-x:auto;white-space:nowrap;padding:5px 0 12px}
+ .v-year-months button{border:1px solid #d9e3f0;background:#f6f8fc;border-radius:8px;color:#637187;padding:6px 9px;cursor:pointer;font-size:12px}
+ .v-year-months button.active{background:#2e63c5;color:#fff;border-color:#2e63c5}
+ .v-linked{font-size:11px;background:#e1f7e9;border-radius:15px;color:#087a50;padding:4px 9px;vertical-align:middle;white-space:nowrap}
+ .v-year-matrix{min-width:1356px;width:100%;border-collapse:separate;border-spacing:0;table-layout:fixed;font-size:11px}
+ .v-year-matrix th,.v-year-matrix td{padding:5px 6px;border-right:1px solid #d1dbea;border-bottom:1px solid #d1dbea;text-align:right!important;white-space:nowrap;font-variant-numeric:tabular-nums;box-sizing:border-box;overflow:hidden;text-overflow:ellipsis}
+ .v-year-matrix th{background:#fbe5d8!important;color:#29384b;text-align:center!important;font-weight:750}
+ .v-year-matrix thead th:nth-child(2){background:#f9deda!important}
+ .v-year-matrix .perf-branch{background:#f4f7fb;font-weight:800;text-align:center!important;white-space:normal}
+ .v-year-matrix .perf-division{text-align:center!important;font-weight:700;background:#fcfcff}
+ .v-year-matrix .perf-kind{text-align:center!important;background:#fafcff}
+ .v-year-matrix .perf-goal{color:#374357}
+ .v-year-matrix .perf-actual{color:#285ce4;font-weight:800}
+ .v-year-matrix .perf-good{color:#009b65;font-weight:800}
+ .v-year-matrix .perf-zero{color:#95a4bb}
+ .v-year-matrix .perf-missing{color:#9aa5b5}
+ .v-year-matrix .perf-total td{background:#edf3ff;font-weight:800}
+ .v-year-matrix .perf-region td{background:#dfe8fa;font-weight:850}
+ .v-year-matrix .perf-active-month{background:#fff7d7!important}
+ .v-year-matrix tr:last-child td{border-bottom:0}
+
  /* Match administrator layouts while keeping all public data strictly read-only. */
  .v-extra{margin:20px 0;padding:18px;border:1px solid #dce5f2;border-radius:12px;background:#fff}
  .v-extra-head h2{font-size:19px;color:#142b4c}
@@ -115,8 +139,9 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
  originals.forEach(n=>n.classList.add('v-original'));
  const wrapper=document.createElement('div');wrapper.id='v-extra';wrapper.innerHTML=`
  <section id="v-yearboard" class="v-extra" hidden>
-  <div class="v-extra-head"><div><h2>지사별 / 본부별 실적현황</h2><p>부산 1~4지사 전체 목표·실적·달성률을 월별로 확인합니다.</p></div><div class="v-filters"><label>조회 연도 <select id="v-year"></select></label></div></div>
-  <div class="v-table-scroll"><table class="v-table" style="min-width:1400px"><thead id="v-year-head"></thead><tbody id="v-year-body"></tbody></table></div>
+  <div class="v-extra-head"><div><h2>▦ 지사별 / 본부별 실적 현황 <span class="v-linked">실적 내역 연동</span></h2><p>회사 배정 월별 목표와 등록된 가입 실적을 1~12월 기준으로 자동 집계합니다. 실적은 가입 건별 담당 지사·본부를 기준으로 계산합니다.</p></div><div class="v-filters"><label>조회 연도 <select id="v-year"></select></label><label>지사 <select id="v-year-branch"></select></label></div></div>
+  <div id="v-year-months" class="v-year-months" aria-label="강조할 월 선택"></div>
+  <div class="v-table-scroll"><table class="v-table v-year-matrix" style="min-width:1356px"><colgroup><col style="width:118px"><col style="width:116px"><col style="width:70px"><col style="width:92px"><col style="width:80px"><col style="width:80px"><col style="width:80px"><col style="width:80px"><col style="width:80px"><col style="width:80px"><col style="width:80px"><col style="width:80px"><col style="width:80px"><col style="width:80px"><col style="width:80px"><col style="width:80px"></colgroup><thead id="v-year-head"></thead><tbody id="v-year-body"></tbody></table></div>
   <p class="v-note" id="v-year-note"></p>
  </section>
  <section id="v-personal" class="v-extra" hidden>
@@ -161,24 +186,23 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
  function renderYear(){
   if(!years().includes(year))year=years()[0]||new Date().getFullYear();
   selectOptions(el('v-year'),years().map(y=>[y,y+'년']),year);
-  el('v-year-head').innerHTML='<tr><th style="width:95px">구분</th><th style="width:130px">지사</th><th style="width:100px">본부</th><th style="width:110px">연간 합계</th>'+months.map(m=>'<th>'+m+'월</th>').join('')+'</tr>';
-  const metric=(goal,done)=>'<td><span class="v-number">'+fmt(done)+'구좌</span><small>목표 '+(goal===null?'—':fmt(goal))+'구좌</small><small>달성률 '+(goal===null||!goal?'—':(done/goal*100).toFixed(1)+'%')+'</small></td>';
-  let rows='',allTotal=0;
-  for(const b of branches){
-   const vals=months.map(m=>({goal:getTarget(b,year,m,'all'),done:actual(b,year,m)}));
-   const g=vals.reduce((s,v)=>s+(v.goal||0),0),d=vals.reduce((s,v)=>s+v.done,0);allTotal+=d;
-   rows+='<tr class="v-branch"><td>지사 전체</td><td>'+safe(b)+'</td><td>전체</td>'+metric(g,d)+vals.map(v=>metric(v.goal,v.done)).join('')+'</tr>';
-   for(const div of divisions){
-    const subv=months.map(m=>({goal:getTarget(b,year,m,div),done:actual(b,year,m,div)}));
-    if(!subv.some(v=>v.goal!==null||v.done))continue;
-    const sg=subv.reduce((s,v)=>s+(v.goal||0),0),sd=subv.reduce((s,v)=>s+v.done,0);
-    rows+='<tr><td>본부</td><td>'+safe(b)+'</td><td>'+safe(div)+'</td>'+metric(sg,sd)+subv.map(v=>metric(v.goal,v.done)).join('')+'</tr>';
-   }
-  }
-  el('v-year-body').innerHTML=rows||'<tr><td colspan="16">조회할 실적이 없습니다.</td></tr>';
-  el('v-year-note').textContent=year+'년 · 부산 1~4지사 전체 · '+fmt(allTotal)+'구좌 · 현재 등록된 자료를 기준으로 집계합니다.';
+  const allowed=branches.filter(b=>['부산 1지사','부산 2지사','부산 3지사','부산 4지사'].includes(b)&&(!assignedBranch||assignedBranch===b));
+  if(!allowed.includes(yearBranch))yearBranch='all';
+  if(allowed.length===1)yearBranch=allowed[0];
+  selectOptions(el('v-year-branch'),[...(allowed.length>1?[['all','전체 지사']]:[]),...allowed.map(b=>[b,b])],yearBranch);
+  const selected=yearBranch==='all'?allowed:[yearBranch];
+  el('v-year-months').innerHTML='<button type="button" data-v-year-month="0" class="'+(highlightedYearMonth===0?'active':'')+'">전체(1~12월)</button>'+
+   months.map(m=>'<button type="button" data-v-year-month="'+m+'" class="'+(highlightedYearMonth===m?'active':'')+'">'+m+'월</button>').join('');
+  const matrix=renderPerformanceMatrix({branches:selected,year,highlight:highlightedYearMonth,getGoal:getTarget,getActual:actual,escape:safe,divisionOptions:divisions.filter(d=>d!=='권역대표')});
+  el('v-year-head').innerHTML=matrix.heading;
+  el('v-year-body').innerHTML=matrix.body;
+  const total=selected.reduce((sum,b)=>sum+months.reduce((subtotal,m)=>subtotal+actual(b,year,m),0),0);
+  el('v-year-note').textContent=year+'년 · '+(yearBranch==='all'?'전체 지사':yearBranch)+
+   ' · 목표: 회사 배정 DB / 실적: 온라인 등록 내역 (담당 지사·본부 기준) · 미배정 목표는 — 표시 · 합계 달성률은 연간 실적 ÷ 연간 배정 목표입니다. · 전체 '+fmt(total)+'구좌';
  }
  el('v-year').addEventListener('change',e=>{year=Number(e.target.value);renderYear()});
+ el('v-year-branch').addEventListener('change',e=>{yearBranch=e.target.value;renderYear()});
+ el('v-year-months').addEventListener('click',e=>{const button=e.target.closest('[data-v-year-month]');if(!button)return;highlightedYearMonth=Number(button.dataset.vYearMonth);renderYear()});
  function renderPersonal(){
   if(!years().includes(pyear))pyear=years()[0]||new Date().getFullYear();
   selectOptions(el('v-pyear'),years().map(y=>[y,y+'년']),pyear);
