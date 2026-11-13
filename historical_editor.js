@@ -9,7 +9,7 @@ export function createHistoricalEditor({getDb,getRole,onRecords}){
  section.id='historicalEditorPanel';section.className='perf-yearboard';section.hidden=true;
  section.style.cssText='margin:18px 0;padding:18px;border:1px solid #d5dfea;border-radius:12px';
  section.innerHTML=`<details><summary style="cursor:pointer;font-weight:800;font-size:17px">과거 실적 구좌 직접 입력 · 수정</summary>
- <p style="font-size:13px;line-height:1.8">지난 월의 목표·실적 구좌를 숫자로만 입력합니다. 입력한 범위와 월은 기존 자동 집계 대신 수동값이 표시됩니다. 행사 등록·입회 기록·매출 통계는 변경되지 않습니다. 지사·본부·개인별 숫자는 각각 별도 입력합니다. <strong>재직 / 계약해지</strong> 두 가지 중 선택할 수 있으며, 계약해지 선택 시 개인별 입력으로 전환됩니다. 계약해지자 구좌도 정상 실적에 합산됩니다.</p>
+ <p style="font-size:13px;line-height:1.8">지난 월의 목표·실적 구좌를 숫자로만 입력합니다. 입력한 범위와 월은 기존 자동 집계 대신 수동값이 표시됩니다. 행사 등록·입회 기록·매출 통계는 변경되지 않습니다. 지사·본부·개인별 실적을 입력할 수 있으며, 개인별 구좌가 변경되면 해당 본부·지사의 실적도 자동으로 다시 계산됩니다. <strong>재직 / 계약해지</strong> 두 가지 중 선택할 수 있으며, 계약해지 선택 시 개인별 입력으로 전환됩니다. 계약해지자 구좌도 정상 실적에 합산됩니다.</p>
  <form id="histForm"><div style="display:flex;flex-wrap:wrap;gap:12px;align-items:end">
  <label>연도 <input id="histYear" type="number" min="2020" max="2100" required style="width:92px"></label>
  <label>월 <select id="histMonth"></select></label>
