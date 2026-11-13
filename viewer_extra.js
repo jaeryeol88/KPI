@@ -1,6 +1,6 @@
 import { drawOrgConnectorLines } from './org_connector_lines.js';
 import { emptyRevenue,recordRevenue,oldRevenue,addRevenue,clickableSeats,revenueLabel,showRevenueDetail } from './personal_revenue_ui.js';
-import { rosterPerformancePeople } from './personal_roster.js';
+import { rosterPerformancePeople,regionalRepresentativeNames } from './personal_roster.js';
 /* Read-only supplemental KPI views, shared by all public viewers. */
 export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTarget,countSeats,normalizeDivision,loadOrganization}) {
  const el=id=>document.getElementById(id);
@@ -187,6 +187,7 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
   el('v-months').innerHTML='<button type="button" data-all-months class="'+(pmonths.size===0?'active':'')+'">전체(1~12월)</button>'+months.map(m=>'<label class="v-month-check'+(pmonths.has(m)?' checked':'')+'"><input type="checkbox" data-v-month="'+m+'" value="'+m+'" '+(pmonths.has(m)?'checked ':'')+'aria-label="'+m+'월 선택">'+m+'월</label>').join('');
   const shown=pmonths.size?months.filter(m=>pmonths.has(m)):months,byKey=new Map();
   const revenueActions=new Map(),oneMonth=shown.length===1;
+  const regionalReps=regionalRepresentativeNames(orgLoaded?orgNodes:[]);
   for(const person of rosterPerformancePeople(orgLoaded?orgNodes:[])){
    if(!branches.includes(person.branch)||assignedBranch&&assignedBranch!==person.branch||pbranch!=='all'&&pbranch!==person.branch||pdivision!=='all'&&pdivision!==person.division)continue;
    const key=JSON.stringify([person.branch,person.division,person.name]);
@@ -196,6 +197,7 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
   const totalRevenueFor=(row,monthList)=>monthList.reduce((r,m)=>addRevenue(r,row.revenues[m-1]),emptyRevenue());
   const inline=(amount,missing)=>'<td class="personal-revenue-single">'+safe(revenueLabel(amount,missing))+'</td>';
   const add=(b,d,name,m,seats,revenue)=>{
+   if(b==='부산권역'&&regionalReps.has(name))return;
    if(!branches.includes(b)||assignedBranch&&assignedBranch!==b||pbranch!=='all'&&pbranch!==b||pdivision!=='all'&&pdivision!==d)return;
    const key=JSON.stringify([b,d,name]);if(!byKey.has(key))byKey.set(key,{b,d,name,months:Array(12).fill(0),revenues:Array.from({length:12},emptyRevenue)});
    byKey.get(key).months[m-1]+=seats;
