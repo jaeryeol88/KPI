@@ -230,6 +230,7 @@
 .signup-report-table .num{text-align:right}.signup-report-table .strong{font-weight:800}.signup-report-table .signup-report-empty{text-align:center;padding:30px;color:#718098}
 .signup-report-badge{display:block;color:#2563eb;font-size:11px;margin-top:4px}
 @media(max-width:750px){.signup-report-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
+ .signup-prior-heading{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin:30px 0 12px}.signup-prior-heading h3{font-size:17px;color:#172840;margin:0}.signup-prior-heading p{font-size:12px;color:#718098;margin:0}.signup-prior-heading strong{margin-left:auto;color:#145dc5;font-size:16px;font-variant-numeric:tabular-nums}
 </style>
 </head><body>
 <section class="auth-screen" id="authScreen">
@@ -294,11 +295,11 @@
 <div class="perf-yearboard-scroll"><table class="perf-yearboard-table"><colgroup><col style="width:118px"><col style="width:116px"><col style="width:70px"><col style="width:92px"><col style="width:112px"><col style="width:80px"><col style="width:80px"><col style="width:80px"><col style="width:80px"><col style="width:80px"><col style="width:80px"><col style="width:80px"><col style="width:80px"><col style="width:80px"><col style="width:80px"><col style="width:80px"><col style="width:80px"></colgroup><thead id="perfYearHead"></thead><tbody id="perfYearBody"></tbody></table></div>
 <p class="perf-yearboard-note" id="perfYearNote">월별 실적 데이터를 불러오는 중…</p></section>
 <section class="perf-yearboard" id="monthlySignupBoard" hidden aria-label="월별 입회 현황">
-<div class="perf-yearboard-top"><div><h2>월별 입회 현황 <span class="perf-linked">가입 건별 등록 연동</span></h2><p>실제 가입일 기준으로 해당 월 신규 가입 건만 표시합니다. 분납 입회금은 가입월 1회차 금액만 반영하며 이전 달 가입자의 후속 분납금은 제외합니다.</p></div>
+<div class="perf-yearboard-top"><div><h2>월별 입회 현황 <span class="perf-linked">가입 건별 등록 연동</span></h2><p>실제 가입일 기준으로 해당 월 신규 가입 건만 표시합니다. 분납 입회금은 가입월 1회차 금액만 반영하며 이전 달 가입자의 후속 분납금은 아래 별도 표에서 확인할 수 있습니다.</p></div>
 <div class="perf-yearboard-filters"><label>조회 연도 <select id="signupReportYear"></select></label><label>조회 월 <select id="signupReportMonth"></select></label><label>소속지사 <select id="signupReportBranch"></select></label><label>소속본부 <select id="signupReportDivision"></select></label></div></div>
 <div class="signup-report-summary" id="signupReportSummary" aria-live="polite"></div>
 <div class="signup-report-scroll"><table class="signup-report-table"><thead><tr><th>가입 일자</th><th>소속지사</th><th>소속본부</th><th>가입 담당 매니저</th><th>가입상품</th><th>구좌</th><th>입회금</th><th>연회비</th><th>총 매출</th><th>입회자 성함</th></tr></thead><tbody id="signupReportBody"></tbody></table></div>
-<p class="perf-yearboard-note" id="signupReportNote"></p></section>
+<p class="perf-yearboard-note" id="signupReportNote"></p><div class="signup-prior-heading"><h3>전월 이전 가입자 분납금</h3><p>선택한 월에 도래한 이전 가입 건의 분납 회차입니다. 신규 입회 구좌와 연회비에는 포함되지 않습니다.</p><strong id="signupPriorTotal"></strong></div><div class="signup-report-scroll"><table class="signup-report-table"><thead><tr><th>가입 일자</th><th>소속지사</th><th>소속본부</th><th>가입 담당 매니저</th><th>가입상품</th><th>구좌</th><th>입회금</th><th>연회비</th><th>총 매출</th><th>입회자 성함</th></tr></thead><tbody id="signupPriorBody"></tbody></table></div><p class="perf-yearboard-note" id="signupPriorNote"></p></section>
 <section class="perf-yearboard" id="personalYearBoard" hidden aria-label="개인별 월간 실적현황">
 <div class="perf-yearboard-top"><div><h2>개인별 실적현황 <span class="perf-linked">가입 건별 실적 연동</span></h2><p>담당 매니저별 월간 가입구좌와 연간 합계입니다. 등록된 담당 지사·본부 기준이며 연간 실적 내림차순으로 정렬합니다.</p></div>
 <div class="perf-yearboard-filters"><label>조회 연도 <select id="personalYearSelect"></select></label><label>지사 <select id="personalBranchSelect"></select></label><label>본부 <select id="personalDivisionSelect"></select></label><label>이름 조회 <input id="personalNameSearch" type="search" placeholder="이름만 입력하세요" autocomplete="off" aria-label="매니저 이름으로 실적 검색" style="width:155px;background:#fff;border:1px solid var(--line);padding:8px;border-radius:8px;font-size:13px"></label></div></div>
@@ -1347,7 +1348,7 @@ function renderMonthlySignupReport(){
  if(!yearEl||!body)return;
  const fixed=restrictedBranch();
  const allowed=monthlyAllowedBranches();
- const all=[];
+ const all=[],prior=[];
  for(const event of items){
   if(!Array.isArray(event.signupEntries))continue;
   for(const row of event.signupEntries){
@@ -1359,16 +1360,17 @@ function renderMonthlySignupReport(){
    const y=Number(signupDate.slice(0,4)),m=Number(signupDate.slice(5,7));
    const amounts=row.paymentType==='installment'&&Array.isArray(row.installmentAmounts)&&row.installmentAmounts.length?row.installmentAmounts:[Number(row.revenue)||0];
    all.push({signupDate,branch,division,manager:row.manager||'',product:row.product||'',memberName:row.memberName||'',seats:Number(row.seats)||0,fee:Number(row.annualFee)||0,revenue:Number(amounts[0])||0,payYear:y,payMonth:m,installment:row.paymentType==='installment',sequence:1});
+   if(row.paymentType==='installment')amounts.slice(1).forEach((amount,i)=>{const offset=i+1;prior.push({signupDate,branch,division,manager:row.manager||'',product:row.product||'',memberName:row.memberName||'',seats:0,fee:0,revenue:Number(amount)||0,payYear:y+Math.floor((m-1+offset)/12),payMonth:(m-1+offset)%12+1,installment:true,sequence:offset+1});});
   }
  }
- const years=[...new Set([new Date().getFullYear(),...all.map(x=>x.payYear)])].sort((a,b)=>b-a);
+ const years=[...new Set([new Date().getFullYear(),...all.map(x=>x.payYear),...prior.map(x=>x.payYear)])].sort((a,b)=>b-a);
  if(!years.includes(signupReportYear))signupReportYear=years[0];
  yearEl.innerHTML=years.map(y=>'<option value="'+y+'">'+y+'년</option>').join('');yearEl.value=String(signupReportYear);
  monthEl.innerHTML=Array.from({length:12},(_,i)=>'<option value="'+(i+1)+'">'+(i+1)+'월</option>').join('');monthEl.value=String(signupReportMonth);
- const branches=[...new Set(all.map(x=>x.branch).filter(Boolean))].filter(b=>!allowed.length||allowed.includes(b)).sort((a,b)=>a.localeCompare(b,'ko'));
+ const branches=[...new Set([...all,...prior].map(x=>x.branch).filter(Boolean))].filter(b=>!allowed.length||allowed.includes(b)).sort((a,b)=>a.localeCompare(b,'ko'));
  if(signupReportBranch!=='all'&&!branches.includes(signupReportBranch))signupReportBranch='all';
  branchEl.innerHTML='<option value="all">전체 지사</option>'+branches.map(b=>'<option value="'+esc(b)+'">'+esc(b)+'</option>').join('');branchEl.value=signupReportBranch;
- const divisions=[...new Set(all.filter(x=>signupReportBranch==='all'||x.branch===signupReportBranch).map(x=>x.division).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko'));
+ const divisions=[...new Set([...all,...prior].filter(x=>signupReportBranch==='all'||x.branch===signupReportBranch).map(x=>x.division).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko'));
  if(signupReportDivision!=='all'&&!divisions.includes(signupReportDivision))signupReportDivision='all';
  divisionEl.innerHTML='<option value="all">전체 본부</option>'+divisions.map(d=>'<option value="'+esc(d)+'">'+esc(d)+'</option>').join('');divisionEl.value=signupReportDivision;
  const rows=all.filter(x=>x.payYear===signupReportYear&&x.payMonth===signupReportMonth&&(signupReportBranch==='all'||x.branch===signupReportBranch)&&(signupReportDivision==='all'||x.division===signupReportDivision)).sort((a,b)=>b.signupDate.localeCompare(a.signupDate)||a.manager.localeCompare(b.manager,'ko'));
@@ -1376,7 +1378,12 @@ function renderMonthlySignupReport(){
  const summary=el('signupReportSummary');
  summary.innerHTML='<div><span>해당 월 구좌</span><strong>'+fmt(sum('seats'))+'구좌</strong></div><div><span>입회금</span><strong>'+won(sum('revenue'))+'</strong></div><div><span>연회비</span><strong>'+won(sum('fee'))+'</strong></div><div><span>총 매출</span><strong>'+won(sum('revenue')+sum('fee'))+'</strong></div>';
  body.innerHTML=rows.length?rows.map(x=>'<tr><td>'+esc(x.signupDate)+'</td><td>'+esc(x.branch||'—')+'</td><td>'+esc(x.division||'—')+'</td><td>'+esc(x.manager||'—')+'</td><td>'+esc(x.product||'—')+(x.installment?'<small class="signup-report-badge">'+x.sequence+'회차 분납</small>':'')+'</td><td class="num">'+fmt(x.seats)+'</td><td class="num">'+won(x.revenue)+'</td><td class="num">'+won(x.fee)+'</td><td class="num strong">'+won(x.revenue+x.fee)+'</td><td>'+esc(x.memberName||'—')+'</td></tr>').join(''):'<tr><td colspan="10" class="signup-report-empty">선택한 월에 등록된 입회 또는 분납 내역이 없습니다.</td></tr>';
- el('signupReportNote').textContent='총 '+fmt(rows.length)+'건의 해당 월 신규 가입 기록 · 이전 달 가입자의 후속 분납금은 이 표에서 제외합니다. 분납 건은 가입월 1회차 금액만 반영합니다.';
+ el('signupReportNote').textContent='총 '+fmt(rows.length)+'건의 해당 월 신규 가입 기록 · 분납 건은 가입월 1회차 금액만 반영합니다.';
+ const priorRows=prior.filter(x=>x.payYear===signupReportYear&&x.payMonth===signupReportMonth&&(signupReportBranch==='all'||x.branch===signupReportBranch)&&(signupReportDivision==='all'||x.division===signupReportDivision)).sort((a,b)=>b.signupDate.localeCompare(a.signupDate)||a.manager.localeCompare(b.manager,'ko'));
+ const priorSum=priorRows.reduce((n,x)=>n+x.revenue,0);
+ el('signupPriorTotal').textContent='분납금 합계 '+won(priorSum);
+ el('signupPriorBody').innerHTML=priorRows.length?priorRows.map(x=>'<tr><td>'+esc(x.signupDate)+'</td><td>'+esc(x.branch||'—')+'</td><td>'+esc(x.division||'—')+'</td><td>'+esc(x.manager||'—')+'</td><td>'+esc(x.product||'—')+'<small class="signup-report-badge">'+x.sequence+'회차 분납</small></td><td class="num">0</td><td class="num">'+won(x.revenue)+'</td><td class="num">0원</td><td class="num strong">'+won(x.revenue)+'</td><td>'+esc(x.memberName||'—')+'</td></tr>').join(''):'<tr><td colspan="10" class="signup-report-empty">해당 월에 예정된 이전 가입자의 분납금이 없습니다.</td></tr>';
+ el('signupPriorNote').textContent='총 '+fmt(priorRows.length)+'건 · 전월 및 그 이전에 가입한 건의 해당 월 분납금만 표시합니다. 위 신규 입회 합계와는 별도입니다.';
 }
 [['signupReportYear',v=>signupReportYear=Number(v)],['signupReportMonth',v=>signupReportMonth=Number(v)],['signupReportBranch',v=>{signupReportBranch=v;signupReportDivision='all';}],['signupReportDivision',v=>signupReportDivision=v]].forEach(([id,set])=>el(id).addEventListener('change',e=>{set(e.target.value);renderMonthlySignupReport();}));
 
