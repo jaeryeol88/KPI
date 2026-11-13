@@ -87,7 +87,7 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
  .v-year-months button{border:1px solid #d9e3f0;background:#f6f8fc;border-radius:8px;color:#637187;padding:6px 9px;cursor:pointer;font-size:12px}
  .v-year-months button.active{background:#2e63c5;color:#fff;border-color:#2e63c5}
  .v-linked{font-size:11px;background:#e1f7e9;border-radius:15px;color:#087a50;padding:4px 9px;vertical-align:middle;white-space:nowrap}
- .v-year-matrix{min-width:1356px;width:100%;border-collapse:separate;border-spacing:0;table-layout:fixed;font-size:11px}
+ .v-year-matrix{min-width:1356px;width:100%;border-collapse:separate;border-spacing:0;table-layout:fixed;font-size:12px}
  .v-year-matrix th,.v-year-matrix td{padding:5px 6px;border-right:1px solid #d1dbea;border-bottom:1px solid #d1dbea;text-align:right!important;white-space:nowrap;font-variant-numeric:tabular-nums;box-sizing:border-box;overflow:hidden;text-overflow:ellipsis}
  .v-year-matrix th{background:#fbe5d8!important;color:#29384b;text-align:center!important;font-weight:750}
  .v-year-matrix thead th:nth-child(2){background:#f9deda!important}
@@ -118,6 +118,7 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
  .v-table td{color:#254260}
  .v-table .v-total td{background:#dfe8fa;font-weight:850}
  .v-table .v-number{color:#285ce4;font-weight:800}
+ #v-person-table{font-size:12px}
  #v-person-table thead th{background:#edf2f8!important}
  #v-person-table td{text-align:center;white-space:nowrap}
  #v-person-table td:nth-child(4){font-weight:800;color:#203551}
