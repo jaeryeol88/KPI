@@ -2,6 +2,7 @@ import { drawOrgConnectorLines } from './org_connector_lines.js';
 import { emptyRevenue,recordRevenue,oldRevenue,addRevenue,clickableSeats,revenueLabel,showRevenueDetail } from './personal_revenue_ui.js';
 import { rosterPerformancePeople,regionalRepresentativeNames } from './personal_roster.js';
 import { renderPerformanceMatrix } from './performance_matrix.js';
+import { historicValue } from './historical_seats.js';
 import { timedSignupRows,signupSeatsForPeriod,undatedSignupStats } from './signup_date_utils.js';
 /* Read-only supplemental KPI views, shared by all public viewers. */
 export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTarget,countSeats,normalizeDivision,loadOrganization}) {
@@ -13,6 +14,7 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
  const roles={regional:'권역대표',branch:'지사장',division:'본부장',manager:'매니저'};
  // Only district-specific viewers hide other branches' personal revenue.
  const revenueBranch=assignedBranch&&assignedBranch!=='부산권역'?assignedBranch:null;
+ let historicalSeats=[];
  let active='dashboard',year=new Date().getFullYear(),yearBranch='all',highlightedYearMonth=0,pyear=year,pmonths=new Set(),pbranch='all',pdivision='all',orgNodes=[],orgLoaded=false,orgMessage='',staffStatuses=new Map(),staffStatusLoaded=false,staffStatusError='';
  const css=`
  .v-nav{display:flex;flex-direction:column;gap:8px}
@@ -186,8 +188,9 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
  }
  nav.addEventListener('click',event=>{const b=event.target.closest('button[data-vpage]');if(b)show(b.dataset.vpage)});
  const selectOptions=(node,opts,value)=>{node.innerHTML=opts.map(([v,t])=>'<option value="'+safe(v)+'">'+safe(t)+'</option>').join('');node.value=String(value)};
- const years=()=>[...new Set([...getYears(),...getAllEvents().map(e=>Number(String(e.date||'').slice(0,4))),new Date().getFullYear()])].filter(y=>Number.isInteger(y)&&y>=2020&&y<=2100).sort((a,b)=>b-a);
- const actual=(branch,y,m,div='all')=>signupSeatsForPeriod(getAllEvents(),{years:[y],months:[m],branches:[branch],divisions:div==='all'?null:[div],normalizeDivision});
+ const years=()=>[...new Set([...getYears(),...historicalSeats.map(x=>Number(x.goal_year)),...getAllEvents().map(e=>Number(String(e.date||'').slice(0,4))),new Date().getFullYear()])].filter(y=>Number.isInteger(y)&&y>=2020&&y<=2100).sort((a,b)=>b-a);
+ const actual=(branch,y,m,div='all')=>historicValue(historicalSeats,branch,div==='all'?'':div,'',y,m,'actual_seats')??signupSeatsForPeriod(getAllEvents(),{years:[y],months:[m],branches:[branch],divisions:div==='all'?null:[div],normalizeDivision});
+ const goal=(branch,y,m,div='all')=>historicValue(historicalSeats,branch,div==='all'?'':div,'',y,m,'target_seats')??getTarget(branch,y,m,div);
  const months=Array.from({length:12},(_,i)=>i+1);
  function renderYear(){
   if(!years().includes(year))year=years()[0]||new Date().getFullYear();
@@ -199,12 +202,12 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
   const selected=yearBranch==='all'?allowed:[yearBranch];
   el('v-year-months').innerHTML='<button type="button" data-v-year-month="0" class="'+(highlightedYearMonth===0?'active':'')+'">전체(1~12월)</button>'+
    months.map(m=>'<button type="button" data-v-year-month="'+m+'" class="'+(highlightedYearMonth===m?'active':'')+'">'+m+'월</button>').join('');
-  const matrix=renderPerformanceMatrix({branches:selected,year,highlight:highlightedYearMonth,getGoal:getTarget,getActual:actual,escape:safe,divisionOptions:divisions.filter(d=>d!=='권역대표')});
+  const matrix=renderPerformanceMatrix({branches:selected,year,highlight:highlightedYearMonth,getGoal:goal,getActual:actual,escape:safe,divisionOptions:divisions.filter(d=>d!=='권역대표')});
   el('v-year-head').innerHTML=matrix.heading;
   el('v-year-body').innerHTML=matrix.body;
   const total=selected.reduce((sum,b)=>sum+months.reduce((subtotal,m)=>subtotal+actual(b,year,m),0),0);
   el('v-year-note').textContent=year+'년 · '+(yearBranch==='all'?'전체 지사':yearBranch)+
-   ' · 목표: 회사 배정 DB / 실적: 온라인 등록 내역 (담당 지사·본부 기준) · 미배정 목표는 — 표시 · 실제 가입일자 기준 · 합계 달성률은 연간 실적 ÷ 연간 배정 목표입니다. · 전체 '+fmt(total)+'구좌'+
+   ' · 과거 수동 입력값 우선, 미입력 월은 온라인 집계 · 미배정 목표는 — 표시 · 실제 가입일자 기준 · 합계 달성률은 연간 실적 ÷ 연간 배정 목표입니다. · 전체 '+fmt(total)+'구좌'+
    (undatedSignupStats(getAllEvents()).records?' · 가입일 미입력 '+undatedSignupStats(getAllEvents()).records+'건 ('+fmt(undatedSignupStats(getAllEvents()).seats)+'구좌) 제외':'');
  }
  el('v-year').addEventListener('change',e=>{year=Number(e.target.value);renderYear()});
