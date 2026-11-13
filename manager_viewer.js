@@ -15,7 +15,7 @@ const normalizeDivision=value=>{const v=String(value||'').trim();const m=v.match
 let events=[],history=[],branchTargets=[],divisionTargets=[],orgNodes=[],signedRows=[];
 let currentYear=new Date().getFullYear(),currentBranch='all',yearHighlight=new Date().getMonth()+1,individualYear=currentYear,individualBranch='all',individualDivision='all',individualName='',individualSelectedMonths=new Set(),staffBranch='all',staffQuery='';
 const cache=new Map();
-let phoneDb=null,phoneAuthenticated=false,pendingPhoneId=null;
+let phoneDb=null,phoneAuthenticated=false;
 let staffStatuses=new Map(),staffStatusAvailable=false;
 const phoneCache=new Map(),revealedPhones=new Set();
 const choices=(node,options,value)=>{node.innerHTML=options.map(([id,label])=>'<option value="'+safe(id)+'">'+safe(label)+'</option>').join('');node.value=String(value);};
@@ -192,9 +192,8 @@ function drawStaff(){
   (!query||[r.name,r.role,r.branch,r.division].join(' ').toLocaleLowerCase('ko').includes(query)));
  el('staffCount').textContent='총 '+fmt(all.length)+'명';
  el('staffMessage').textContent=phoneAuthenticated?
-  '연락처 조회 권한 확인 완료 · 번호를 더블클릭하면 표시됩니다. 드래그로도 선택하여 볼 수 있습니다.':
-  '연락처는 비공개 상태입니다. 더블클릭 또는 드래그 후 권한 있는 계정으로 인증하면 표시됩니다.';
- el('staffPhoneLogout').hidden=!phoneAuthenticated;
+  '기존 관리자 로그인 권한이 확인되었습니다. 연락처를 더블클릭하거나 드래그하면 바로 표시됩니다.':
+  '연락처는 비공개입니다. 관리자 홈페이지에 로그인된 권한이 있는 사용자만 번호를 더블클릭하여 조회할 수 있습니다.';
  el('staffBody').innerHTML=filtered.length?filtered.map((r,i)=>{
   const st=r.status==='휴직'?' leave':r.status==='퇴사'?' left':'';
   const number=phoneCache.get(r.id)||'';
@@ -208,15 +207,27 @@ function drawStaff(){
    '<td><span class="staff-status'+st+'">'+safe(r.status)+'</span></td><td>—</td></tr>';
  }).join(''):'<tr><td colspan="9">조회 가능한 조직원이 없습니다.</td></tr>';
 }
-function promptPhoneLogin(nodeId){
- pendingPhoneId=nodeId;
- el('staffPhoneError').textContent='';
- el('staffPhonePassword').value='';
- const dlg=el('staffPhoneDialog');
- if(!dlg.open)dlg.showModal();
+async function refreshPhoneAccess(){
+ if(!phoneDb){phoneAuthenticated=false;return false;}
+ try{
+  const {data:{session},error:sessionError}=await phoneDb.auth.getSession();
+  if(sessionError||!session?.access_token){phoneAuthenticated=false;phoneCache.clear();revealedPhones.clear();return false;}
+  // Check role on the server: session alone never grants contact access.
+  const {data,error}=await phoneDb.rpc('kpi_my_access');
+  const allowed=!error&&['owner','shared','branch'].includes(data?.role);
+  if(!allowed){phoneCache.clear();revealedPhones.clear();}
+  phoneAuthenticated=allowed;
+  return allowed;
+ }catch{
+  phoneAuthenticated=false;phoneCache.clear();revealedPhones.clear();return false;
+ }
 }
 async function requestPhone(nodeId){
- if(!phoneAuthenticated||!phoneDb){promptPhoneLogin(nodeId);return;}
+ if(!await refreshPhoneAccess()){
+  drawStaff();
+  el('staffMessage').textContent='연락처 열람 권한이 확인되지 않았습니다. 관리자 홈페이지에서 로그인하면 여기에서도 별도 로그인창 없이 확인할 수 있습니다.';
+  return;
+ }
  if(!phoneCache.has(nodeId)){
   const {data,error}=await phoneDb.rpc('kpi_manager_staff_phone',{p_node_id:nodeId});
   if(error)throw error;
@@ -229,42 +240,16 @@ async function requestPhone(nodeId){
 }
 el('staffBody').addEventListener('dblclick',async e=>{
  const span=e.target.closest('[data-phone-id]');if(!span)return;
- const nodeId=span.dataset.phoneId;
- try{await requestPhone(nodeId);}catch(error){el('staffMessage').textContent='연락처 조회 실패: '+(error.message||'권한 확인 필요');}
+ try{await requestPhone(span.dataset.phoneId);}catch(error){
+  el('staffMessage').textContent='연락처 조회 실패: '+(error.message||'조회 권한 확인 필요');
+ }
 });
 el('staffBody').addEventListener('mouseup',async e=>{
  const span=e.target.closest('[data-phone-id]');if(!span)return;
  if(!window.getSelection()?.toString().trim())return;
- try{await requestPhone(span.dataset.phoneId);}catch(error){el('staffMessage').textContent='연락처 조회 실패: '+(error.message||'권한 확인 필요');}
-});
-el('staffPhoneCancel').addEventListener('click',()=>el('staffPhoneDialog').close());
-el('staffPhoneLogin').addEventListener('submit',async e=>{
- e.preventDefault();
- if(!phoneDb||!pendingPhoneId)return;
- const button=el('staffPhoneLoginButton');
- button.disabled=true;
- el('staffPhoneError').textContent='';
- try{
-  const email=el('staffPhoneEmail').value.trim(),password=el('staffPhonePassword').value;
-  const {error}=await phoneDb.auth.signInWithPassword({email,password});
-  if(error)throw error;
-  phoneAuthenticated=true;
-  await requestPhone(pendingPhoneId);
-  el('staffPhoneDialog').close();
-  pendingPhoneId=null;
-  el('staffPhonePassword').value='';
- }catch(error){
-  phoneAuthenticated=false;
-  phoneCache.clear();revealedPhones.clear();
-  await phoneDb.auth.signOut();
-  el('staffPhoneError').textContent='인증 또는 연락처 조회 실패: '+(error.message||'관리자에게 권한 확인을 요청하세요.');
-  drawStaff();
- }finally{button.disabled=false;}
-});
-el('staffPhoneLogout').addEventListener('click',async()=>{
- if(phoneDb)await phoneDb.auth.signOut();
- phoneAuthenticated=false;phoneCache.clear();revealedPhones.clear();
- drawStaff();
+ try{await requestPhone(span.dataset.phoneId);}catch(error){
+  el('staffMessage').textContent='연락처 조회 실패: '+(error.message||'조회 권한 확인 필요');
+ }
 });
 function showPage(page){
  const titles={year:'지사별 / 본부별 실적현황',personal:'개인별 실적현황',org:'조직도',orgstaff:'조직원 정보'};
@@ -302,7 +287,15 @@ async function main(){
   const cfg=window.PLK_CONFIG||{};
   if(!/^https:\/\/[^/]+\.supabase\.co\/?$/.test(cfg.supabaseUrl||'')||!cfg.supabaseAnonKey)throw Error('Supabase 공개 연결 설정이 없습니다.');
   const db=createClient(cfg.supabaseUrl,cfg.supabaseAnonKey,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});
-  phoneDb=db;
+  phoneDb=createClient(cfg.supabaseUrl,cfg.supabaseAnonKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
+  await refreshPhoneAccess();
+  phoneDb.auth.onAuthStateChange((event)=>{
+   if(event==='SIGNED_OUT'){phoneAuthenticated=false;phoneCache.clear();revealedPhones.clear();if(!el('orgstaff').classList.contains('hidden'))drawStaff();}
+   if(event==='SIGNED_IN'||event==='TOKEN_REFRESHED'){
+    // Avoid calling auth/database methods directly inside the auth event callback.
+    queueMicrotask(()=>refreshPhoneAccess().then(()=>{if(!el('orgstaff').classList.contains('hidden'))drawStaff();}));
+   }
+  });
   const [signups,historic,targets,divisionGoals,organization]=await Promise.all([
    readPages((from,to)=>db.rpc('kpi_manager_performance_signups').range(from,to)),
    readPages((from,to)=>db.from('kpi_historical_seats').select('branch,division,manager,goal_year,goal_month,target_seats,actual_seats,employment_status').range(from,to)),
