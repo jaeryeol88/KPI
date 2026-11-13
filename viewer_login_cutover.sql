@@ -24,19 +24,19 @@ DECLARE v_user public.kpi_viewer_accounts%ROWTYPE;v_attempt public.kpi_viewer_lo
 BEGIN
  v_name=lower(trim(coalesce(p_username,'')));
  IF v_name !~ '^[a-z][a-z0-9_-]{3,31}$' OR coalesce(p_password,'') !~ '^[0-9]{4}$' THEN
-   RAISE EXCEPTION '아이디 또는 비밀번호를 확인하세요';
+   RETURN jsonb_build_object('error','아이디 또는 비밀번호를 확인하세요');
  END IF;
  INSERT INTO public.kpi_viewer_login_attempts(username) VALUES(v_name)
  ON CONFLICT(username) DO NOTHING;
  SELECT * INTO v_attempt FROM public.kpi_viewer_login_attempts WHERE username=v_name FOR UPDATE;
- IF v_attempt.locked_until>now() THEN RAISE EXCEPTION '로그인 시도 제한: 잠시 후 다시 시도하세요'; END IF;
+ IF v_attempt.locked_until>now() THEN RETURN jsonb_build_object('error','로그인 시도 제한: 15분 후 다시 시도하세요'); END IF;
  SELECT * INTO v_user FROM public.kpi_viewer_accounts WHERE username=v_name AND enabled=true;
  IF NOT FOUND OR v_user.password_hash IS DISTINCT FROM extensions.crypt(p_password,v_user.password_hash) THEN
    UPDATE public.kpi_viewer_login_attempts
    SET failed_count=CASE WHEN failed_count>=4 THEN 0 ELSE failed_count+1 END,
        locked_until=CASE WHEN failed_count>=4 THEN now()+interval '15 minutes' ELSE NULL END,
        updated_at=now() WHERE username=v_name;
-   RAISE EXCEPTION '아이디 또는 비밀번호를 확인하세요';
+   RETURN jsonb_build_object('error','아이디 또는 비밀번호를 확인하세요');
  END IF;
  UPDATE public.kpi_viewer_login_attempts SET failed_count=0,locked_until=NULL,updated_at=now() WHERE username=v_name;
  v_token=encode(extensions.gen_random_bytes(32),'hex');
