@@ -1063,7 +1063,7 @@ async function loadPublic(){
 }
 let viewerExtras={refresh:()=>{},refreshOrganization:async()=>{},setHistoricalSeats:()=>{}};
 try{
- const {installViewerExtras}=await import('./viewer_extra.js?v=monthly-signup-filter-compact-20261114');
+ const {installViewerExtras}=await import('./viewer_extra.js?v=monthly-signup-selected-labels-20261114');
  viewerExtras=installViewerExtras({
  assignedBranch,
  getAllEvents:()=>allViewerEvents,
