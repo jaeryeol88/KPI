@@ -41,24 +41,20 @@ export function countOrgHeadcount(nodes){
   if(!node||node.staffHidden===true)continue;
   const raw=String(node.label||'').trim();
   if(!raw||PLACEHOLDERS.has(raw))continue;
-  if(['root','group'].includes(node.type)&&!Object.prototype.hasOwnProperty.call(node,'headcountRole'))continue;
+  const explicit=String(node.headcountRole||'').trim();
+  // Count the role selected in the card editor, including division cards.
+  // The dual role is a separate statistic and never contributes to total.
+  const role=explicit==='dual'||explicit==='본부장 겸직'||explicit==='겸직'?'dual':orgEffectiveRoleShared(node);
+  if(!Object.prototype.hasOwnProperty.call(counts,role))continue;
+  if(['root','group'].includes(node.type)&&!explicit)continue;
   const name=orgIdentityName(raw);
   if(!name||/^(구성원|새구성원|이름미입력|새본부팀)$/.test(name))continue;
-  // The explicitly selected headcount role takes precedence over title text.
-  const role=node.headcountRole==='dual'?'dual':orgEffectiveRoleShared(node);
-  if(role==='dual'){
-   dualNames.add(name);
-   continue;
-  }
-  if(['regional','branch','division','manager'].includes(role)&&!regularNames.has(name))
-   regularNames.set(name,role);
+  if(role==='dual')dualNames.add(name);
+  else if(!regularNames.has(name))regularNames.set(name,role);
  }
- // Explicit '본부장 겸직' assignments appear only in the dual counter,
- // never in the regular headcount or total. Keep ordinary role cards intact.
  counts.dual=dualNames.size;
- for(const [name,role] of regularNames){
-  if(dualNames.has(name))continue;
-  counts[role]++;
- }
+ // A dual-duty card is excluded from total; an independent primary-role
+ // card for the same person remains counted once in that primary role.
+ for(const role of regularNames.values())counts[role]++;
  return {...counts,total:counts.regional+counts.branch+counts.division+counts.manager};
 }
