@@ -1,10 +1,10 @@
 import { historicalPast } from './historical_seats.js';
 /* Separate administrator-only, seat-only historical records editor. */
-export function createHistoricalEditor({getDb,getRole,onRecords}){
+export function createHistoricalEditor({getDb,getRole,onRecords,onCancellations=()=>{}}){
  const el=id=>document.getElementById(id);
  const branches=['부산 1지사','부산 2지사','부산 3지사','부산 4지사','부산권역'];
  const divisions=['1본부','2본부','3본부','지사장','기타','권역대표'];
- let rows=[],ready=false;
+ let rows=[],cancellations=[],ready=false,cancellationReady=false;
  const section=document.createElement('section');
  section.id='historicalEditorPanel';section.className='perf-yearboard';section.hidden=true;
  section.style.cssText='margin:18px 0;padding:18px;border:1px solid #d5dfea;border-radius:12px';
@@ -15,10 +15,11 @@ export function createHistoricalEditor({getDb,getRole,onRecords}){
  <label>월 <select id="histMonth"></select></label>
  <label>지사 <select id="histBranch"></select></label>
  <label>구분 <select id="histScope"><option value="branch">지사 합계</option><option value="division">본부</option><option value="person">개인</option></select></label>
+ <label>재직 상태 <select id="histEmployment"><option value="active">재직</option><option value="cancelled">계약해지</option></select></label>
  <label id="histDivisionWrap" hidden>본부 <select id="histDivision"></select></label>
  <label id="histManagerWrap" hidden>매니저 성명 <input id="histManager" maxlength="80" placeholder="성명 정확히 입력"></label>
  <label id="histTargetWrap">목표 구좌 <input id="histTarget" type="number" min="0" max="1000000" step="1" placeholder="미입력" style="width:95px"></label>
- <label>실적 구좌 <input id="histActual" type="number" min="0" max="1000000" step="0.5" placeholder="미입력" style="width:95px"></label>
+ <label id="histActualWrap"><span id="histActualCaption">실적 구좌</span> <input id="histActual" type="number" min="0" max="1000000" step="0.5" placeholder="미입력" style="width:95px"></label>
  </div><p id="histRate" style="font-size:13px;margin:12px 0">달성률: —</p>
  <div style="display:flex;flex-wrap:wrap;gap:8px"><button type="submit">저장</button><button id="histDelete" type="button">수동 기록 삭제</button><button id="histReload" type="button">새로고침</button></div>
  <p id="histStatus" role="status" style="font-size:13px;margin-top:9px"></p></form></details>`;
@@ -34,24 +35,36 @@ export function createHistoricalEditor({getDb,getRole,onRecords}){
  }
  const matching=(r,k)=>Object.keys(k).every(x=>String(r[x])===String(k[x]));
  function rate(){
+  if(el('histEmployment').value==='cancelled'){
+   el('histRate').textContent='계약해지 실적은 재직자 구좌·달성률에 합산하지 않습니다.';
+   return;
+  }
   const target=el('histScope').value==='person'?'':el('histTarget').value;
   const actual=el('histActual').value;
   el('histRate').textContent='달성률: '+(target!==''&&actual!==''&&Number(target)>0?(100*Number(actual)/Number(target)).toFixed(1)+'%':'—')+' (입력값 기준)';
  }
  function fill(){
-  const r=rows.find(x=>matching(x,selection()));
-  el('histTarget').value=r?.target_seats??'';
-  el('histActual').value=r?.actual_seats??'';
+  const k=selection(),cancelled=el('histEmployment').value==='cancelled';
+  const r=cancelled?cancellations.find(x=>x.manager===k.manager&&Number(x.goal_year)===k.goal_year&&Number(x.goal_month)===k.goal_month):rows.find(x=>matching(x,k));
+  el('histTarget').value=cancelled?'':r?.target_seats??'';
+  el('histActual').value=cancelled?(r?.cancelled_seats??''):(r?.actual_seats??'');
   rate();
  }
- for(const id of ['histYear','histMonth','histBranch','histDivision','histManager'])el(id).addEventListener('change',fill);
- el('histScope').addEventListener('change',()=>{
-  const kind=el('histScope').value;
-  el('histDivisionWrap').hidden=kind==='branch';
-  el('histManagerWrap').hidden=kind!=='person';
-  el('histTargetWrap').hidden=kind==='person';
+ function updateScope(){
+  const cancelled=el('histEmployment').value==='cancelled';
+  if(cancelled)el('histScope').value='person';
+  el('histScope').disabled=cancelled;
+  el('histBranch').closest('label').hidden=cancelled;
+  el('histDivisionWrap').hidden=cancelled||el('histScope').value==='branch';
+  el('histManagerWrap').hidden=!cancelled&&el('histScope').value!=='person';
+  el('histTargetWrap').hidden=cancelled||el('histScope').value==='person';
+  el('histActualCaption').textContent=cancelled?'계약해지 구좌':'실적 구좌';
   fill();
- });
+ }
+ for(const id of ['histYear','histMonth','histBranch','histDivision','histManager'])el(id).addEventListener('change',fill);
+ el('histScope').addEventListener('change',updateScope);
+ el('histEmployment').addEventListener('change',updateScope);
+ updateScope();
  for(const id of ['histTarget','histActual'])el(id).addEventListener('input',rate);
  async function load(){
   const db=getDb();if(!db)return;
