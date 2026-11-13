@@ -331,6 +331,7 @@ import { drawOrgConnectorLines } from './org_connector_lines.js';
 import { emptyRevenue,recordRevenue,oldRevenue,addRevenue,clickableSeats,revenueLabel,showRevenueDetail } from './personal_revenue_ui.js';
 import { rosterPerformancePeople,regionalRepresentativeNames } from './personal_roster.js';
 import { renderPerformanceMatrix } from './performance_matrix.js';
+import { historicValue,historicalPast } from './historical_seats.js';
 import { validSignupDate,timedSignupRows,signupSeatsForPeriod,undatedSignupStats } from './signup_date_utils.js';
 let createClient;
 try {
@@ -686,6 +687,7 @@ function showAttendanceMetrics(){
 const monthlyMainDivisions=['1본부','2본부','3본부'];
 const monthlyBranches=['부산 1지사','부산 2지사','부산 3지사','부산 4지사','부산권역'];
 let monthlyTargets=[],monthlyDivisionTargets=[],monthlyReady=false,expandedMonthlyBranch=null;
+let historicalSeats=[],historicalReady=false;
 const expandedMonthlyDivisions=new Set();
 const expandedMonthlyManagers=new Set();
 const monthlyDivisions=['1본부','2본부','3본부','지사장','기타'];
@@ -697,7 +699,7 @@ function monthlyAllowedBranches(){
  return fixed?[fixed]:monthlyBranches;
 }
 function monthlyYearList(){
- const values=[new Date().getFullYear(),...items.map(e=>Number(String(e.date||'').slice(0,4))),...items.flatMap(e=>timedSignupRows(e).map(row=>Number(row.signupDate.slice(0,4)))),...monthlyTargets.map(t=>Number(t.goal_year)),...monthlyDivisionTargets.map(t=>Number(t.goal_year)),...monthlyFilterValues.year].filter(y=>Number.isInteger(Number(y))&&Number(y)>=2020&&Number(y)<=2100);
+ const values=[new Date().getFullYear(),...items.map(e=>Number(String(e.date||'').slice(0,4))),...items.flatMap(e=>timedSignupRows(e).map(row=>Number(row.signupDate.slice(0,4)))),...monthlyTargets.map(t=>Number(t.goal_year)),...monthlyDivisionTargets.map(t=>Number(t.goal_year)),...historicalSeats.map(t=>Number(t.goal_year)),...monthlyFilterValues.year].filter(y=>Number.isInteger(Number(y))&&Number(y)>=2020&&Number(y)<=2100);
  return [...new Set(values.map(Number))].sort((a,b)=>b-a);
 }
 function monthlySelectedYears(){
@@ -1287,10 +1289,10 @@ let perfSelectedYear=new Date().getFullYear();
 let perfSelectedBranch='all';
 let perfHighlightedMonth=new Date().getMonth()+1;
 function perfGoalValue(branch,year,month,division){
- return monthlyTarget(branch,year,month,division);
+ return historicValue(historicalSeats,branch,division==='all'?'':division,'',year,month,'target_seats')??monthlyTarget(branch,year,month,division);
 }
 function perfActualValue(branch,year,month,division){
- return monthlyActual(branch,year,month,division);
+ return historicValue(historicalSeats,branch,division==='all'?'':division,'',year,month,'actual_seats')??monthlyActual(branch,year,month,division);
 }
 function perfDisplayNumber(n){return fmt(n);}
 function perfDisplayRate(goal,actual,anyTarget){
@@ -1332,7 +1334,7 @@ function renderPerformanceYearboard(){
  body.innerHTML=matrix.body;
  const note=el('perfYearNote');
  note.textContent=perfSelectedYear+'년 · '+(perfSelectedBranch==='all'?'전체 지사':perfSelectedBranch)+
-  ' · 목표: 회사 배정 DB / 실적: 온라인 등록 내역 (담당 지사·본부 기준) · 미배정 목표는 — 표시'+
+  ' · 과거 수동 구좌 우선 표시 · 미입력 월은 기존 자동 집계 · 미배정 목표는 — 표시'+
   (!monthlyReady?' · 목표 DB 연결 상태를 아래 월별·연간 목표 현황에서 확인하세요.':'')+
   ' · 실제 가입일자 기준 · 합계 달성률은 연간 실적 ÷ 연간 배정 목표입니다.'+
   (undatedSignupStats(items).records?' · 가입일 미입력 '+undatedSignupStats(items).records+'건 ('+fmt(undatedSignupStats(items).seats)+'구좌) 집계 제외':'')+
