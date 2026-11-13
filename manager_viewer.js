@@ -182,7 +182,9 @@ function drawOrg(){
   const label=String(n.label||''),subtitle=String(n.subtitle||'');
   const leader=roleOf(n)==='branch'&&['박영우','안선경'].includes(cleanName(label));
   if(leader||!marked.test(label+' '+subtitle))continue;
-  const personName=marked.test(label)?cleanName(label):cleanName(subtitle);
+  const labelName=cleanName(label),subtitleName=cleanName(subtitle);
+  // 직급란에 '(겸직)'만 써 놓은 카드도 성명(label)을 기준으로 집계합니다.
+  const personName=labelName&&!/^(구성원|새구성원|이름미입력|최상위조직|새지사부서|새본부팀)$/.test(labelName)?labelName:subtitleName;
   if(!personName||/^(구성원|새구성원|이름미입력)$/.test(personName))continue;
   dualNames.add(personName);dualIds.add(String(n.id));
  }
