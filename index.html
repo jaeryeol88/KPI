@@ -214,6 +214,9 @@
 #personalMonthButtons .personal-month-check{display:inline-flex;align-items:center;gap:5px;border:1px solid #d9e3f0;background:#f6f8fc;border-radius:8px;padding:6px 9px;color:#637187;cursor:pointer;font-size:12px;user-select:none;white-space:nowrap}
 #personalMonthButtons .personal-month-check.checked{border-color:#2e63c5;background:#eaf1ff;color:#2152a9;font-weight:800}
 #personalMonthButtons .personal-month-check input{width:14px;height:14px;margin:0;accent-color:#2e63c5;cursor:pointer}
+
+/* 입회금 분납 내역: 관리자 및 뷰어 공통 */
+.installment-details{border-bottom:1px solid #e2e8f0}.installment-summary{cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between;gap:12px}.installment-summary::-webkit-details-marker{display:none}.installment-summary-amount{display:flex;flex-direction:column;align-items:flex-end;gap:4px}.installment-summary-amount strong{color:#172840!important;opacity:1!important;font-weight:800}.installment-summary-amount small{color:#2563eb;font-size:11px;font-weight:600}.installment-details[open] .installment-summary-amount small{color:#526989}.installment-content{padding:12px 0 14px;display:grid;gap:12px}.installment-card{border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;background:#fff}.installment-card-heading{padding:12px 14px;background:#f5f8fc;color:#172840;font-size:13px;font-weight:750}.installment-card-heading span{font-weight:500;color:#64748b}.installment-table-scroll{overflow-x:auto}.installment-table{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}.installment-table th{background:#edf3fb;color:#385477;font-weight:750;text-align:center;padding:10px 9px;border-bottom:1px solid #dce6f2}.installment-table td{padding:10px 9px;border-bottom:1px solid #edf1f6;text-align:center;color:#172840}.installment-table tr:last-child td{border-bottom:0}.installment-table tbody tr:nth-child(even){background:#f8fbff}.installment-table td:last-child{text-align:right;font-weight:750;white-space:nowrap;color:#172840}.installment-table th:last-child{text-align:right}.installment-table td:first-child{white-space:nowrap;color:#526989}.installment-table td:nth-child(2){white-space:nowrap}
 </style>
 </head><body>
 <section class="auth-screen" id="authScreen">
@@ -2247,11 +2250,11 @@ function showEventDetail(x){
   const date=validSignupDate(r.signupDate),y=date?Number(date.slice(0,4)):null,m=date?Number(date.slice(5,7)):null;
   const rows=r.installmentAmounts.map((v,i)=>{
    const year=y===null?null:y+Math.floor((m-1+i)/12),month=m===null?null:(m-1+i)%12+1;
-   return '<div class="detail-line" style="font-size:13px;padding:5px 0"><span>'+(year===null?(i+1)+'회차':year+'년 '+month+'월 · '+(i+1)+'회차')+'</span><strong>'+won(Number(v)||0)+'</strong></div>';
+   return '<tr><td>'+(i+1)+'회차</td><td>'+(year===null?'납부월 미지정':year+'년 '+month+'월')+'</td><td>'+won(Number(v)||0)+'</td></tr>';
   }).join('');
-  return '<div style="padding:8px 0"><small>'+esc(r.product||'가입상품')+' · '+esc(r.memberName||'입회자')+'</small>'+rows+'</div>';
+  return '<section class="installment-card"><div class="installment-card-heading">'+esc(r.product||'가입상품')+' <span>· '+esc(r.memberName||'입회자')+'</span></div><div class="installment-table-scroll"><table class="installment-table"><thead><tr><th>회차</th><th>납부월</th><th>납부금액</th></tr></thead><tbody>'+rows+'</tbody></table></div></section>';
  }).join('');
- return '<details style="border-bottom:1px solid #e2e8f0"><summary class="detail-row" style="cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between"><span>입회금</span><span style="display:flex;flex-direction:column;align-items:flex-end;gap:3px"><strong style="color:#172840!important;opacity:1!important">'+amount+'</strong><small style="color:#2563eb;font-size:11px;font-weight:500">분납 내역 보기 ▾</small></span></summary><div style="padding:4px 12px 12px">'+detail+'</div></details>';
+ return '<details class="installment-details"><summary class="detail-row installment-summary"><span>입회금</span><span class="installment-summary-amount"><strong>'+amount+'</strong><small>분납 내역 보기 ▾</small></span></summary><div class="installment-content">'+detail+'</div></details>';
  })()+
  line('연회비',value(x.annualFee))+
  line('행사 수입',value(x.eventIncome))+
