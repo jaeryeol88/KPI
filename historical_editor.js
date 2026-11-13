@@ -1,15 +1,15 @@
 import { historicalPast } from './historical_seats.js';
 /* Separate administrator-only, seat-only historical records editor. */
-export function createHistoricalEditor({getDb,getRole,onRecords,onCancellations=()=>{}}){
+export function createHistoricalEditor({getDb,getRole,onRecords}){
  const el=id=>document.getElementById(id);
  const branches=['부산 1지사','부산 2지사','부산 3지사','부산 4지사','부산권역'];
  const divisions=['1본부','2본부','3본부','지사장','기타','권역대표'];
- let rows=[],cancellations=[],ready=false,cancellationReady=false;
+ let rows=[],ready=false;
  const section=document.createElement('section');
  section.id='historicalEditorPanel';section.className='perf-yearboard';section.hidden=true;
  section.style.cssText='margin:18px 0;padding:18px;border:1px solid #d5dfea;border-radius:12px';
  section.innerHTML=`<details><summary style="cursor:pointer;font-weight:800;font-size:17px">과거 실적 구좌 직접 입력 · 수정</summary>
- <p style="font-size:13px;line-height:1.8">지난 월의 목표·실적 구좌를 숫자로만 입력합니다. 입력한 범위와 월은 기존 자동 집계 대신 수동값이 표시됩니다. 행사 등록·입회 기록·매출 통계는 변경되지 않습니다. 지사·본부·개인별 숫자는 각각 별도 입력합니다.</p>
+ <p style="font-size:13px;line-height:1.8">지난 월의 목표·실적 구좌를 숫자로만 입력합니다. 입력한 범위와 월은 기존 자동 집계 대신 수동값이 표시됩니다. 행사 등록·입회 기록·매출 통계는 변경되지 않습니다. 지사·본부·개인별 숫자는 각각 별도 입력합니다. 개인의 재직/계약해지 상태는 구분만 하며 구좌 실적은 모두 합산됩니다.</p>
  <form id="histForm"><div style="display:flex;flex-wrap:wrap;gap:12px;align-items:end">
  <label>연도 <input id="histYear" type="number" min="2020" max="2100" required style="width:92px"></label>
  <label>월 <select id="histMonth"></select></label>
@@ -35,30 +35,25 @@ export function createHistoricalEditor({getDb,getRole,onRecords,onCancellations=
  }
  const matching=(r,k)=>Object.keys(k).every(x=>String(r[x])===String(k[x]));
  function rate(){
-  if(el('histEmployment').value==='cancelled'){
-   el('histRate').textContent='계약해지 실적은 재직자 구좌·달성률에 합산하지 않습니다.';
-   return;
-  }
   const target=el('histScope').value==='person'?'':el('histTarget').value;
   const actual=el('histActual').value;
   el('histRate').textContent='달성률: '+(target!==''&&actual!==''&&Number(target)>0?(100*Number(actual)/Number(target)).toFixed(1)+'%':'—')+' (입력값 기준)';
  }
  function fill(){
-  const k=selection(),cancelled=el('histEmployment').value==='cancelled';
-  const r=cancelled?cancellations.find(x=>x.manager===k.manager&&Number(x.goal_year)===k.goal_year&&Number(x.goal_month)===k.goal_month):rows.find(x=>matching(x,k));
-  el('histTarget').value=cancelled?'':r?.target_seats??'';
-  el('histActual').value=cancelled?(r?.cancelled_seats??''):(r?.actual_seats??'');
+  const k=selection();
+  const r=rows.find(x=>matching(x,k));
+  el('histTarget').value=r?.target_seats??'';
+  el('histActual').value=r?.actual_seats??'';
+  if(el('histScope').value==='person')el('histEmployment').value=r?.employment_status==='계약해지'?'cancelled':'active';
   rate();
  }
  function updateScope(){
-  const cancelled=el('histEmployment').value==='cancelled';
-  if(cancelled)el('histScope').value='person';
-  el('histScope').disabled=cancelled;
-  el('histBranch').closest('label').hidden=cancelled;
-  el('histDivisionWrap').hidden=cancelled||el('histScope').value==='branch';
-  el('histManagerWrap').hidden=!cancelled&&el('histScope').value!=='person';
-  el('histTargetWrap').hidden=cancelled||el('histScope').value==='person';
-  el('histActualCaption').textContent=cancelled?'계약해지 구좌':'실적 구좌';
+  const person=el('histScope').value==='person';
+  el('histEmployment').closest('label').hidden=!person;
+  el('histDivisionWrap').hidden=el('histScope').value==='branch';
+  el('histManagerWrap').hidden=!person;
+  el('histTargetWrap').hidden=person;
+  el('histActualCaption').textContent='실적 구좌';
   fill();
  }
  for(const id of ['histYear','histMonth','histBranch','histDivision','histManager'])el(id).addEventListener('change',fill);
@@ -71,7 +66,7 @@ export function createHistoricalEditor({getDb,getRole,onRecords,onCancellations=
   try{
    const all=[];
    for(let offset=0;;offset+=1000){
-    const {data,error}=await db.from('kpi_historical_seats').select('branch,division,manager,goal_year,goal_month,target_seats,actual_seats').range(offset,offset+999);
+    const {data,error}=await db.from('kpi_historical_seats').select('branch,division,manager,goal_year,goal_month,target_seats,actual_seats,employment_status').range(offset,offset+999);
     if(error)throw error;
     all.push(...(data||[]));if((data||[]).length<1000)break;
    }
@@ -92,12 +87,13 @@ export function createHistoricalEditor({getDb,getRole,onRecords,onCancellations=
   const target=kind==='person'||el('histTarget').value===''?null:Number(el('histTarget').value);
   const actual=el('histActual').value===''?null:Number(el('histActual').value);
   if(target===null&&actual===null){alert('목표나 실적 중 하나 이상 입력해 주세요.');return;}
-  if([target,actual].some(x=>x!==null&&(!Number.isFinite(x)||Math.round(x*2)!==x*2||x<0||x>1000000))){alert('0~1,000,000 사이의 정수만 입력해 주세요.');return;}
+  if([target,actual].some(x=>x!==null&&(!Number.isFinite(x)||Math.round(x*2)!==x*2||x<0||x>1000000))){alert('0~1,000,000 사이의 0.5구좌 단위로 입력해 주세요.');return;}
   const button=event.submitter;if(button)button.disabled=true;
   try{
-   const {error}=await getDb().from('kpi_historical_seats').upsert({...k,target_seats:target,actual_seats:actual,updated_at:new Date().toISOString()},{onConflict:'branch,division,manager,goal_year,goal_month'});
+   const employment_status=kind==='person'&&el('histEmployment').value==='cancelled'?'계약해지':'재직';
+   const {error}=await getDb().from('kpi_historical_seats').upsert({...k,target_seats:target,actual_seats:actual,employment_status,updated_at:new Date().toISOString()},{onConflict:'branch,division,manager,goal_year,goal_month'});
    if(error)throw error;
-   await load();el('histStatus').textContent=k.goal_year+'년 '+k.goal_month+'월 '+k.branch+' '+(k.manager||k.division||'지사 합계')+' 저장 완료';
+   await load();el('histStatus').textContent=k.goal_year+'년 '+k.goal_month+'월 '+k.branch+' '+(k.manager||k.division||'지사 합계')+' 저장 완료 · 실적 구좌 합산 포함';
   }catch(error){el('histStatus').textContent='저장 실패: '+error.message;}
   finally{if(button)button.disabled=false;}
  }
