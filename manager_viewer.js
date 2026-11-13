@@ -4,7 +4,7 @@ import {historicalActualSeats,historicValue} from './historical_seats.js?v=auto-
 import {timedSignupRows} from './signup_date_utils.js';
 import {rosterPerformancePeople} from './personal_roster.js';
 import {drawOrgConnectorLines} from './org_connector_lines.js';
-import {ORG_ROLE_LABELS,orgEffectiveRoleShared,countOrgHeadcount,isDualStaff} from './org_headcount.js?v=role-dual-20261113d';
+import {ORG_ROLE_LABELS,orgEffectiveRoleShared,countOrgHeadcount,isDualStaff} from './org_headcount.js?v=role-dual-20261113e';
 
 const el=id=>document.getElementById(id);
 const safe=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
