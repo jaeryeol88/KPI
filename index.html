@@ -287,7 +287,7 @@
 <section id="orgStaffPage" class="org-page" hidden aria-label="조직원 정보"></section>
 <section id="orgPage" class="org-page" hidden>
  <div class="org-toolbar"><div><h2>조직도 <span class="perf-linked">조직관리</span></h2><p>조직과 본부, 구성원을 자유롭게 추가하고 수정할 수 있습니다. 카드를 클릭하면 상세 편집이 열립니다.</p></div>
- <div class="org-actions"><button class="btn" id="orgAddGroup" type="button">+ 지사 / 부서 추가</button><button class="btn" id="orgAddRoot" type="button">+ 최상위 추가</button><button class="btn primary" id="orgSave" type="button">저장</button><button class="btn" id="orgExportPpt" type="button" title="현재 조직도를 편집 가능한 PowerPoint 파일로 다운로드">↓ PPT 다운로드</button></div></div>
+ <div class="org-actions"><button class="btn" id="orgAddGroup" type="button">+ 지사 / 부서 추가</button><button class="btn" id="orgAddRoot" type="button">+ 최상위 추가</button><button class="btn primary" id="orgSave" type="button">저장</button><span id="orgSaveFeedback" role="status" aria-live="polite" style="font-size:13px;font-weight:700;color:#145dc5;min-width:120px">저장 대기</span><button class="btn" id="orgExportPpt" type="button" title="현재 조직도를 편집 가능한 PowerPoint 파일로 다운로드">↓ PPT 다운로드</button></div></div>
  <p class="org-status" id="orgStatus" role="status" aria-live="polite">조직도 준비 중…</p>
  <div class="org-scroll"><div id="orgCanvas" class="org-canvas"></div></div>
  <section class="org-headcount" aria-label="조직 인원 현황">
@@ -999,7 +999,7 @@ function orgDefaultNodes(){
  return nodes;
 }
 function orgCanEdit(){return access&&['owner','shared'].includes(access.role);}
-function orgStatus(message,error=false){const e=el('orgStatus');e.textContent=message;e.classList.toggle('error',error);}
+function orgStatus(message,error=false){const e=el('orgStatus');if(e){e.textContent=message;e.classList.toggle('error',error);}const f=el('orgSaveFeedback');if(f){f.textContent=message;f.style.color=error?'#d94b50':'#145dc5';}}
 function orgChildren(id){return orgNodes.filter(n=>n.parent===id).sort((a,b)=>a.order-b.order);}
 function orgNewId(){return typeof crypto!=='undefined'&&crypto.randomUUID?crypto.randomUUID():'org-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2);}
 function orgJoinYearMonth(value){
@@ -1196,9 +1196,10 @@ function orgUpdateButtons(){
  if(!can)orgStatus('조회 전용입니다. 조직도 편집은 최고관리자·공동 관리자 권한이 필요합니다.');
 }
 async function orgSave(){
- if(!orgCanEdit())return;
+ orgStatus('저장 버튼 클릭 확인 · 저장 처리 시작');
+ if(!orgCanEdit()){orgStatus('저장 권한이 없습니다.',true);return;}
  if(!orgDbReady){orgStatus('저장할 수 없습니다. Supabase SQL Editor에서 org_chart_setup.sql을 먼저 실행하세요.',true);return;}
- const button=el('orgSave');button.disabled=true;
+ const button=el('orgSave');button.disabled=true;orgStatus('온라인 DB에 저장 중…');
  try{
   const {error}=await db.from('kpi_org_chart').upsert({id:1,nodes:orgNodes,updated_at:new Date().toISOString()},{onConflict:'id'});
   if(error)throw error;
