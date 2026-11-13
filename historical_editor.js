@@ -58,7 +58,7 @@ export function createHistoricalEditor({getDb,getRole,onRecords}){
  }
  for(const id of ['histYear','histMonth','histBranch','histDivision','histManager'])el(id).addEventListener('change',fill);
  el('histScope').addEventListener('change',updateScope);
- el('histEmployment').addEventListener('change',updateScope);
+ el('histEmployment').addEventListener('change',rate);
  updateScope();
  for(const id of ['histTarget','histActual'])el(id).addEventListener('input',rate);
  async function load(){
