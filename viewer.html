@@ -1053,10 +1053,16 @@ async function fetchViewerPublicData(silent){
         if((data||[]).length<1000)break;
       }
       const cancellations=[];
-      for(let start=0;;start+=1000){
-        const {data,error}=await client.from('kpi_historical_cancellations').select('manager,goal_year,goal_month,cancelled_seats').range(start,start+999);
-        if(error)throw error;
-        cancellations.push(...(data||[]));if((data||[]).length<1000)break;
+      // Cancellation records have no branch column and are only available to the full viewer.
+      // Never discard successfully loaded historical seats when this optional query is unavailable.
+      if(!assignedBranch){
+        try{
+          for(let start=0;;start+=1000){
+            const {data,error}=await client.from('kpi_historical_cancellations').select('manager,goal_year,goal_month,cancelled_seats').range(start,start+999);
+            if(error)throw error;
+            cancellations.push(...(data||[]));if((data||[]).length<1000)break;
+          }
+        }catch(cancelError){console.warn('과거 취소 구좌 조회 불가 · 과거 가입 실적은 유지합니다.',cancelError);}
       }
       monthlyHistoricalSeats=historic;
       viewerExtras.setHistoricalSeats(historic,cancellations);
