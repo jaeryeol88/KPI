@@ -8,8 +8,7 @@ export function renderPerformanceMatrix({branches,year,highlight=0,getGoal,getAc
  // limited to the current calendar month for this year (all 12 for past years).
  const now=new Date(),yearNumber=Number(year);
  const throughMonth=yearNumber<now.getFullYear()?12:yearNumber===now.getFullYear()?now.getMonth()+1:0;
- const currentMonths=months.filter(m=>m<=throughMonth);
- const heading='<tr><th colspan="3">구분</th><th title="1월~12월 전체 기간">합계(평균)<small style="display:block;font-size:10px;font-weight:500">1~12월</small></th><th title="조회 연도의 현재 월까지 집계">현재 월까지<br>합계(평균)<small style="display:block;font-size:10px;font-weight:500">1~'+(throughMonth||0)+'월</small></th>'+months.map(m=>'<th class="'+(highlight===m?'perf-active-month':'')+'">'+m+'월</th>').join('')+'</tr>';
+ const heading='<tr><th colspan="3">구분</th><th title="1월~12월 전체 기간">합계(평균)<small style="display:block;font-size:10px;font-weight:500">1~12월</small></th><th title="조회 연도의 현재 월까지 집계">현재 월까지<br>합계(평균)<small style="display:block;font-size:10px;font-weight:500">1~'+(throughMonth?throughMonth+'월':'미도래')+'</small></th>'+months.map(m=>'<th class="'+(highlight===m?'perf-active-month':'')+'">'+m+'월</th>').join('')+'</tr>';
   const cols=(goals,actuals,kind)=>{
   const defined=goals.some(v=>v!==null);
   const sumGoal=goals.reduce((n,v)=>n+(v===null?0:v),0);
