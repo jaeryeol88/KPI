@@ -474,6 +474,22 @@ el('v-months').addEventListener('change',e=>{
  async function showStaffPhone(nodeId){
   const note=el('v-staff-status-note');
   if(!await checkStaffPhoneAccess()){
+   if(assignedBranch&&['부산 1지사','부산 2지사','부산 3지사','부산 4지사'].includes(assignedBranch)){
+    try{
+     const cfg=window.PLK_CONFIG||{};
+     const db=staffPhoneDb||createClient(cfg.supabaseUrl,cfg.supabaseAnonKey,{auth:{persistSession:false,detectSessionInUrl:false}});
+     const {data,error}=await db.rpc('kpi_public_branch_staff_phones',{p_branch:assignedBranch});
+     if(error)throw error;
+     for(const row of data||[])staffPhoneCache.set(String(row.node_id),String(row.phone||''));
+     staffPhoneAllowed=true;
+     staffPhoneShown.add(nodeId);
+     renderStaff();
+     return;
+    }catch(error){
+     note.textContent='지사 공개 연락처는 서버 공개 설정이 완료되어야 표시됩니다. ('+(error.message||'설정 대기')+')';
+     return;
+    }
+   }
    renderStaff();
    note.textContent='연락처 조회 권한이 없습니다. 관리자 홈페이지에 권한 있는 계정으로 로그인하면 별도 로그인창 없이 조회할 수 있습니다.';
    return;
