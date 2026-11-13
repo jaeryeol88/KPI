@@ -110,14 +110,20 @@ function drawOrg(){
   .map(([label,n])=>'<div class="org-headcount-stat'+(label==='총인원'?' org-headcount-total':'')+'"><span>'+safe(label)+'</span><strong>'+fmt(n)+'명</strong></div>').join('');
  const children=new Map();
  for(const n of visible){const parent=n.parent==null?'':String(n.parent);if(!children.has(parent))children.set(parent,[]);children.get(parent).push(n);}
+ for(const list of children.values())list.sort((a,b)=>(Number(a.order)||0)-(Number(b.order)||0));
  const kids=n=>children.get(n==null?'':String(n))||[];
  const card=n=>{
   const role=roles[roleOf(n)]||'';
   const subtitle=String(n.subtitle||'').trim();
   const roleTag=role?'<small class="org-card-role">'+safe(role)+'</small>':'';
   const sub=subtitle&&subtitle.replace(/\s+/g,'')!==role?'<small>'+safe(subtitle)+'</small>':'';
-  const col=n.color&&n.color!=='default'?' color-'+safe(n.color):'';
-  return '<div class="org-node org-node-'+safe(n.type)+col+'">'+roleTag+'<strong>'+safe(n.label||'이름 미입력')+'</strong>'+sub+'</div>';
+  const permittedColors=new Set(['default','white','navy','blue','mint','sky','teal','green','purple','lavender','pink','coral','orange','yellow','gray']);
+  const col=permittedColors.has(n.color)&&n.color!=='default'?' color-'+n.color:'';
+  const date=String(n.joinDate||'').trim();
+  const m=/^([0-9]{2})[.](0[1-9]|1[0-2])$/.exec(date)||/^([0-9]{4})-(0[1-9]|1[0-2])/.exec(date);
+  const joined=m?m[1].slice(-2)+'.'+m[2]:'';
+  const join=['group','person'].includes(n.type)&&joined?'<small class="org-join-date">입사 '+safe(joined)+'</small>':'';
+  return '<button type="button" disabled class="org-node org-node-'+safe(n.type)+col+'">'+roleTag+'<strong>'+safe(n.label||'이름 미입력')+'</strong>'+sub+join+'</button>';
  };
  const person=n=>'<div class="org-person">'+card(n)+'</div>';
  const division=n=>'<div class="org-unit-col">'+card(n)+'<div class="org-person-list">'+kids(n.id).filter(x=>x.type==='person').map(person).join('')+'</div></div>';
