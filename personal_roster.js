@@ -7,6 +7,7 @@ export function rosterPerformancePeople(nodes){
  const normalize=v=>String(v||'').trim();
  for(const node of nodes){
   if(!node||node.staffHidden===true||!['person','division'].includes(node.type))continue;
+  if(node.headcountRole==='regional'||/권역대표/.test(String(node.subtitle||'')))continue;
   const name=normalize(node.label);
   if(!name||PERSONAL_EMPTY_NAMES.has(name)||/^(?:부산\s*[1-4]\s*지사|[123]본부)$/.test(name))continue;
   // Division labels can be personnel only if explicitly assigned a job role.
@@ -34,4 +35,11 @@ export function rosterPerformancePeople(nodes){
   unique.add(key);result.push({branch,division,name});
  }
  return result;
+}
+
+// Exclude the regional representative from individual sales even when a matching signup exists.
+export function regionalRepresentativeNames(nodes){
+ return new Set((Array.isArray(nodes)?nodes:[]).filter(n=>n&&n.type==='person'&&n.staffHidden!==true&&
+  (n.headcountRole==='regional'||(!Object.prototype.hasOwnProperty.call(n,'headcountRole')&&/권역대표/.test(String(n.subtitle||'')))))
+  .map(n=>String(n.label||'').trim()).filter(Boolean));
 }
