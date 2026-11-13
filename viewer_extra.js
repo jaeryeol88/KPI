@@ -10,7 +10,7 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
  const branches=['부산 1지사','부산 2지사','부산 3지사','부산 4지사','부산권역'];
  const divisions=['1본부','2본부','3본부','지사장','기타','권역대표'];
  const roles={regional:'권역대표',branch:'지사장',division:'본부장',manager:'매니저'};
- let active='dashboard',year=new Date().getFullYear(),yearBranch='all',highlightedYearMonth=0,pyear=year,pmonths=new Set(),pbranch='all',pdivision='all',orgNodes=[],orgLoaded=false,orgMessage='';
+ let active='dashboard',year=new Date().getFullYear(),yearBranch='all',highlightedYearMonth=0,pyear=year,pmonths=new Set(),pbranch='all',pdivision='all',orgNodes=[],orgLoaded=false,orgMessage='',staffStatuses=new Map(),staffStatusLoaded=false,staffStatusError='';
  const css=`
  .v-nav{display:flex;flex-direction:column;gap:8px}
  .v-nav button{border:0;border-radius:11px;background:transparent;color:#dce9ff;text-align:left;font:inherit;font-size:13px;padding:12px 12px;cursor:pointer;line-height:1.5}
@@ -98,7 +98,10 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
  .v-year-matrix .perf-active-month{background:#fff7d7!important}
  .v-year-matrix tr:last-child td{border-bottom:0}
 
- /* Match administrator layouts while keeping all public data strictly read-only. */
+.v-staff-status{display:inline-block;color:#2158cc;background:#eff5ff;border:1px solid #cbdcff;border-radius:18px;font-weight:750;padding:2px 9px}
+ .v-staff-status.leave{color:#9c6700;background:#fff7e2;border-color:#ffe0a0}
+ .v-staff-status.left{color:#8691a0;background:#eff2f5;border-color:#dce3eb}
+  /* Match administrator layouts while keeping all public data strictly read-only. */
  .v-extra{margin:20px 0;padding:18px;border:1px solid #dce5f2;border-radius:12px;background:#fff}
  .v-extra-head h2{font-size:19px;color:#142b4c}
  .v-filters label{font-size:12px;font-weight:700}
@@ -158,9 +161,9 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
  <section id="v-orgstaff" class="v-extra" hidden>
   <div class="v-extra-head"><div><h2>PACIFIC 부산권역 임직원 명단</h2><p>조직도에 등록된 전체 조직원 목록입니다. 개인정보 보호를 위해 연락처는 공개하지 않습니다.</p></div>
   <strong id="v-staff-count" style="background:#e9f1ff;color:#215ddd;border-radius:7px;padding:6px 10px;font-size:13px">총 0명</strong></div>
-  <div class="v-filters v-staff-filters"><input id="v-staff-search" placeholder="성명·직급·소속 검색" aria-label="조직원 검색" type="search"><select id="v-staff-branch" aria-label="지사별 검색"><option value="all">전체 지사</option></select><select id="v-staff-status" aria-label="재직상태 (비공개)" disabled title="재직 상태는 관리자에게만 공개됩니다"><option value="all">재직상태 비공개</option></select></div>
+  <div class="v-filters v-staff-filters"><input id="v-staff-search" placeholder="성명·직급·소속 검색" aria-label="조직원 검색" type="search"><select id="v-staff-branch" aria-label="지사별 검색"><option value="all">전체 지사</option></select><select id="v-staff-status" aria-label="재직상태"><option value="all">전체 재직상태</option><option value="재직">재직</option><option value="휴직">휴직</option><option value="퇴사">퇴사</option></select></div>
   <div class="v-table-scroll"><table class="v-table v-staff-table" style="min-width:1150px"><thead><tr><th>No.</th><th>성명</th><th>직급</th><th>소속 지사</th><th>소속 본부/부서</th><th>연락처</th><th>입사년월</th><th>재직상태</th><th>관리</th></tr></thead><tbody id="v-staff-body"></tbody></table></div>
-  <p class="v-note">관리자 화면과 동일한 조직원 목록입니다. 연락처와 재직상태는 개인정보 보호를 위해 공개하지 않으며, 수정 권한은 관리자에게만 있습니다.</p>
+  <p class="v-note">재직상태는 관리자 등록 정보를 조회 전용으로 표시합니다. 연락처는 비공개이며 수정 권한은 관리자에게만 있습니다.</p><p class="v-note" id="v-staff-status-note" role="status"></p>
  </section>`;
  main.appendChild(wrapper);
  const pages={yearboard:el('v-yearboard'),personal:el('v-personal'),org:el('v-org'),orgstaff:el('v-orgstaff')};
@@ -331,6 +334,20 @@ el('v-months').addEventListener('change',e=>{
  async function refreshOrganization(){
   try{const rows=await loadOrganization();orgNodes=Array.isArray(rows)?rows:[];orgMessage='부산권역 전체 조직도 · 읽기 전용';}
   catch(error){orgNodes=[];orgMessage='조직도를 표시할 수 없습니다. 관리자에게 공개 조회 설정 확인을 요청하세요. ('+(error.message||'오류')+')';}
+  // Anonymous viewers can read ONLY the safe status projection; phone numbers remain protected.
+  staffStatuses=new Map();staffStatusLoaded=false;staffStatusError='';
+  try{
+   const settings=window.PLK_CONFIG||{};
+   if(!/^https:\/\/[^/]+\.supabase\.co\/?$/.test(settings.supabaseUrl||'')||!settings.supabaseAnonKey)throw new Error('공개 조회 연결이 설정되지 않았습니다.');
+   const address=settings.supabaseUrl.replace(/\/$/,'')+'/rest/v1/kpi_org_staff_public_status?select=node_id,employment_status';
+   const response=await fetch(address,{headers:{apikey:settings.supabaseAnonKey,Authorization:'Bearer '+settings.supabaseAnonKey},cache:'no-store'});
+   if(!response.ok)throw new Error('공개 재직상태 DB 설정이 필요합니다. ('+response.status+')');
+   const data=await response.json();
+   if(!Array.isArray(data))throw new Error('재직상태 응답 형식 오류');
+   staffStatuses=new Map(data.filter(row=>row&&row.node_id&&['재직','휴직','퇴사'].includes(row.employment_status))
+    .map(row=>[String(row.node_id),row.employment_status]));
+   staffStatusLoaded=true;
+  }catch(error){staffStatusError=error.message||'재직상태를 불러오지 못했습니다.';console.warn('Public staff status unavailable',error);}
   orgLoaded=true;if(active==='org')renderOrg();if(active==='orgstaff')renderStaff();if(active==='personal')renderPersonal();
  }
  function renderStaff(){
@@ -346,19 +363,22 @@ el('v-months').addEventListener('change',e=>{
    }return {b,d};
   };
   const data=orgNodes.filter(n=>n&&n.staffHidden!==true&&['person','root','group','division'].includes(n.type)&&String(n.label||'').trim()&&!placeholder.includes(n.label)&&(n.type==='person'||(n.type!=='group'&&n.type!=='root'&&effectiveRole(n)))).map(n=>{
-   const loc=tree(n);return {name:n.label,role:roles[effectiveRole(n)]||n.subtitle||'미지정',branch:loc.b,division:loc.d,hire:join(n)};
+   const loc=tree(n);const status=staffStatuses.get(String(n.staffContactId||n.id))|| (staffStatusLoaded?'재직':'—');
+   return {name:n.label,role:roles[effectiveRole(n)]||n.subtitle||'미지정',branch:loc.b,division:loc.d,hire:join(n),status};
   }).sort((a,b)=>a.branch.localeCompare(b.branch,'ko')||a.division.localeCompare(b.division,'ko')||a.name.localeCompare(b.name,'ko'));
   el('v-staff-count').textContent='총 '+data.length+'명';
   const query=el('v-staff-search').value.trim().toLocaleLowerCase('ko');
-  const selectedBranch=el('v-staff-branch').value;
-  const filtered=data.filter(r=>(selectedBranch==='all'||r.branch===selectedBranch)&&(!query||[r.name,r.role,r.branch,r.division].join(' ').toLocaleLowerCase('ko').includes(query)));
-  el('v-staff-body').innerHTML=filtered.map((r,i)=>'<tr><td>'+(i+1)+'</td><td class="v-staff-name">'+safe(r.name)+'</td><td><span class="v-staff-pill">'+safe(r.role)+'</span></td><td>'+safe(r.branch||'—')+'</td><td>'+safe(r.division||'—')+'</td><td>비공개</td><td>'+safe(r.hire||'—')+'</td><td>비공개</td><td>조회 전용</td></tr>').join('')||'<tr><td colspan="9">조직원 정보가 없습니다.</td></tr>';
+  const selectedBranch=el('v-staff-branch').value,selectedStatus=el('v-staff-status').value;
+  const filtered=data.filter(r=>(selectedBranch==='all'||r.branch===selectedBranch)&&(selectedStatus==='all'||r.status===selectedStatus)&&(!query||[r.name,r.role,r.branch,r.division].join(' ').toLocaleLowerCase('ko').includes(query)));
+  el('v-staff-status-note').textContent=staffStatusError?'재직상태 표시를 위해 Supabase에서 org_staff_status_public.sql을 실행해야 합니다. '+staffStatusError:staffStatusLoaded?'재직상태는 관리자 등록 DB와 연동됩니다.':'';
+  el('v-staff-body').innerHTML=filtered.map((r,i)=>'<tr><td>'+(i+1)+'</td><td class="v-staff-name">'+safe(r.name)+'</td><td><span class="v-staff-pill">'+safe(r.role)+'</span></td><td>'+safe(r.branch||'—')+'</td><td>'+safe(r.division||'—')+'</td><td>비공개</td><td>'+safe(r.hire||'—')+'</td><td><span class="v-staff-status '+(r.status==='휴직'?'leave':r.status==='퇴사'?'left':'')+'">'+safe(r.status)+'</span></td><td>조회 전용</td></tr>').join('')||'<tr><td colspan="9">조직원 정보가 없습니다.</td></tr>';
  }
  el('v-staff-search').addEventListener('input',renderStaff);
  const branchSelector=el('v-staff-branch');
  branchSelector.innerHTML='<option value="all">전체 지사</option>'+['부산권역',...branches].map(b=>'<option value="'+safe(b)+'">'+safe(b)+'</option>').join('');
  if(assignedBranch&&branches.includes(assignedBranch))branchSelector.value=assignedBranch;
  branchSelector.addEventListener('change',renderStaff);
+ el('v-staff-status').addEventListener('change',renderStaff);
 
  function refresh(){if(active==='yearboard')renderYear();if(active==='personal')renderPersonal();}
  return {refresh,refreshOrganization};
