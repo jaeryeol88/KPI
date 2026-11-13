@@ -3,6 +3,7 @@ import { emptyRevenue,recordRevenue,oldRevenue,addRevenue,clickableSeats,revenue
 import { rosterPerformancePeople,regionalRepresentativeNames } from './personal_roster.js';
 import { renderPerformanceMatrix } from './performance_matrix.js';
 import { historicValue } from './historical_seats.js';
+import { cancellationPanel } from './historical_cancellations_ui.js';
 import { timedSignupRows,signupSeatsForPeriod,undatedSignupStats } from './signup_date_utils.js';
 /* Read-only supplemental KPI views, shared by all public viewers. */
 export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTarget,countSeats,normalizeDivision,loadOrganization}) {
@@ -15,6 +16,7 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
  // Only district-specific viewers hide other branches' personal revenue.
  const revenueBranch=assignedBranch&&assignedBranch!=='부산권역'?assignedBranch:null;
  let historicalSeats=[];
+ const cancelPanel=cancellationPanel(document.getElementById('v-personal'));
  let active='dashboard',year=new Date().getFullYear(),yearBranch='all',highlightedYearMonth=0,pyear=year,pmonths=new Set(),pbranch='all',pdivision='all',orgNodes=[],orgLoaded=false,orgMessage='',staffStatuses=new Map(),staffStatusLoaded=false,staffStatusError='';
  const css=`
  .v-nav{display:flex;flex-direction:column;gap:8px}
@@ -214,6 +216,7 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
  el('v-year-branch').addEventListener('change',e=>{yearBranch=e.target.value;renderYear()});
  el('v-year-months').addEventListener('click',e=>{const button=e.target.closest('[data-v-year-month]');if(!button)return;highlightedYearMonth=Number(button.dataset.vYearMonth);renderYear()});
  function renderPersonal(){
+  cancelPanel.render(pyear,pmonths.size?[...pmonths]:null);
   if(!years().includes(pyear))pyear=years()[0]||new Date().getFullYear();
   selectOptions(el('v-pyear'),years().map(y=>[y,y+'년']),pyear);
   selectOptions(el('v-pbranch'),[['all','전체 지사'],...branches.map(b=>[b,b])],pbranch);
@@ -408,6 +411,6 @@ el('v-months').addEventListener('change',e=>{
  el('v-staff-status').addEventListener('change',renderStaff);
 
  function refresh(){if(active==='yearboard')renderYear();if(active==='personal')renderPersonal();}
- function setHistoricalSeats(data){historicalSeats=Array.isArray(data)?data:[];refresh();}
+ function setHistoricalSeats(data,cancellations=[]){historicalSeats=Array.isArray(data)?data:[];cancelPanel.setRows(cancellations);refresh();}
  return {refresh,refreshOrganization,setHistoricalSeats};
 }
