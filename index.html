@@ -329,7 +329,7 @@
 <script type="module">
 import { drawOrgConnectorLines } from './org_connector_lines.js';
 import { emptyRevenue,recordRevenue,oldRevenue,addRevenue,clickableSeats,revenueLabel,showRevenueDetail } from './personal_revenue_ui.js';
-import { rosterPerformancePeople } from './personal_roster.js';
+import { rosterPerformancePeople,regionalRepresentativeNames } from './personal_roster.js';
 let createClient;
 try {
   ({ createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'));
@@ -1424,12 +1424,14 @@ function renderPersonalYearboard(){
  const entries=new Map();
  let excludedLegacy=0,unassignedSeats=0;
  const roster=rosterPerformancePeople(orgLoaded?orgNodes:[]);
+ const regionalReps=regionalRepresentativeNames(orgLoaded?orgNodes:[]);
  for(const person of roster){
   if(!allowed.includes(person.branch)||personalSelectedBranch!=='all'&&personalSelectedBranch!==person.branch||personalSelectedDivision!=='all'&&personalSelectedDivision!==person.division)continue;
   const key=JSON.stringify([person.branch,person.division,person.name]);
   if(!entries.has(key))entries.set(key,{branch:person.branch,division:person.division,manager:person.name,monthly:Array(12).fill(0),sales:Array.from({length:12},emptyRevenue)});
  }
  function add(b,d,manager,month,seats,amount){
+  if(b==='부산권역'&&regionalReps.has(manager))return;
   const key=JSON.stringify([b,d,manager]);
   if(!entries.has(key))entries.set(key,{branch:b,division:d,manager,monthly:Array(12).fill(0),sales:Array.from({length:12},emptyRevenue)});
   entries.get(key).monthly[month-1]+=seats;
