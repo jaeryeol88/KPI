@@ -82,7 +82,7 @@ a.btn{display:inline-flex;align-items:center}
 <script type="module">
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 import { installViewerExtras } from './viewer_extra.js?v=signup-date-20261113';
-import { timedSignupRows,signupSeatsForPeriod } from './signup_date_utils.js';
+import { validSignupDate,timedSignupRows,signupSeatsForPeriod } from './signup_date_utils.js';
 const el=id=>document.getElementById(id);
 const cfg=window.PLK_CONFIG||{};
 const branchLinks=Object.freeze({busan1:'부산 1지사',busan2:'부산 2지사',busan3:'부산 3지사',busan4:'부산 4지사',busanarea:'부산권역'});
@@ -841,7 +841,7 @@ function showEventDetail(x){
     '<div><span>가입구좌</span><strong>'+count(r.seats)+'</strong></div>'+
     '<div><span>구좌 매출액</span><strong>'+value(r.revenue)+'</strong></div>'+
     '<div><span>연회비 금액</span><strong>'+value(r.annualFee)+'</strong></div>'+
-    '<div><span>가입 담당 지사</span><strong>'+esc(r.branch||x.branch||'미지정')+'</strong></div>'+ '<div><span>가입 담당 본부</span><strong>'+esc(normalizeDivision(r.division||x.division)||'미지정')+'</strong></div>'+'<div><span>가입 담당 매니저</span><strong>'+esc(r.manager||'미지정')+'</strong></div>'+'<div><span>입회자 성함</span><strong>'+esc(r.memberName||'미입력')+'</strong></div>'+'<div><span>납부 방식</span><strong>'+esc(payment)+'</strong></div>'+
+    '<div><span>가입 담당 지사</span><strong>'+esc(r.branch||x.branch||'미지정')+'</strong></div>'+ '<div><span>가입 담당 본부</span><strong>'+esc(normalizeDivision(r.division||x.division)||'미지정')+'</strong></div>'+'<div><span>가입 담당 매니저</span><strong>'+esc(r.manager||'미지정')+'</strong></div>'+'<div><span>입회자 성함</span><strong>'+esc(r.memberName||'미입력')+'</strong></div>'+'<div><span>실제 가입일자</span><strong>'+esc(validSignupDate(r.signupDate)||'미입력 · 월별 실적 제외')+'</strong></div>'+'<div><span>납부 방식</span><strong>'+esc(payment)+'</strong></div>'+
     '<div><span>분납 개월 수</span><strong>'+esc(months)+'</strong></div>'+
     '</div>'+((typeof r.note==='string'&&r.note.trim())?'<div class="detail-entry-note"><span>가입 건별 메모</span><p>'+esc(r.note)+'</p></div>':'<div class="detail-entry-note"><span>가입 건별 메모</span><p>미입력</p></div>')+'</div>';
   }).join('');
