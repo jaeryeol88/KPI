@@ -1333,7 +1333,9 @@ function renderPerformanceYearboard(){
  note.textContent=perfSelectedYear+'년 · '+(perfSelectedBranch==='all'?'전체 지사':perfSelectedBranch)+
   ' · 목표: 회사 배정 DB / 실적: 온라인 등록 내역 (담당 지사·본부 기준) · 미배정 목표는 — 표시'+
   (!monthlyReady?' · 목표 DB 연결 상태를 아래 월별·연간 목표 현황에서 확인하세요.':'')+
-  ' · 실제 가입일자 기준 · 가입일 미입력 건 제외 · 합계 달성률은 연간 실적 ÷ 연간 배정 목표입니다.';
+  ' · 실제 가입일자 기준 · 합계 달성률은 연간 실적 ÷ 연간 배정 목표입니다.'+
+  (undatedSignupStats(items).records?' · 가입일 미입력 '+undatedSignupStats(items).records+'건 ('+fmt(undatedSignupStats(items).seats)+'구좌) 집계 제외':'')+
+  (undatedSignupStats(items).legacyEvents?' · 가입 건별 정보가 없는 기존 행사 '+undatedSignupStats(items).legacyEvents+'건 집계 제외':'');
 }
 el('perfYearSelect').addEventListener('change',e=>{perfSelectedYear=Number(e.target.value);renderPerformanceYearboard();});
 el('perfBranchSelect').addEventListener('change',e=>{perfSelectedBranch=e.target.value;renderPerformanceYearboard();});
@@ -1425,7 +1427,8 @@ function renderPersonalYearboard(){
  el('personalYearNote').textContent=personalSelectedYear+'년 '+(fullYear?'전체(1~12월)':visibleMonths.map(m=>m+'월').join('·'))+' · 총 '+rows.length+'개 담당자/소속 조합 · '+fmt(sum)+'구좌'+
   (unassignedSeats?' · 담당자 미지정 '+fmt(unassignedSeats)+'구좌 (기존 기록 포함)':'')+
   (excludedLegacy?' · 가입 건별 정보가 없는 기존 실적 '+fmt(excludedLegacy)+'구좌는 담당자 미지정으로 표시':'')+
-  ' · 가입일자 기준 집계 (가입일 미입력 건 제외) · 동일 성명이라도 소속 지사·본부가 다르면 별도 집계합니다.';
+  ' · 가입일자 기준 집계 · 동일 성명이라도 소속 지사·본부가 다르면 별도 집계합니다.'+
+  (undatedSignupStats(items).records?' · 가입일 미입력 '+undatedSignupStats(items).records+'건 ('+fmt(undatedSignupStats(items).seats)+'구좌) 월별 집계 제외':'');
 }
 el('personalYearBody').addEventListener('click',e=>{const button=e.target.closest('[data-personal-revenue]');if(!button)return;const info=personalRevenueActions.get(button.dataset.personalRevenue);if(info)showRevenueDetail(info.name,info.period,info.seats,info.revenue);});
 el('personalYearSelect').addEventListener('change',e=>{personalSelectedYear=Number(e.target.value);renderPersonalYearboard();});
