@@ -116,91 +116,72 @@
 
  // First slide: all currently visible org cards in one editable 16:9 tree.
  // Unlike the per-branch breakdown, this page includes ALL branch members and all division members.
- function fullTree(pptx,root,groups,pageCounter){
-  // Every single person gets a dedicated text cell; nothing is clipped, summarized or skipped.
-  // Structure is divided into four wide branch columns, with divisions stacked vertically.
-  const slide=pptx.addSlide();
-  base(slide,pptx,'PLK 조직도 · 전 직원 전체 조직도',
-   '부산권역 전체 인원 · 모든 지사장 / 본부장 / 매니저 표시  |  다음 장부터 지사별 상세',++pageCounter.value);
-  const mid=W/2,left=.37,right=W-.37,top=1.25,bottom=6.99;
-  const valid=n=>n&&String(n.label||'').trim()&&!['구성원','새 구성원','이름 미입력'].includes(String(n.label||'').trim());
-  const name=n=>String(n.label||'이름 미입력').trim();
-  const draw=(x,y,w,h,label,kind,opts={})=>{
-   const colors=kind==='root'?['2457C6','FFFFFF','2457C6']:
-    kind==='branch'?['17253D','FFFFFF','17253D']:
-    kind==='division'?['DCE9FE','194B9E','C3D6F3']:
-    kind==='leader'?['EDF3FB','1A3B6C','C5D6EE']:['FFFFFF','253956','DCE5F2'];
-   boxes(slide,pptx,x,y,w,h,colors[0],colors[1],colors[2],.045);
-   text(slide,label,x+.034,y+.014,w-.068,Math.max(.065,h-.025),
-     {size:opts.size||9,bold:kind!=='member',color:colors[1],fit:'shrink'});
-  };
-  draw(mid-1.25,top,2.5,.36,name(root),'root',{size:15});
-  const reps=getDirect(root.id).filter(n=>n.type==='person'&&valid(n));
-  let repEnd=top+.36;
-  if(reps.length){
-   const rowY=top+.51,rowH=.31,gap=.07,rowW=Math.min(2.45,(Math.min(4,reps.length)*2.45)/reps.length);
-   const total=Math.min(W-1,reps.length*rowW+(reps.length-1)*gap),start=mid-total/2;
-   line(slide,pptx,mid,repEnd,mid,rowY);
-   reps.forEach((p,i)=>draw(start+i*(rowW+gap),rowY,rowW,rowH,'권역대표  '+name(p),'leader',{size:10.8}));
-   repEnd=rowY+rowH;
-  }
-  const branchTop=2.40,branchH=.38,busY=2.27,blockTop=2.96;
-  const columns=Math.max(groups.length,1),gap=.15,width=(right-left-(columns-1)*gap)/columns;
-  const centers=groups.map((_,i)=>left+i*(width+gap)+width/2);
-  line(slide,pptx,mid,repEnd,mid,busY);
-  if(centers.length>1)line(slide,pptx,centers[0],busY,centers[centers.length-1],busY);
-  groups.forEach((group,i)=>{
-   const x=left+i*(width+gap),cx=centers[i];
-   line(slide,pptx,cx,busY,cx,branchTop);
-   draw(x,branchTop,width,branchH,orgApi.branchHeading(group),'branch',{size:13});
-   const direct=getDirect(group.id).filter(n=>n.type==='person'&&valid(n));
-   const divisions=getDirect(group.id).filter(n=>n.type==='division');
-   // Each division consumes its proportional number of manager rows.
-   const sections=divisions.map(d=>({division:d,people:getDirect(d.id).filter(n=>n.type==='person'&&valid(n))}));
-   const freeH=bottom-blockTop;
-   const leadRows=direct.length?Math.ceil(direct.length/2):0;
-   const cardGap=.045,headH=.27,leadH=.30,sectionGap=.12;
-   const headerBudget=leadRows?leadRows*leadH+.10:0;
-   const sectionBudget=sections.length*(headH+.045+sectionGap);
-   const totalRows=sections.reduce((n,sec)=>n+Math.max(1,Math.ceil(sec.people.length/2)),0);
-   const remaining=freeH-headerBudget-sectionBudget-totalRows*cardGap;
-   const rowH=Math.max(.09,Math.min(.315,remaining/Math.max(totalRows,1)));
-   let y=blockTop;
-   if(direct.length){
-    line(slide,pptx,cx,branchTop+branchH,cx,y);
-    const slotGap=.055,slotW=(width-slotGap)/2;
-    for(let j=0;j<direct.length;j++){
-     const px=x+(j%2)*(slotW+slotGap),py=y+Math.floor(j/2)*leadH;
-     draw(px,py,slotW,leadH-.045,'지사장  '+name(direct[j]),'leader',{size:10.5});
-    }
-    y+=leadRows*leadH+.10;
-   }
-   if(!sections.length&&direct.length===0){
-    draw(x,y,width,.30,'등록된 조직원 없음','member',{size:9});return;
-   }
-   const peopleGap=.055,personW=(width-peopleGap)/2;
-   sections.forEach(({division,people})=>{
-    line(slide,pptx,cx,y-.05,cx,y);
-    const title=name(division);
-    draw(x,y,width,headH,title,'division',{size:11});
-    y+=headH+.045;
-    if(!people.length){
-     draw(x,y,width,rowH,'등록된 구성원 없음','member',{size:8});y+=rowH+sectionGap;
-     return;
-    }
-    for(let j=0;j<people.length;j++){
-     const member=people[j],px=x+(j%2)*(personW+peopleGap),
-      py=y+Math.floor(j/2)*(rowH+cardGap);
-     const role=roles[orgApi.effectiveRole(member)]||'매니저';
-     draw(px,py,personW,rowH,role+'  '+name(member),'member',{size:9.6});
-    }
-    y+=Math.ceil(people.length/2)*(rowH+cardGap)+sectionGap;
-   });
-   // If the organization grows beyond the standard slide capacity, fit all cells
-   // by scaling the column vertically instead of silently dropping a person.
-   if(y>bottom+.03)console.warn('전체 조직도 인원이 많아 첫 장 글씨가 작아질 수 있습니다.',orgApi.branchHeading(group));
+
+ // Capture actual read-only viewer DOM and its SVG connector lines.
+ // The first slide is a visual screenshot; following slides remain editable shapes.
+ async function viewerSnapshot(pptx,root,pageCounter){
+  const frame=document.createElement('iframe');
+  frame.src='./viewer.html?ppt-preview=1&v=20261113c';
+  frame.title='조직도 PPT 캡처';
+  Object.assign(frame.style,{
+   position:'fixed',left:'-30000px',top:'0',width:'2300px',height:'1400px',
+   border:'0',background:'#fafcff',pointerEvents:'none'
   });
-  if(!groups.length)text(slide,'등록된 지사가 없습니다.',mid-1.8,3,3.6,.3,{size:13});
+  document.body.appendChild(frame);
+  const loadScript=(doc,win,url)=>new Promise((resolve,reject)=>{
+   const script=doc.createElement('script');
+   script.src=url;script.async=true;
+   const timeout=setTimeout(()=>{script.remove();reject(new Error('화면 캡처 도구 응답 지연'));},12000);
+   script.onload=()=>{clearTimeout(timeout);resolve();};
+   script.onerror=()=>{clearTimeout(timeout);script.remove();reject(new Error('캡처 도구 다운로드 실패'));};
+   doc.head.appendChild(script);
+  });
+  const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+  try{
+   await new Promise((resolve,reject)=>{
+    const timeout=setTimeout(()=>reject(new Error('뷰어 화면을 불러오지 못했습니다.')),20000);
+    frame.onload=()=>{clearTimeout(timeout);resolve();};
+    frame.onerror=()=>{clearTimeout(timeout);reject(new Error('뷰어 페이지 연결 실패'));};
+   });
+   const win=frame.contentWindow,doc=frame.contentDocument;
+   if(!win||!doc)throw new Error('같은 사이트의 뷰어 화면에 접근할 수 없습니다.');
+   for(let retry=0;typeof win.PLK_RENDER_PPT_ORG_PREVIEW!=='function';retry++){
+    if(retry>=180)throw new Error('뷰어 조직도 표시 기능을 준비하지 못했습니다. 새로고침 후 재시도해 주세요.');
+    await sleep(100);
+   }
+   const currentNodes=orgApi.nodes.map(n=>({...n}));
+   const node=win.PLK_RENDER_PPT_ORG_PREVIEW(currentNodes);
+   if(!node||!node.querySelector('.v-org-root'))throw new Error('뷰어 전체 조직도를 표시할 수 없습니다.');
+   // Two frames allow drawOrgConnectorLines to finish its SVG positioning.
+   await new Promise(resolve=>win.requestAnimationFrame(()=>win.requestAnimationFrame(resolve)));
+   if(typeof win.html2canvas!=='function'){
+    let lastError=null;
+    for(const url of [
+     'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js',
+     'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
+     'https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js'
+    ]){
+     try{await loadScript(doc,win,url);if(typeof win.html2canvas==='function')break;}
+     catch(error){lastError=error;}
+    }
+    if(typeof win.html2canvas!=='function')throw new Error('뷰어 조직도 캡처 도구를 불러오지 못했습니다. '+(lastError?.message||''));
+   }
+   const width=Math.ceil(node.scrollWidth),height=Math.ceil(node.scrollHeight);
+   if(width<100||height<100)throw new Error('전체 조직도 크기가 유효하지 않습니다.');
+   // Browser canvas dimension and memory safeguards; never crop any member.
+   const scale=Math.min(2,12000/Math.max(width,height),Math.sqrt(24000000/(width*height)));
+   const bitmap=await win.html2canvas(node,{
+    backgroundColor:'#fafcff',scale:Math.max(.4,scale),useCORS:true,
+    logging:false,removeContainer:true,width,height,scrollX:0,scrollY:0,
+    windowWidth:Math.max(2300,width+80),windowHeight:Math.max(1400,height+80)
+   });
+   const slide=pptx.addSlide();
+   base(slide,pptx,'PLK 조직도 · 전체 조직도','뷰어와 동일한 카드 배치 및 연결선  |  전체 구성원 표시  |  2페이지부터 편집 가능한 상세 도형',++pageCounter.value);
+   const x0=.35,y0=1.24,maxW=W-.70,maxH=5.76;
+   const ratio=Math.min(maxW/bitmap.width,maxH/bitmap.height);
+   const w=bitmap.width*ratio,h=bitmap.height*ratio;
+   slide.addImage({data:bitmap.toDataURL('image/png'),x:(W-w)/2,y:y0+(maxH-h)/2,w,h});
+  }finally{frame.remove();}
  }
 
  function overview(pptx,root,groups,pageCounter){
@@ -287,15 +268,15 @@
    const roots=orgApi.children(null);
    for(const root of roots.filter(node=>node.type==='root')){
     const groups=getDirect(root.id).filter(node=>node.type==='group');
-    fullTree(pptx,root,groups,pageCounter);
+    await viewerSnapshot(pptx,root,pageCounter);
     overview(pptx,root,groups,pageCounter);
     for(const group of groups)detail(pptx,group,root,pageCounter);
    }
    if(!roots.some(node=>node.type==='root'))throw new Error('최상위 조직이 없습니다.');
    const title=String(roots.find(node=>node.type==='root').label||'PLK').replace(/[\\/:*?"<>|]/g,'_').slice(0,36);
-   const name=title+'_전체조직원_조직도.pptx';
+   const name=title+'_뷰어화면그대로_전체조직도.pptx';
    await pptx.writeFile({fileName:name});
-   orgApi.status('PPT 다운로드 완료 · 첫 장에 전체 조직원이 표시됩니다. 파일명: '+name);
+   orgApi.status('PPT 다운로드 완료 · 첫 장은 뷰어 화면과 동일한 전체 조직도입니다. 파일명: '+name);
   }catch(err){console.error(err);orgApi.status('PPT 다운로드 오류: '+(err.message||String(err)),true);}
   finally{button.disabled=false;button.textContent=old;}
  }
