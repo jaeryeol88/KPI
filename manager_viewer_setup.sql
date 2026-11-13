@@ -1,6 +1,7 @@
 -- PLK: ALL-MANAGER READ-ONLY KPI / ORGANIZATION VIEW
 -- Execute once in the existing Supabase project, SQL Editor.
--- Public functions return ONLY individual signup seats and non-sensitive org fields.
+-- Public functions return ONLY signup seats and display-only organization fields.
+-- Re-run this SQL in Supabase SQL Editor to enable the same custom organization card colors, order, and joining dates as admin. The functions are replaced in place; existing data is unchanged.
 -- No event revenue, attendance, expenses, private contacts, or notes are returned.
 BEGIN;
 
@@ -42,6 +43,9 @@ AS $$
      'subtitle',n.node->'subtitle',
      'headcountRole',n.node->'headcountRole',
      'branchName',n.node->'branchName',
+     'color',n.node->'color',
+     'order',n.node->'order',
+     'joinDate',n.node->'joinDate',
      'staffHidden',n.node->'staffHidden'
    ) ORDER BY n.ord)
    FROM public.kpi_org_chart org,
