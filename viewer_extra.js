@@ -2,7 +2,7 @@ import { drawOrgConnectorLines } from './org_connector_lines.js';
 import { emptyRevenue,recordRevenue,oldRevenue,addRevenue,clickableSeats,revenueLabel,showRevenueDetail } from './personal_revenue_ui.js';
 import { rosterPerformancePeople,regionalRepresentativeNames } from './personal_roster.js';
 import { renderPerformanceMatrix } from './performance_matrix.js';
-import { historicValue,historicalActualSeats } from './historical_seats.js';
+import { historicValue,historicalActualSeats } from './historical_seats.js?v=auto-person-rollup-20261113';
 import { cancellationPanel } from './historical_cancellations_ui.js';
 import { timedSignupRows,signupSeatsForPeriod,undatedSignupStats } from './signup_date_utils.js';
 /* Read-only supplemental KPI views, shared by all public viewers. */
