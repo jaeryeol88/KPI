@@ -92,7 +92,7 @@ function drawOrg(){
  const roleOf=n=>{
   if(Object.prototype.hasOwnProperty.call(n,'headcountRole'))return roles[n.headcountRole]?n.headcountRole:'';
   if(n.type!=='person')return '';
-  const title=String(n.subtitle||'').replace(/\\s+/g,'');
+  const title=String(n.subtitle||'').replace(/\s+/g,'');
   return Object.keys(roles).find(role=>title.includes(roles[role]))||'';
  };
  const ignored=new Set(['구성원','새 구성원','이름 미입력','최상위 조직','새 지사 / 부서','새 본부 / 팀','지사장 / 담당자 입력']);
@@ -115,13 +115,13 @@ function drawOrg(){
   const role=roles[roleOf(n)]||'';
   const subtitle=String(n.subtitle||'').trim();
   const roleTag=role?'<small class="org-card-role">'+safe(role)+'</small>':'';
-  const sub=subtitle&&subtitle.replace(/\\s+/g,'')!==role?'<small>'+safe(subtitle)+'</small>':'';
+  const sub=subtitle&&subtitle.replace(/\s+/g,'')!==role?'<small>'+safe(subtitle)+'</small>':'';
   const col=n.color&&n.color!=='default'?' color-'+safe(n.color):'';
   return '<div class="org-node org-node-'+safe(n.type)+col+'">'+roleTag+'<strong>'+safe(n.label||'이름 미입력')+'</strong>'+sub+'</div>';
  };
  const person=n=>'<div class="org-person">'+card(n)+'</div>';
  const division=n=>'<div class="org-unit-col">'+card(n)+'<div class="org-person-list">'+kids(n.id).filter(x=>x.type==='person').map(person).join('')+'</div></div>';
- const branchName=n=>{const v=String(n.branchName||n.label||'').trim(),m=v.match(/부산\\s*([1-4])\\s*지사/);return m?'부산 '+m[1]+'지사':v;};
+ const branchName=n=>{const v=String(n.branchName||n.label||'').trim(),m=v.match(/부산\s*([1-4])\s*지사/);return m?'부산 '+m[1]+'지사':v;};
  const group=n=>'<div class="org-group-wrap"><div class="org-branch-heading">'+safe(branchName(n))+'</div>'+
    (kids(n.id).some(x=>x.type==='person')?'<div class="org-branch-direct-members">'+kids(n.id).filter(x=>x.type==='person').map(person).join('')+'</div>':'')+
    '<div class="org-unit-row">'+kids(n.id).filter(x=>x.type==='division').map(division).join('')+'</div></div>';
