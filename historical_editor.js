@@ -1,4 +1,5 @@
 import { historicalPast } from './historical_seats.js';
+import { createHistoricalBulkImport } from './historical_bulk_import.js';
 /* Separate administrator-only, seat-only historical records editor. */
 export function createHistoricalEditor({getDb,getRole,onRecords}){
  const el=id=>document.getElementById(id);
@@ -18,7 +19,7 @@ export function createHistoricalEditor({getDb,getRole,onRecords}){
  <label id="histDivisionWrap" hidden>본부 <select id="histDivision"></select></label>
  <label id="histManagerWrap" hidden>매니저 성명 <input id="histManager" maxlength="80" placeholder="성명 정확히 입력"></label>
  <label id="histTargetWrap">목표 구좌 <input id="histTarget" type="number" min="0" max="1000000" step="1" placeholder="미입력" style="width:95px"></label>
- <label>실적 구좌 <input id="histActual" type="number" min="0" max="1000000" step="1" placeholder="미입력" style="width:95px"></label>
+ <label>실적 구좌 <input id="histActual" type="number" min="0" max="1000000" step="0.5" placeholder="미입력" style="width:95px"></label>
  </div><p id="histRate" style="font-size:13px;margin:12px 0">달성률: —</p>
  <div style="display:flex;flex-wrap:wrap;gap:8px"><button type="submit">저장</button><button id="histDelete" type="button">수동 기록 삭제</button><button id="histReload" type="button">새로고침</button></div>
  <p id="histStatus" role="status" style="font-size:13px;margin-top:9px"></p></form></details>`;
@@ -79,7 +80,7 @@ export function createHistoricalEditor({getDb,getRole,onRecords}){
   const target=kind==='person'||el('histTarget').value===''?null:Number(el('histTarget').value);
   const actual=el('histActual').value===''?null:Number(el('histActual').value);
   if(target===null&&actual===null){alert('목표나 실적 중 하나 이상 입력해 주세요.');return;}
-  if([target,actual].some(x=>x!==null&&(!Number.isSafeInteger(x)||x<0||x>1000000))){alert('0~1,000,000 사이의 정수만 입력해 주세요.');return;}
+  if([target,actual].some(x=>x!==null&&(!Number.isFinite(x)||Math.round(x*2)!==x*2||x<0||x>1000000))){alert('0~1,000,000 사이의 정수만 입력해 주세요.');return;}
   const button=event.submitter;if(button)button.disabled=true;
   try{
    const {error}=await getDb().from('kpi_historical_seats').upsert({...k,target_seats:target,actual_seats:actual,updated_at:new Date().toISOString()},{onConflict:'branch,division,manager,goal_year,goal_month'});
@@ -103,5 +104,6 @@ export function createHistoricalEditor({getDb,getRole,onRecords}){
  el('histForm').addEventListener('submit',save);
  el('histDelete').addEventListener('click',remove);
  el('histReload').addEventListener('click',load);
+ createHistoricalBulkImport({section,getDb,getRole,afterSave:load});
  return {load,show(){section.hidden=!['owner','shared'].includes(getRole());}};
 }
