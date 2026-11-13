@@ -164,9 +164,9 @@ function drawOrg(){
  const roles=ORG_ROLE_LABELS;
  const roleOf=orgEffectiveRoleShared;
  const counts=countOrgHeadcount(orgNodes);
- const dualHelp=el('orgDualViewerHelp');if(dualHelp)dualHelp.textContent=counts.dual===0?'겸직 0명: 관리자에서 ‘본부장 겸직’으로 지정하여 저장한 구성원이 아직 확인되지 않습니다.':'';
+ const dualHelp=el('orgDualViewerHelp');if(dualHelp)dualHelp.hidden=true;
  el('orgCount').textContent='조직도 카드 기준 · 자동 집계';
- el('orgHeadcount').innerHTML=[...['regional','branch','division','manager','dual'].map(k=>[roles[k],counts[k]]),['총인원',counts.total]]
+ el('orgHeadcount').innerHTML=[...['regional','branch','division','manager'].map(k=>[roles[k],counts[k]]),['총인원',counts.total]]
   .map(([label,n])=>'<div class="org-headcount-stat'+(label==='총인원'?' org-headcount-total':'')+'"><span>'+safe(label)+'</span><strong>'+fmt(n)+'명</strong></div>').join('');
  const children=new Map();
  for(const n of visible){const parent=n.parent==null?'':String(n.parent);if(!children.has(parent))children.set(parent,[]);children.get(parent).push(n);}
