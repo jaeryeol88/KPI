@@ -1419,6 +1419,7 @@ function renderPersonalYearboard(){
   if(!entries.has(key))entries.set(key,{branch:h.branch,division:h.division,manager:h.manager,monthly:Array(12).fill(0),sales:Array.from({length:12},emptyRevenue)});
   if(h.actual_seats!==null&&h.actual_seats!==undefined){
    const row=entries.get(key);row.monthly[Number(h.goal_month)-1]=Number(h.actual_seats);
+   row.employmentStatus=h.employment_status==='계약해지'?'계약해지':'재직';
    (row.manualMonths??=new Set()).add(Number(h.goal_month));
   }
  }
@@ -1432,7 +1433,7 @@ function renderPersonalYearboard(){
  rows.forEach((row,i)=>{
   const missing=row.manager==='담당자 미지정';
   row.monthly.forEach((v,m)=>{total[m]+=v;salesTotals[m]=addRevenue(salesTotals[m],row.sales[m]);});
-  tbody+='<tr><td class="personal-rank">'+(i+1)+'</td><td class="personal-affiliation">'+esc(row.branch)+'</td><td>'+esc(row.division||'본부 미지정')+'</td><td class="personal-name'+(missing?' personal-unassigned':'')+'">'+esc(row.manager)+'</td>'+
+  tbody+='<tr><td class="personal-rank">'+(i+1)+'</td><td class="personal-affiliation">'+esc(row.branch)+'</td><td>'+esc(row.division||'본부 미지정')+'</td><td class="personal-name'+(missing?' personal-unassigned':'')+'">'+esc(row.manager)+(row.employmentStatus==='계약해지'?' <small style="color:#a65035;font-weight:700">(계약해지)</small>':'')+'</td>'+
    visibleMonths.map(m=>{const v=row.monthly[m-1];return '<td class="'+(v?'perf-actual':'perf-zero')+'">'+action(row.manager,m+'월',v,row.sales[m-1],row.manualMonths?.has(m))+'</td>';}).join('')+
    (showTotal?'<td class="personal-annual">'+action(row.manager,fullYear?'연간 합계':'선택 월 합계',row.total,salesFor(row,visibleMonths),visibleMonths.some(m=>row.manualMonths?.has(m)))+'</td>':'')+
    (oneMonth?(()=>{const r=row.sales[visibleMonths[0]-1];return row.manualMonths?.has(visibleMonths[0])?'<td>미등록</td><td>미등록</td><td>미등록</td>':inline(r.sale,r.missingSale)+inline(r.fee,r.missingFee)+inline(r.sale+r.fee,r.missingSale+r.missingFee)})():'')+'</tr>';
