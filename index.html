@@ -1917,11 +1917,11 @@ function signupEntryHTML(row={}){
  return '<div class="entry-row"><div class="entry-row-header"><strong class="entry-number">가입 건</strong><div class="entry-row-actions" style="display:flex;align-items:center;gap:8px;margin-left:auto"><button type="button" class="entry-withdraw" style="color:#b91c1c">'+(withdrawn?'탈회 취소':'탈회 처리')+'</button><button type="button" class="entry-remove">삭제</button></div></div>'+
  '<div class="entry-withdraw-status"'+(withdrawn?'':' hidden')+' style="color:#b91c1c;font-weight:700;padding:8px 0">탈회 처리됨 · 구좌 및 매출 실적 제외</div><div class="entry-row-fields"><label>가입상품<select class="entry-product">'+options+'</select></label>'+
  '<label>가입구좌<input class="entry-seats" type="number" min="0" step="1" placeholder="구좌" value="'+esc(numberValue('seats'))+'"></label>'+
- '<label>구좌 매출액 (원)<input class="entry-revenue" type="number" min="0" step="1" placeholder="매출액" value="'+esc(numberValue('revenue'))+'"><span class="entry-currency-readable entry-revenue-preview" aria-live="polite"></span></label>'+
- '<label>연회비 금액 (원)<input class="entry-fee" type="number" min="0" step="1" placeholder="연회비" value="'+esc(numberValue('annualFee'))+'"><span class="entry-currency-readable entry-fee-preview" aria-live="polite"></span></label></div>'+
+ '<label>구좌 매출액 (원)<input class="entry-revenue" type="text" inputmode="numeric" placeholder="매출액" value="'+esc(numberValue('revenue')===''?'':Number(numberValue('revenue')).toLocaleString('en-US'))+'"><span class="entry-currency-readable entry-revenue-preview" aria-live="polite"></span></label>'+
+ '<label>연회비 금액 (원)<input class="entry-fee" type="text" inputmode="numeric" placeholder="연회비" value="'+esc(numberValue('annualFee')===''?'':Number(numberValue('annualFee')).toLocaleString('en-US'))+'"><span class="entry-currency-readable entry-fee-preview" aria-live="polite"></span></label></div>'+
  '<div class="entry-assignment"><label>가입 담당 지사<select class="entry-branch"><option value="">지사 선택</option>'+eventBranchOptions.map(b=>'<option value="'+b+'"'+(row.branch===b?' selected':'')+'>'+b+'</option>').join('')+'</select></label><label>가입 담당 본부<select class="entry-division"><option value="">본부 미지정</option>'+divisionBranches.map(d=>'<option value="'+d+'"'+(row.division===d?' selected':'')+'>'+d+'</option>').join('')+'</select></label><label>가입 담당 매니저<input class="entry-manager" type="text" maxlength="60" placeholder="예: 홍길동" value="'+esc(row.manager||'')+'"></label><label>입회자 성함<input class="entry-member-name" type="text" maxlength="80" autocomplete="off" placeholder="입회자 성함" value="'+esc(row.memberName||'')+'"></label><label>가입일자 *<input class="entry-signup-date" type="date" value="'+esc(validSignupDate(row.signupDate))+'" aria-label="실제 가입일자"></label></div>'+
  '<div class="entry-payment"><label>납부 방식<select class="entry-payment-type">'+payOptions+'</select></label><label class="entry-installment-wrap"'+(paymentType==='installment'?'':' hidden')+'>분납 개월 수<input type="number" min="1" max="360" step="1" class="entry-installment-months" placeholder="개월" value="'+installmentMonths+'"'+(paymentType==='installment'?'':' disabled')+'></label></div>'+
- '<div class="entry-installment-schedule"'+(paymentType==='installment'?'':' hidden')+'><strong class="entry-installment-heading">월별 분납 매출액 (가입월부터 매월)</strong><div class="entry-installment-amounts">'+Array.from({length:Number(installmentMonths)||0},(_,i)=>'<label>'+(i+1)+'회차 <input type="number" class="entry-installment-amount" min="0" step="1" value="'+esc(String(Array.isArray(row.installmentAmounts)?row.installmentAmounts[i]??'':''))+'"></label>').join('')+'</div><strong class="entry-installment-total">분납 합계 0원</strong></div>'+ 
+ '<div class="entry-installment-schedule"'+(paymentType==='installment'?'':' hidden')+'><strong class="entry-installment-heading">월별 분납 매출액 (가입월부터 매월)</strong><div class="entry-installment-amounts">'+Array.from({length:Number(installmentMonths)||0},(_,i)=>'<label>'+(i+1)+'회차 <input type="text" class="entry-installment-amount" inputmode="numeric" min="0" step="1" value="'+esc(Array.isArray(row.installmentAmounts)&&row.installmentAmounts[i]!=null?Number(row.installmentAmounts[i]).toLocaleString('en-US'):'')+'"></label>').join('')+'</div><strong class="entry-installment-total">분납 합계 0원</strong></div>'+ 
  '<div class="entry-promo-title">프로모션 적용</div><div class="entry-calculator"><span>매출액 조정</span><select class="entry-calc-mode"><option value="-">− 할인</option><option value="+">+ 할증</option></select><input class="entry-percent" type="number" min="0" max="100" step="0.1" value="5" aria-label="할인 할증 비율"> % <input class="entry-adjust" type="number" step="1" value="0" aria-label="추가 금액 조정"><span>원 조정</span><button type="button" class="entry-apply">적용</button></div>'+ 
  '<label class="entry-special-note">가입 건별 메모 (수기 입력)<textarea class="entry-note-input" maxlength="500" placeholder="예: 할인 프로모션 외 별도 상품 조건, 특별 협의사항 등">'+esc(row.note||'')+'</textarea></label></div>';
 }
@@ -1941,13 +1941,13 @@ function readSignupEntries(strict=false){
   const monthsRaw=element.querySelector('.entry-installment-months').value.trim();
   const note=element.querySelector('.entry-note-input').value.trim();
   const withdrawn=!element.querySelector('.entry-withdraw-status').hidden;
-  const installmentAmounts=[...element.querySelectorAll('.entry-installment-amount')].map(input=>input.value.trim()===''?null:Number(input.value));
+  const installmentAmounts=[...element.querySelectorAll('.entry-installment-amount')].map(input=>input.value.trim()===''?null:Number(input.value.replace(/,/g,'')));
   if(blankEntryRow(raw)&&!note)continue;
   if(!group){if(strict)throw Error((idx+1)+'번째 가입 건의 상품을 선택해 주세요.');continue;}
   if(strict&&!validSignupDate(raw.signupDate))throw Error((idx+1)+'번째 가입 건의 실제 가입일자를 입력해 주세요. 행사일과 달라도 괜찮습니다.');
   if(strict&&[raw.seats,raw.revenue,raw.annualFee].some(x=>x===''))throw Error((idx+1)+'번째 가입 건의 구좌·매출액·연회비를 모두 입력해 주세요. 연회비가 없다면 0을 입력하세요.');
   if([raw.seats,raw.revenue,raw.annualFee].some(x=>x===''))continue;
-  const seats=Number(raw.seats),revenue=Number(raw.revenue),annualFee=Number(raw.annualFee);
+  const seats=Number(raw.seats),revenue=Number(raw.revenue.replace(/,/g,'')),annualFee=Number(raw.annualFee.replace(/,/g,''));
   if(![seats,revenue,annualFee].every(n=>Number.isSafeInteger(n)&&n>=0)){if(strict)throw Error((idx+1)+'번째 가입 건의 금액과 구좌는 0 이상의 정수로 입력해 주세요.');continue;}
   if(strict&&paymentType==='installment'&&(monthsRaw===''||!Number.isSafeInteger(Number(monthsRaw))||Number(monthsRaw)<1||Number(monthsRaw)>360))throw Error((idx+1)+'번째 가입 건의 분납 개월 수(1~360)를 입력해 주세요.');
   const installmentMonths=paymentType==='installment'&&Number.isSafeInteger(Number(monthsRaw))&&Number(monthsRaw)>0&&Number(monthsRaw)<=360?Number(monthsRaw):null;
@@ -1965,7 +1965,7 @@ function refreshSignupEntryTotals(){
  const rows=[...el('signupEntryRows').querySelectorAll('.entry-row')];
  rows.forEach((element,i)=>{
   element.querySelector('.entry-number').textContent='가입 '+(i+1)+'건';
-  const amounts=[...element.querySelectorAll('.entry-installment-amount')].map(n=>n.value.trim()===''?0:Number(n.value));const total=element.querySelector('.entry-installment-total');if(total)total.textContent='분납 합계 '+won(amounts.reduce((a,b)=>a+(Number.isFinite(b)?b:0),0));
+  const amounts=[...element.querySelectorAll('.entry-installment-amount')].map(n=>n.value.trim()===''?0:Number(n.value.replace(/,/g,'')));const total=element.querySelector('.entry-installment-total');if(total)total.textContent='분납 합계 '+won(amounts.reduce((a,b)=>a+(Number.isFinite(b)?b:0),0));
   for(const [inputClass,previewClass] of [['entry-revenue','entry-revenue-preview'],['entry-fee','entry-fee-preview']]){
    const input=element.querySelector('.'+inputClass),preview=element.querySelector('.'+previewClass);
    const raw=input.value.trim(),amount=Number(raw);
@@ -2032,11 +2032,21 @@ entryContainer.addEventListener('change',e=>{
  if(row.querySelector('.entry-fee').value==='')row.querySelector('.entry-fee').value=0;
  refreshSignupEntryTotals();
 });
-entryContainer.addEventListener('input',e=>{if(e.target.matches('.entry-installment-months'))refreshInstallmentInputs(e.target.closest('.entry-row'));if(e.target.matches('.entry-seats,.entry-revenue,.entry-fee,.entry-installment-months,.entry-installment-amount'))refreshSignupEntryTotals();});
+entryContainer.addEventListener('input',e=>{
+ if(e.target.matches('.entry-revenue,.entry-fee,.entry-installment-amount')){
+  const input=e.target,start=input.selectionStart??input.value.length;
+  const digitsBefore=input.value.slice(0,start).replace(/[^0-9]/g,'').length;
+  const digits=input.value.replace(/[^0-9]/g,'');
+  input.value=digits?Number(digits).toLocaleString('en-US'):'';
+  let pos=0,seen=0;
+  while(pos<input.value.length&&seen<digitsBefore){if(/[0-9]/.test(input.value[pos]))seen++;pos++;}
+  input.setSelectionRange(pos,pos);
+ }
+ if(e.target.matches('.entry-installment-months'))refreshInstallmentInputs(e.target.closest('.entry-row'));if(e.target.matches('.entry-seats,.entry-revenue,.entry-fee,.entry-installment-months,.entry-installment-amount'))refreshSignupEntryTotals();});
 function refreshInstallmentInputs(row){
  const count=Math.min(360,Math.max(0,Number(row.querySelector('.entry-installment-months').value)||0));
  const box=row.querySelector('.entry-installment-amounts'),old=[...box.querySelectorAll('input')].map(e=>e.value);
- box.innerHTML=Array.from({length:count},(_,i)=>'<label>'+(i+1)+'회차 <input type="number" class="entry-installment-amount" min="0" step="1" value="'+esc(old[i]??'')+'"></label>').join('');
+ box.innerHTML=Array.from({length:count},(_,i)=>'<label>'+(i+1)+'회차 <input type="text" class="entry-installment-amount" inputmode="numeric" min="0" step="1" value="'+esc(old[i]??'')+'"></label>').join('');
  row.querySelector('.entry-installment-schedule').hidden=row.querySelector('.entry-payment-type').value!=='installment';
 }
 function refreshDivisionForm(saved=''){
