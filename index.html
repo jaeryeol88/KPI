@@ -329,6 +329,7 @@
 <script type="module">
 import { drawOrgConnectorLines } from './org_connector_lines.js';
 import { emptyRevenue,recordRevenue,oldRevenue,addRevenue,clickableSeats,revenueLabel,showRevenueDetail } from './personal_revenue_ui.js';
+import { rosterPerformancePeople } from './personal_roster.js';
 let createClient;
 try {
   ({ createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'));
@@ -1137,7 +1138,7 @@ function orgSelect(id){
  el('orgDelete').hidden=!can;
  if(!can)orgStatus('조직도를 조회 중입니다. 조직 수정은 최고관리자 및 공동 관리자만 가능합니다.');
 }
-function orgMarkDirty(){orgDirty=true;orgDraw();orgStatus('변경사항이 아직 저장되지 않았습니다. 상단의 저장 버튼을 눌러주세요.');}
+function orgMarkDirty(){orgDirty=true;orgDraw();if(activeKpiPage==='personal')renderPersonalYearboard();orgStatus('변경사항이 아직 저장되지 않았습니다. 상단의 저장 버튼을 눌러주세요.');}
 function orgAdd(parent,type){
  if(!orgCanEdit())return;
  if(parent!==null&&!orgNodes.some(n=>n.id===parent))return;
@@ -1162,11 +1163,13 @@ async function orgLoad(){
   orgDirty=orgNormalizeBranches(orgNodes)||!data?.nodes?.length;
   orgLoaded=true;
   orgDraw();
+  if(activeKpiPage==='personal')renderPersonalYearboard();
   if(window.renderOrgStaff)window.renderOrgStaff();
   orgStatus(orgDirty?'조직도 표시 구조를 정리했습니다. 상단 저장 버튼을 눌러 변경 내용을 확정하세요.':'온라인 조직도를 불러왔습니다.');
  }catch(e){
   orgDbReady=false;
   orgLoaded=true;orgNodes=orgDefaultNodes();orgNormalizeBranches(orgNodes);orgDirty=true;orgDraw();
+  if(activeKpiPage==='personal')renderPersonalYearboard();
   if(window.renderOrgStaff)window.renderOrgStaff();
   orgStatus('저장 DB 설정이 필요합니다. Supabase SQL Editor에서 org_chart_setup.sql을 실행하세요. (변경 내용은 아직 저장되지 않습니다.)',true);
  }
@@ -1260,7 +1263,10 @@ function switchKpiPage(page){
   else button.removeAttribute('aria-current');
  });
  if(activeKpiPage==='yearboard')renderPerformanceYearboard();
- if(activeKpiPage==='personal')renderPersonalYearboard();
+ if(activeKpiPage==='personal'){
+  renderPersonalYearboard();
+  if(!orgLoaded)orgLoad().then(()=>{if(activeKpiPage==='personal')renderPersonalYearboard();});
+ }
  if(activeKpiPage==='org'){if(!orgLoaded)orgLoad();else{orgDraw();orgUpdateButtons();}}
  if(activeKpiPage==='orgstaff'&&window.renderOrgStaff)window.renderOrgStaff();
 }
@@ -1395,12 +1401,12 @@ function renderPersonalYearboard(){
  if(!years.includes(personalSelectedYear))personalSelectedYear=years[0]||new Date().getFullYear();
  yearSelect.innerHTML=years.map(y=>'<option value="'+y+'">'+y+'년</option>').join('');
  yearSelect.value=String(personalSelectedYear);
- const allowed=monthlyAllowedBranches().filter(b=>['부산 1지사','부산 2지사','부산 3지사','부산 4지사'].includes(b));
+ const allowed=monthlyAllowedBranches().filter(b=>['부산 1지사','부산 2지사','부산 3지사','부산 4지사','부산권역'].includes(b));
  if(personalSelectedBranch!=='all'&&!allowed.includes(personalSelectedBranch))personalSelectedBranch='all';
  if(allowed.length===1)personalSelectedBranch=allowed[0];
  branchSelect.innerHTML=(allowed.length>1?'<option value="all">전체 지사</option>':'')+allowed.map(b=>'<option value="'+esc(b)+'">'+esc(b)+'</option>').join('');
  branchSelect.value=personalSelectedBranch;
- divisionSelect.innerHTML='<option value="all">전체 본부</option>'+monthlyDivisions.map(d=>'<option value="'+esc(d)+'">'+esc(d)+'</option>').join('');
+ divisionSelect.innerHTML='<option value="all">전체 본부</option>'+[...new Set([...monthlyDivisions,'권역대표'])].map(d=>'<option value="'+esc(d)+'">'+esc(d)+'</option>').join('');
  divisionSelect.value=personalSelectedDivision;
  const months=Array.from({length:12},(_,i)=>i+1);
  const visibleMonths=personalSelectedMonths.size?months.filter(m=>personalSelectedMonths.has(m)):months;
@@ -1417,6 +1423,12 @@ function renderPersonalYearboard(){
   visibleMonths.map(m=>'<th>'+m+'월</th>').join('')+(showTotal?'<th>'+(fullYear?'연간 합계':'선택 월 합계')+'</th>':'')+(oneMonth?'<th>가입구좌 매출</th><th>연회비 매출</th><th>총매출</th>':'')+'</tr>';
  const entries=new Map();
  let excludedLegacy=0,unassignedSeats=0;
+ const roster=rosterPerformancePeople(orgLoaded?orgNodes:[]);
+ for(const person of roster){
+  if(!allowed.includes(person.branch)||personalSelectedBranch!=='all'&&personalSelectedBranch!==person.branch||personalSelectedDivision!=='all'&&personalSelectedDivision!==person.division)continue;
+  const key=JSON.stringify([person.branch,person.division,person.name]);
+  if(!entries.has(key))entries.set(key,{branch:person.branch,division:person.division,manager:person.name,monthly:Array(12).fill(0),sales:Array.from({length:12},emptyRevenue)});
+ }
  function add(b,d,manager,month,seats,amount){
   const key=JSON.stringify([b,d,manager]);
   if(!entries.has(key))entries.set(key,{branch:b,division:d,manager,monthly:Array(12).fill(0),sales:Array.from({length:12},emptyRevenue)});
@@ -1441,7 +1453,7 @@ function renderPersonalYearboard(){
   }
  }
  const rows=[...entries.values()].map(x=>({...x,total:visibleMonths.reduce((a,m)=>a+x.monthly[m-1],0)}))
-  .filter(x=>x.total>0).sort((a,b)=>b.total-a.total||a.branch.localeCompare(b.branch,'ko')||a.division.localeCompare(b.division,'ko')||a.manager.localeCompare(b.manager,'ko'));
+  .sort((a,b)=>b.total-a.total||a.branch.localeCompare(b.branch,'ko')||a.division.localeCompare(b.division,'ko')||a.manager.localeCompare(b.manager,'ko'));
  const total=Array(12).fill(0),salesTotals=Array.from({length:12},emptyRevenue);
  let tbody='';
  const action=(name,period,seats,sales)=>{const id=personalRevenueActions.size+1;personalRevenueActions.set(String(id),{name,period,seats,revenue:sales});return clickableSeats(seats,id)};
