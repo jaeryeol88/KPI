@@ -1914,7 +1914,7 @@ function signupEntryHTML(row={}){
  const payOptions=[['full','완납'],['installment','분납'],['unknown','기존 미지정']].map(([value,label])=>'<option value="'+value+'"'+(paymentType===value?' selected':'')+'>'+label+'</option>').join('');
  const installmentMonths=Number.isSafeInteger(row.installmentMonths)&&row.installmentMonths>0?row.installmentMonths:'';
  const withdrawn=Boolean(row.withdrawn);
- return '<div class="entry-row"><div class="entry-row-header"><strong class="entry-number">가입 건</strong><button type="button" class="entry-withdraw" style="margin-right:8px;color:#b91c1c">'+(withdrawn?'탈회 취소':'탈회 처리')+'</button><button type="button" class="entry-remove">삭제</button></div>'+
+ return '<div class="entry-row"><div class="entry-row-header"><strong class="entry-number">가입 건</strong><div class="entry-row-actions" style="display:flex;align-items:center;gap:8px;margin-left:auto"><button type="button" class="entry-withdraw" style="color:#b91c1c">'+(withdrawn?'탈회 취소':'탈회 처리')+'</button><button type="button" class="entry-remove">삭제</button></div></div>'+
  '<div class="entry-withdraw-status"'+(withdrawn?'':' hidden')+' style="color:#b91c1c;font-weight:700;padding:8px 0">탈회 처리됨 · 구좌 및 매출 실적 제외</div><div class="entry-row-fields"><label>가입상품<select class="entry-product">'+options+'</select></label>'+
  '<label>가입구좌<input class="entry-seats" type="number" min="0" step="1" placeholder="구좌" value="'+esc(numberValue('seats'))+'"></label>'+
  '<label>구좌 매출액 (원)<input class="entry-revenue" type="number" min="0" step="1" placeholder="매출액" value="'+esc(numberValue('revenue'))+'"><span class="entry-currency-readable entry-revenue-preview" aria-live="polite"></span></label>'+
