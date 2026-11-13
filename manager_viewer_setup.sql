@@ -3,6 +3,7 @@
 -- Public functions return ONLY signup seats and display-only organization fields.
 -- Re-run this SQL in Supabase SQL Editor to enable the same custom organization card colors, order, and joining dates as admin. The functions are replaced in place; existing data is unchanged.
 -- No event revenue, attendance, expenses, private contacts, or notes are returned.
+-- Phone reveal RPC below requires an authenticated account with owner/shared/branch role.
 BEGIN;
 
 CREATE OR REPLACE FUNCTION public.kpi_manager_performance_signups()
@@ -57,5 +58,48 @@ AS $$
 $$;
 REVOKE ALL ON FUNCTION public.kpi_manager_org_nodes() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.kpi_manager_org_nodes() TO anon, authenticated;
+
+
+-- Contact details remain private. Only an authenticated owner, shared admin,
+-- or branch manager with an explicitly granted account may request one number.
+-- A public/anonymous page cannot call this function or read the phone table.
+CREATE OR REPLACE FUNCTION public.kpi_manager_staff_phone(p_node_id text)
+RETURNS text LANGUAGE plpgsql STABLE SECURITY DEFINER
+SET search_path = ''
+AS $private$
+DECLARE
+  contact_id text;
+  result_phone text;
+  role_name text;
+BEGIN
+  IF (SELECT auth.uid()) IS NULL THEN
+    RAISE EXCEPTION '연락처는 로그인 후 확인할 수 있습니다.';
+  END IF;
+  role_name := public.kpi_my_access()->>'role';
+  IF role_name IS NULL OR role_name NOT IN ('owner','shared','branch') THEN
+    RAISE EXCEPTION '연락처 열람 권한이 없습니다.';
+  END IF;
+  IF p_node_id IS NULL OR length(p_node_id) > 256 THEN
+    RAISE EXCEPTION '잘못된 조직원입니다.';
+  END IF;
+  SELECT COALESCE(NULLIF(n.node->>'staffContactId',''),p_node_id)
+  INTO contact_id
+  FROM public.kpi_org_chart org
+  CROSS JOIN LATERAL jsonb_array_elements(org.nodes) n(node)
+  WHERE org.id = 1
+    AND n.node->>'id'=p_node_id
+    AND n.node->>'staffHidden' IS DISTINCT FROM 'true'
+  LIMIT 1;
+  IF contact_id IS NULL THEN
+    RAISE EXCEPTION '조회할 수 없는 조직원입니다.';
+  END IF;
+  SELECT c.phone INTO result_phone
+  FROM public.kpi_org_staff_contacts c
+  WHERE c.node_id=contact_id;
+  RETURN COALESCE(result_phone,'');
+END;
+$private$;
+REVOKE ALL ON FUNCTION public.kpi_manager_staff_phone(text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.kpi_manager_staff_phone(text) TO authenticated;
 
 COMMIT;
