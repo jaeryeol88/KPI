@@ -68,6 +68,7 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
  const el=id=>document.getElementById(id);
  const safe=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const fmt=x=>Number(x||0).toLocaleString('ko-KR');
+ const won=x=>fmt(Math.round(Number(x)||0))+'원';
  const branches=['부산 1지사','부산 2지사','부산 3지사','부산 4지사','부산권역'];
  const divisions=['1본부','2본부','3본부','지사장','기타','권역대표'];
  const roles={regional:'권역대표',branch:'지사장',division:'본부장',manager:'매니저'};
