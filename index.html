@@ -293,7 +293,7 @@
  <section class="org-headcount" aria-label="조직 인원 현황">
  <div class="org-headcount-top"><h3>조직 인원 현황</h3><span>조직도 카드 기준 · 자동 집계</span></div>
  <div id="orgHeadcountGrid" class="org-headcount-grid" aria-live="polite"></div>
- <p class="org-headcount-note">이름이 입력된 카드 중 직책 구분이 지정된 인원만 집계합니다. 지사·본부 이름이나 기본 구성원 카드는 제외됩니다.</p>
+ <p class="org-headcount-note">이름이 입력된 직책 지정 인원만 집계합니다. 이름·직급에 (겸직)이 표시된 인원은 별도 겸직 항목으로 집계하고 다른 직책에서 중복 계산하지 않습니다.</p>
  </section>
  <p class="org-help">위계: 최상위 → 지사 / 부서 → 본부 / 팀 → 구성원. 카드 클릭 시 이름·직급·직책 구분 수정, 하위 카드 추가, 순서 변경, 삭제가 가능합니다.</p>
  <div id="orgEditor" class="org-editor" hidden>
@@ -1030,9 +1030,14 @@ function orgCountable(node){
 }
 function orgRenderHeadcount(){
  const target=el('orgHeadcountGrid');if(!target)return;
- const counts={regional:0,branch:0,division:0,manager:0};
- for(const node of orgNodes){const role=orgEffectiveRole(node);if(role&&orgCountable(node))counts[role]++;}
- const labels=[['regional','권역대표'],['branch','지사장'],['division','본부장'],['manager','매니저']];
+ const counts={regional:0,branch:0,division:0,manager:0,dual:0};
+ for(const node of orgNodes){
+  const role=orgEffectiveRole(node);
+  if(!role||!orgCountable(node))continue;
+  if(/\(\s*겸직\s*\)/.test(String(node.label||'')+' '+String(node.subtitle||'')))counts.dual++;
+  else counts[role]++;
+ }
+ const labels=[['regional','권역대표'],['branch','지사장'],['division','본부장'],['manager','매니저'],['dual','겸직']];
  const total=Object.values(counts).reduce((a,b)=>a+b,0);
  target.innerHTML=labels.map(([key,label])=>'<div class="org-headcount-stat"><span>'+label+'</span><strong>'+fmt(counts[key])+'명</strong></div>').join('')+
   '<div class="org-headcount-stat org-headcount-total"><span>총인원</span><strong>'+fmt(total)+'명</strong></div>';
