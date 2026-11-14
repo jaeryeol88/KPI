@@ -1,0 +1,52 @@
+name: PLK validated Pages deployment
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: plk-pages-validated
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Verify website before deployment
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Revenue and JavaScript regression tests
+        run: node --test tests/revenue-regression.test.mjs
+      - name: Validate required site files
+        run: |
+          set -euo pipefail
+          for f in index.html viewer.html viewer_extra.js viewer_gate.js signup_date_utils.js config.js view-busan1.html view-busan2.html view-busan3.html view-busan4.html; do
+            test -s "$f" || { echo "::error::Missing required site file: $f"; exit 1; }
+          done
+
+  deploy:
+    name: Deploy only after passing tests
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+      - name: Publish validated site
+        id: deployment
+        uses: actions/deploy-pages@v4
