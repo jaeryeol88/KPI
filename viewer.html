@@ -894,8 +894,11 @@ function renderManagerStats(events){
  el('managerStatsFoot').textContent='합계 '+fmt(totals.records)+'건 · '+fmt(totals.seats)+'구좌 · 가입매출 '+won(totals.revenue)+' · 연회비 '+won(totals.fee)+(unassigned?' · 매니저 미지정 '+fmt(unassigned)+'건':'')+' (기존 가입 건별 기록 없는 행사 제외)';
 }
 function eventPeriodRevenue(event,group){
- const entries=Array.isArray(event.signupEntries)?event.signupEntries.filter(r=>r&&!r.withdrawn&&r.group===group):[];
- if(!entries.length)return Number(event[group+'Revenue'])||0;
+ // Shared branch/division-scoped entry list prevents cross-branch event revenue leakage.
+ const scoped=scopedSignupRows(event);
+ if(scoped===null)return scopedSignupMetric(event,group+'Revenue');
+ const entries=scoped.filter(r=>r.group===group);
+ if(!entries.length)return 0;
  const years=multiValues.year.size?[...multiValues.year].map(Number):null;
  const months=multiValues.month.size?[...multiValues.month].map(Number):null;
  let total=0;
@@ -982,8 +985,17 @@ function installKpiDetailPopups(){
   detail.push(['이전 가입 분납 유입',won(carry)]);
   detail.push(['분류된 매출 합계',won(current+carry)]);
   detail.push(['법인·개인 구분',el('mRevenueSub')?.textContent||'']);
+  const legacy=[];
+  for(const event of rows){
+   if(Array.isArray(event.signupEntries)&&event.signupEntries.some(r=>r&&['corporate','individual'].includes(r.group)))continue;
+   const amount=scopedSignupMetric(event,'corporateRevenue')+scopedSignupMetric(event,'individualRevenue');
+   if(amount)legacy.push({date:event.date||'',branch:event.branch||'미지정',label:event.name||event.title||'기존 직접입력',amount});
+  }
+  const legacyTotal=legacy.reduce((sum,r)=>sum+r.amount,0);
+  detail.push(['과거 직접입력 매출',won(legacyTotal)]);
+  legacy.forEach(r=>detail.push(['과거 직접입력 · '+r.date+' · '+r.branch+' · '+r.label,won(r.amount)]));
   const displayed=Number(String(total).replace(/[^0-9]/g,''));
-  if(Number.isFinite(displayed)&&displayed!==current+carry)detail.push(['기타·과거 직접입력 등 차액',won(displayed-current-carry)+' · 개별 가입건 확인 필요']);
+  if(Number.isFinite(displayed)&&displayed!==current+carry+legacyTotal)detail.push(['집계 차액 확인 필요',won(displayed-current-carry-legacyTotal)+' · 관리자 원본 확인 필요']);
   if(unknown)detail.push(['가입일 미확인',unknown+'건 · 월별 반영 제외']);
   entries.sort((a,b)=>a.carried-b.carried||b.period.localeCompare(a.period)||b.date.localeCompare(a.date));revenueEntries=entries;revenueCurrent=current;revenueCarry=carry;
   for(const e of entries)detail.push([(e.carried?'이전 가입 분납':'당월 가입')+' · '+e.period+' 반영',e.date+' 가입 / '+e.branch+' / '+e.manager+' / '+e.product+' / '+(e.installment?e.round+'회차 · ':'완납 · ')+won(e.amount)]);
