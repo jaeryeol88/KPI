@@ -248,6 +248,9 @@
  .top .btns>#add{font-size:14px}
 }
 @media(max-width:360px){.top .btns{gap:6px}.top .btns>.btn,.top .btns>.viewer-shortcuts>summary{font-size:11px;padding:9px 6px}}
+
+/* KPI calculation details popup */
+.kpi-detail-overlay{position:fixed;inset:0;z-index:99999;background:rgba(10,25,49,.55);display:flex;align-items:center;justify-content:center;padding:16px}.kpi-detail-panel{background:#fff;color:#172b49;border-radius:18px;width:min(560px,100%);max-height:85vh;overflow:auto;padding:22px;box-shadow:0 15px 55px rgba(0,0,0,.2)}.kpi-detail-panel header{display:flex;justify-content:space-between;align-items:center;gap:12px}.kpi-detail-panel h3{margin:0;font-size:20px}.kpi-detail-panel button{border:1px solid #d8e1ef;background:#f8fafc;border-radius:10px;padding:8px 12px;cursor:pointer}.kpi-detail-line{display:flex;justify-content:space-between;gap:12px;border-bottom:1px solid #edf0f5;padding:11px 0;font-size:14px}.kpi-detail-line strong{text-align:right}.kpi-detail-note{font-size:12px;color:#64748b;line-height:1.6;margin-top:12px}.kpi-detail-click{cursor:pointer}.kpi-detail-click:focus-visible{outline:3px solid #2c72d6;outline-offset:3px}@media(max-width:600px){.kpi-detail-panel{padding:16px}.kpi-detail-panel h3{font-size:18px}}
 </style>
 <style id="mobile-nav-polish">@media(max-width:650px){
 .sidebar{padding:14px 16px!important;gap:10px!important}
@@ -1899,7 +1902,30 @@ function recognizedSignupRevenue(group,legacyRows){
  }
  return total;
 }
-function render(){years();syncLegacyTypes();refreshMultiFilters();const a=filtered();el('activeFilters').textContent='행사 목록·비용은 행사일 기준 / 월별 구좌 실적은 실제 가입일 기준 · 조회 조건: '+multiLabel('branch')+' · '+multiLabel('division')+' · '+multiLabel('year')+' · '+multiLabel('month')+' · '+multiLabel('type')+' · '+a.length+'건';const sum=k=>a.reduce((z,x)=>z+Number(x[k]||0),0),count=a.length,people=sum('attendees'),cost=sum('cost'),goal=sum('goal'),done=a.reduce((z,x)=>z+scopedSignupMetric(x,'corporate')+scopedSignupMetric(x,'individual'),0);
+
+// KPI 카드의 표시값과 집계 근거를 동일한 필터 상태에서 조회합니다.
+function installKpiDetailPopups(){
+ const ids=['mRevenue','mAnnualFee','mPromoUsage','mCost','mProfit','mEvents','mAttendees'];
+ const titles={mRevenue:'입회매출',mAnnualFee:'연회비 매출',mPromoUsage:'판촉물 포인트 사용내역',mCost:'본사지원',mProfit:'손익',mEvents:'진행 건수',mAttendees:'참가인원'};
+ const metricKey={mAnnualFee:'annualFee',mPromoUsage:'promoPoints',mCost:'headOfficeSupport',mAttendees:'attendees'};
+ ids.forEach(id=>{const node=el(id);if(!node||node.dataset.kpiDetailReady)return;node.dataset.kpiDetailReady='1';node.classList.add('kpi-detail-click');node.setAttribute('role','button');node.setAttribute('tabindex','0');node.setAttribute('title','클릭하여 산출 근거 확인');const open=()=>{
+ const rows=filtered(),total=node.textContent,detail=[];
+ if(id==='mRevenue'){
+  detail.push(['법인 입회매출',el('mRevenueSub')?.textContent||'']);
+  detail.push(['집계 기준','완납: 가입월 전액 / 분납: 조회월 해당 회차']);
+  detail.push(['대상 행사',rows.length+'건']);
+ }else if(id==='mProfit'){
+  detail.push(['계산식','입회매출 + 연회비 + 행사 수입 − 행사비용']);
+  detail.push(['입회매출',el('mRevenue')?.textContent||'—']);
+  detail.push(['연회비',el('mAnnualFee')?.textContent||'—']);
+  detail.push(['주의','단순 차액이며 실제 순이익이 아닙니다']);
+ }else if(metricKey[id]){
+  const key=metricKey[id];rows.filter(r=>Number(r[key]||0)!==0).forEach(r=>detail.push([(r.date||'')+' · '+(r.name||r.title||'등록 내역'),key==='attendees'?Number(r[key]).toLocaleString()+'명':won(Number(r[key]))]));
+ }else if(id==='mEvents')rows.forEach(r=>detail.push([r.date||'',r.name||r.title||'등록 내역']));
+ if(!detail.length)detail.push(['내역','선택한 조회 조건에 표시할 상세 내역이 없습니다']);
+ const overlay=document.createElement('div');overlay.className='kpi-detail-overlay';overlay.setAttribute('role','presentation');const panel=document.createElement('section');panel.className='kpi-detail-panel';panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','true');panel.setAttribute('aria-label',titles[id]+' 산출 근거');const h=document.createElement('header'),title=document.createElement('h3'),close=document.createElement('button');title.textContent=titles[id]+' 상세';close.textContent='닫기';h.append(title,close);panel.append(h);const value=document.createElement('h2');value.textContent=total;panel.append(value);const context=document.createElement('p');context.className='kpi-detail-note';context.textContent=el('activeFilters')?.textContent||'';panel.append(context);detail.forEach(([label,val])=>{const row=document.createElement('div');row.className='kpi-detail-line';const a=document.createElement('span'),b=document.createElement('strong');a.textContent=label;b.textContent=val;row.append(a,b);panel.append(row)});const note=document.createElement('p');note.className='kpi-detail-note';note.textContent='현재 화면에 적용된 조회 조건 기준입니다. 분납 계약의 회차별 원본 데이터가 누락된 경우 정확한 금액 검증이 필요합니다.';panel.append(note);overlay.append(panel);document.body.append(overlay);const dismiss=()=>{overlay.remove();document.removeEventListener('keydown',onEsc)};const onEsc=e=>{if(e.key==='Escape')dismiss()};close.onclick=dismiss;overlay.addEventListener('click',e=>{if(e.target===overlay)dismiss()});document.addEventListener('keydown',onEsc);close.focus();};node.addEventListener('click',open);node.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();open()}})});
+}
+function render(){installKpiDetailPopups();years();syncLegacyTypes();refreshMultiFilters();const a=filtered();el('activeFilters').textContent='행사 목록·비용은 행사일 기준 / 월별 구좌 실적은 실제 가입일 기준 · 조회 조건: '+multiLabel('branch')+' · '+multiLabel('division')+' · '+multiLabel('year')+' · '+multiLabel('month')+' · '+multiLabel('type')+' · '+a.length+'건';const sum=k=>a.reduce((z,x)=>z+Number(x[k]||0),0),count=a.length,people=sum('attendees'),cost=sum('cost'),goal=sum('goal'),done=a.reduce((z,x)=>z+scopedSignupMetric(x,'corporate')+scopedSignupMetric(x,'individual'),0);
 const members=a.reduce((z,x)=>z+(known(x.members)?x.members:0),0),nonMembers=a.reduce((z,x)=>z+(known(x.nonMembers)?x.nonMembers:0),0);
 const corporate=a.reduce((z,x)=>z+scopedSignupMetric(x,'corporate'),0),individual=a.reduce((z,x)=>z+scopedSignupMetric(x,'individual'),0);
 const unclassifiedPeople=a.reduce((z,x)=>z+(classified(x.members,x.nonMembers)?0:Number(x.attendees||0)),0);
