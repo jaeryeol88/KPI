@@ -144,6 +144,8 @@ function syncLegacyTypes(){
 const multiValues=Object.fromEntries(['branch','division','year','month','type'].map(id=>[id,new Set()]));
 // 기본 조회 연도는 접속 시점의 현재 연도이며 사용자가 이후 변경할 수 있습니다.
 multiValues.year.add(String(new Date().getFullYear()));
+// 최초 접속 시 대시보드는 현재 월을 기본 선택합니다. 이후 사용자 필터 변경은 유지됩니다.
+multiValues.month.add(String(new Date().getMonth()+1).padStart(2,'0'));
 const multiNames={branch:'지사선택',division:'본부선택',year:'연도',month:'월',type:'행사 유형'};
 const divisionBranches=['1본부','2본부','3본부','지사장','기타'];
 function normalizeDivision(value){
