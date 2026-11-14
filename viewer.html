@@ -894,24 +894,29 @@ function renderManagerStats(events){
  el('managerStatsFoot').textContent='합계 '+fmt(totals.records)+'건 · '+fmt(totals.seats)+'구좌 · 가입매출 '+won(totals.revenue)+' · 연회비 '+won(totals.fee)+(unassigned?' · 매니저 미지정 '+fmt(unassigned)+'건':'')+' (기존 가입 건별 기록 없는 행사 제외)';
 }
 function eventPeriodRevenue(event,group){
- // Shared branch/division-scoped entry list prevents cross-branch event revenue leakage.
+ // 행사 목록의 금액은 행사일이 속한 월에 발생한 분납 회차만 표시합니다.
+ // 월별 대시보드의 다중 기간 집계는 recognizedSignupRevenue에서 별도로 계산합니다.
  const scoped=scopedSignupRows(event);
  if(scoped===null)return scopedSignupMetric(event,group+'Revenue');
  const entries=scoped.filter(r=>r.group===group);
- if(!entries.length)return 0;
- const years=multiValues.year.size?[...multiValues.year].map(Number):null;
- const months=multiValues.month.size?[...multiValues.month].map(Number):null;
+ const eventDate=validSignupDate(event.date);
+ if(!eventDate)return 0;
+ const reportYear=Number(eventDate.slice(0,4)),reportMonth=Number(eventDate.slice(5,7));
  let total=0;
  for(const row of entries){
   const date=validSignupDate(row.signupDate);
-  if(!date){if(!years&&!months)total+=Number(row.revenue)||0;continue;}
-  const startYear=Number(date.slice(0,4)),startMonth=Number(date.slice(5,7));
-  const amounts=row.paymentType==='installment'&&Array.isArray(row.installmentAmounts)&&row.installmentAmounts.length?row.installmentAmounts:[row.revenue];
-  for(let n=0;n<amounts.length;n++){
-   const year=startYear+Math.floor((startMonth-1+n)/12),month=(startMonth-1+n)%12+1;
-   if(years&&!years.includes(year))continue;
-   if(months&&!months.includes(month))continue;
-   total+=Number(amounts[n])||0;
+  if(!date)continue;
+  const y=Number(date.slice(0,4)),m=Number(date.slice(5,7));
+  const installment=row.paymentType==='installment';
+  const scheduled=installment&&Array.isArray(row.installmentAmounts)&&row.installmentAmounts.length?row.installmentAmounts:null;
+  // 회차별 금액이 누락된 분납 계약은 완납금으로 잘못 처리하지 않습니다.
+  if(installment&&!scheduled)continue;
+  const amounts=scheduled||[row.revenue];
+  for(let i=0;i<amounts.length;i++){
+   const year=y+Math.floor((m-1+i)/12),month=(m-1+i)%12+1;
+   if(year!==reportYear||month!==reportMonth)continue;
+   const amount=Number(amounts[i]);
+   if(Number.isSafeInteger(amount)&&amount>=0)total+=amount;
   }
  }
  return total;
@@ -931,7 +936,7 @@ function recognizedSignupRevenue(group,legacyRows){
    const date=validSignupDate(row.signupDate);
    if(!date){if(!years&&!months)total+=Number(row.revenue)||0;continue;}
    const y=Number(date.slice(0,4)),m=Number(date.slice(5,7));
-   const amounts=row.paymentType==='installment'&&Array.isArray(row.installmentAmounts)&&row.installmentAmounts.length?row.installmentAmounts:[row.revenue];
+   const amounts=row.paymentType==='installment'?(Array.isArray(row.installmentAmounts)&&row.installmentAmounts.length?row.installmentAmounts:[]):[row.revenue];
    for(let i=0;i<amounts.length;i++){
     const year=y+Math.floor((m-1+i)/12),month=(m-1+i)%12+1;
     if(years&&!years.includes(year))continue;
