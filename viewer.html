@@ -1336,9 +1336,34 @@ try{
  }
 });
 }catch(error){console.error('뷰어 메뉴 초기화 오류',error);status('실적 메뉴 로딩 오류: '+(error?.message||error),true);}
+// Fast synchronization: realtime notifications where enabled, polling as a fallback.
+let viewerRefreshQueued=false;
+let viewerRefreshPending=false;
+function requestViewerRefresh(){
+ if(document.hidden){viewerRefreshPending=true;return;}
+ if(publicSyncBusy){viewerRefreshPending=true;return;}
+ if(viewerRefreshQueued)return;
+ viewerRefreshQueued=true;
+ window.setTimeout(async()=>{
+  viewerRefreshQueued=false;
+  if(document.hidden){viewerRefreshPending=true;return;}
+  await loadPublic({silent:true});
+  if(viewerRefreshPending){viewerRefreshPending=false;requestViewerRefresh();}
+ },350);
+}
 loadPublic();
-window.setInterval(()=>{if(!document.hidden)void loadPublic({silent:true});},20000);
-window.setInterval(()=>{if(!document.hidden)void viewerExtras.refreshOrganization();},20000);
-document.addEventListener('visibilitychange',()=>{if(!document.hidden)void loadPublic({silent:true});});
-window.addEventListener('focus',()=>void loadPublic({silent:true}));
+try{
+ if(typeof secureViewerDb.channel==='function'){
+  const channel=secureViewerDb.channel('kpi-viewer-live-'+(branchCode||'all'))
+   .on('postgres_changes',{event:'*',schema:'public',table:'kpi_public_events'},requestViewerRefresh)
+   .on('postgres_changes',{event:'*',schema:'public',table:'kpi_monthly_targets'},requestViewerRefresh)
+   .on('postgres_changes',{event:'*',schema:'public',table:'kpi_monthly_division_targets'},requestViewerRefresh)
+   .on('postgres_changes',{event:'*',schema:'public',table:'kpi_org_chart'},requestViewerRefresh)
+   .subscribe((state)=>{if(state==='CHANNEL_ERROR'||state==='TIMED_OUT')console.warn('실시간 연결 일시 중단: 자동 재조회 사용');});
+  window.addEventListener('pagehide',()=>{void secureViewerDb.removeChannel(channel);});
+ }
+}catch(error){console.warn('실시간 연결 설정 실패: 자동 재조회 사용',error);}
+window.setInterval(()=>{if(!document.hidden)requestViewerRefresh();},10000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){viewerRefreshPending=false;requestViewerRefresh();}});
+window.addEventListener('focus',requestViewerRefresh);
 </script></body></html>
