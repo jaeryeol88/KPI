@@ -551,8 +551,7 @@ el('v-months').addEventListener('change',e=>{
    try{
     const cfg=window.PLK_CONFIG||{};
     if(!cfg.supabaseUrl||!cfg.supabaseAnonKey)throw new Error('Supabase 공개 조회 연결 정보가 없습니다.');
-    const db=createClient(cfg.supabaseUrl,cfg.supabaseAnonKey,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});
-    const {data,error}=await db.rpc('kpi_public_branch_staff_phones',{p_branch:assignedBranch});
+    const {data,error}=await viewerDb.rpc('kpi_viewer_branch_staff_phones',{p_branch:assignedBranch});
     if(error)throw error;
     staffPhoneCache.clear();
     for(const row of data||[])staffPhoneCache.set(String(row.node_id),String(row.phone||''));
