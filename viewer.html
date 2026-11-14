@@ -1306,7 +1306,7 @@ async function fetchViewerPublicData(silent){
 }
 let viewerExtras={refresh:()=>{},refreshOrganization:async()=>{},setHistoricalSeats:()=>{},setCompetitionData:()=>{}};
 try{
- const {installViewerExtras}=await import('./viewer_extra.js?v=monthly-signup-name-center-20261114');
+ const {installViewerExtras}=await import('./viewer_extra.js?v=monthly-signup-syntaxfix-20261114');
  viewerExtras=installViewerExtras({
  assignedBranch,
  getAllEvents:()=>allViewerEvents,
