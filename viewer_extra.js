@@ -6,7 +6,7 @@ import { rosterPerformancePeople,regionalRepresentativeNames } from './personal_
 import { renderPerformanceMatrix } from './performance_matrix.js?v=year-to-date-totals-20261113';
 import { historicValue,historicalActualSeats } from './historical_seats.js?v=auto-person-rollup-20261113';
 import { cancellationPanel } from './historical_cancellations_ui.js';
-import { timedSignupRows,signupSeatsForPeriod,undatedSignupStats } from './signup_date_utils.js';
+import { timedSignupRows,signupSeatsForPeriod,undatedSignupStats,signupPaymentAmounts } from './signup_date_utils.js?v=payment-schedule-unified-20261114';
 function projectAdminOrgChart(original){
  const nodes=Array.isArray(original)?original.map(n=>({...n})):[];
  const roleOf=n=>{
@@ -306,7 +306,7 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
     if(assignedBranch&&branch!==assignedBranch)continue;
     const y=Number(date.slice(0,4)),m=Number(date.slice(5,7));
     if(m<1||m>12)continue;
-    const amounts=row.paymentType==='installment'&&Array.isArray(row.installmentAmounts)&&row.installmentAmounts.length?row.installmentAmounts:[Number(row.revenue)||0];
+    const amounts=signupPaymentAmounts(row);
     const base={date,branch,division,manager:row.manager||'',product:row.product||'',member:row.memberName||'',note:row.note||'',installment:row.paymentType==='installment',months:Number(row.installmentMonths)||amounts.length};
     all.push({...base,y,m,seats:Number(row.seats)||0,fee:Number(row.annualFee)||0,revenue:Number(amounts[0])||0,sequence:1});
     if(row.paymentType==='installment')amounts.slice(1).forEach((amount,i)=>{const offset=i+1;prior.push({...base,y:y+Math.floor((m-1+offset)/12),m:(m-1+offset)%12+1,seats:0,fee:0,revenue:Number(amount)||0,sequence:offset+1});});
