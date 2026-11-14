@@ -64,7 +64,7 @@ function projectAdminOrgChart(original){
  return nodes;
 }
 /* Read-only supplemental KPI views, shared by all public viewers. */
-export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTarget,countSeats,normalizeDivision,loadOrganization,loadStaffStatuses}) {
+export function installViewerExtras({viewerDb,assignedBranch,getAllEvents,getYears,getTarget,countSeats,normalizeDivision,loadOrganization,loadStaffStatuses}) {
  const el=id=>document.getElementById(id);
  const safe=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const fmt=x=>Number(x||0).toLocaleString('ko-KR');
