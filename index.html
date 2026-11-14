@@ -1945,8 +1945,15 @@ function eventPeriodRevenue(event,group){
   const y=Number(date.slice(0,4)),m=Number(date.slice(5,7));
   const installment=row.paymentType==='installment';
   const scheduled=installment&&Array.isArray(row.installmentAmounts)&&row.installmentAmounts.length?row.installmentAmounts:null;
-  if(installment&&!scheduled)continue;
-  const amounts=scheduled||[row.revenue];
+  // 공개 뷰어에 회차 배열이 누락됐어도 총액과 개월 수가 명확한 균등분납은 복원합니다.
+  // 균등 분할이 불가능한 비정형 계약은 임의로 0원 또는 완납금으로 표시하지 않습니다.
+  const months=Number(row.installmentMonths);
+  const fullAmount=Number(row.revenue);
+  const evenInstallments=installment&&!scheduled&&Number.isSafeInteger(months)&&months>1
+    &&Number.isSafeInteger(fullAmount)&&fullAmount>=0&&fullAmount%months===0
+    ?Array(months).fill(fullAmount/months):null;
+  if(installment&&!scheduled&&!evenInstallments)continue;
+  const amounts=scheduled||evenInstallments||[row.revenue];
   for(let i=0;i<amounts.length;i++){
    const year=y+Math.floor((m-1+i)/12),month=(m-1+i)%12+1;
    if(year!==reportYear||month!==reportMonth)continue;
