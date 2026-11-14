@@ -1931,21 +1931,27 @@ function renderManagerStats(events){
  el('managerStatsFoot').textContent='합계 '+fmt(totals.records)+'건 · '+fmt(totals.seats)+'구좌 · 가입매출 '+won(totals.revenue)+' · 연회비 '+won(totals.fee)+(unassigned?' · 매니저 미지정 '+fmt(unassigned)+'건':'')+' (기존 가입 건별 기록 없는 행사 제외)';
 }
 function eventPeriodRevenue(event,group){
- const entries=Array.isArray(event.signupEntries)?event.signupEntries.filter(r=>r&&!r.withdrawn&&r.group===group):[];
- if(!entries.length)return Number(event[group+'Revenue'])||0;
- const years=multiValues.year.size?[...multiValues.year].map(Number):null;
- const months=multiValues.month.size?[...multiValues.month].map(Number):null;
+ // 행사 목록은 행사일이 속한 월의 회차별 입회금만 표시합니다.
+ const scoped=scopedSignupRows(event);
+ if(scoped===null)return scopedSignupMetric(event,group+'Revenue');
+ const entries=scoped.filter(r=>r.group===group);
+ const eventDate=validSignupDate(event.date);
+ if(!eventDate)return 0;
+ const reportYear=Number(eventDate.slice(0,4)),reportMonth=Number(eventDate.slice(5,7));
  let total=0;
  for(const row of entries){
   const date=validSignupDate(row.signupDate);
-  if(!date){if(!years&&!months)total+=Number(row.revenue)||0;continue;}
-  const startYear=Number(date.slice(0,4)),startMonth=Number(date.slice(5,7));
-  const amounts=row.paymentType==='installment'&&Array.isArray(row.installmentAmounts)&&row.installmentAmounts.length?row.installmentAmounts:[row.revenue];
-  for(let n=0;n<amounts.length;n++){
-   const year=startYear+Math.floor((startMonth-1+n)/12),month=(startMonth-1+n)%12+1;
-   if(years&&!years.includes(year))continue;
-   if(months&&!months.includes(month))continue;
-   total+=Number(amounts[n])||0;
+  if(!date)continue;
+  const y=Number(date.slice(0,4)),m=Number(date.slice(5,7));
+  const installment=row.paymentType==='installment';
+  const scheduled=installment&&Array.isArray(row.installmentAmounts)&&row.installmentAmounts.length?row.installmentAmounts:null;
+  if(installment&&!scheduled)continue;
+  const amounts=scheduled||[row.revenue];
+  for(let i=0;i<amounts.length;i++){
+   const year=y+Math.floor((m-1+i)/12),month=(m-1+i)%12+1;
+   if(year!==reportYear||month!==reportMonth)continue;
+   const amount=Number(amounts[i]);
+   if(Number.isSafeInteger(amount)&&amount>=0)total+=amount;
   }
  }
  return total;
@@ -1965,7 +1971,7 @@ function recognizedSignupRevenue(group,legacyRows){
    const date=validSignupDate(row.signupDate);
    if(!date){if(!years&&!months)total+=Number(row.revenue)||0;continue;}
    const y=Number(date.slice(0,4)),m=Number(date.slice(5,7));
-   const amounts=row.paymentType==='installment'&&Array.isArray(row.installmentAmounts)&&row.installmentAmounts.length?row.installmentAmounts:[row.revenue];
+   const amounts=row.paymentType==='installment'?(Array.isArray(row.installmentAmounts)&&row.installmentAmounts.length?row.installmentAmounts:[]):[row.revenue];
    for(let i=0;i<amounts.length;i++){
     const year=y+Math.floor((m-1+i)/12),month=(m-1+i)%12+1;
     if(years&&!years.includes(year))continue;
