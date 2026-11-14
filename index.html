@@ -1926,8 +1926,8 @@ function recognizedSignupRevenue(group,legacyRows){
 
 // KPI 카드의 표시값과 집계 근거를 동일한 필터 상태에서 조회합니다.
 function installKpiDetailPopups(){
- const ids=['mRevenue','mAnnualFee','mPromoUsage','mCost','mProfit','mEvents','mAttendees'];
- const titles={mRevenue:'입회매출',mAnnualFee:'연회비 매출',mPromoUsage:'판촉물 포인트 사용내역',mCost:'본사지원',mProfit:'손익',mEvents:'진행 건수',mAttendees:'참가인원'};
+ const ids=['mGoalSeats','mAchievedSeats','mRevenue','mAnnualFee','mPromoUsage','mCost','mProfit','mEvents','mAttendees'];
+ const titles={mGoalSeats:'목표구좌',mAchievedSeats:'달성구좌',mRevenue:'입회매출',mAnnualFee:'연회비 매출',mPromoUsage:'판촉물 포인트 사용내역',mCost:'본사지원',mProfit:'손익',mEvents:'진행 건수',mAttendees:'참가인원'};
  const metricKey={mAnnualFee:'annualFee',mPromoUsage:'promoPoints',mCost:'headOfficeSupport',mAttendees:'attendees'};
  ids.forEach(id=>{const node=el(id);if(!node||node.dataset.kpiDetailReady)return;node.dataset.kpiDetailReady='1';node.classList.add('kpi-detail-click');node.setAttribute('role','button');node.setAttribute('tabindex','0');node.setAttribute('title','클릭하여 산출 근거 확인');const open=()=>{
  const rows=filtered(),total=node.textContent,detail=[];let revenueEntries=null,revenueCurrent=0,revenueCarry=0;
@@ -1974,7 +1974,28 @@ function installKpiDetailPopups(){
   const key=metricKey[id];rows.filter(r=>Number(r[key]||0)!==0).forEach(r=>detail.push([(r.date||'')+' · '+(r.name||r.title||'등록 내역'),key==='attendees'?Number(r[key]).toLocaleString()+'명':won(Number(r[key]))]));
  }else if(id==='mEvents')rows.forEach(r=>detail.push([r.date||'',r.name||r.title||'등록 내역']));
  if(!detail.length)detail.push(['내역','선택한 조회 조건에 표시할 상세 내역이 없습니다']);
- const overlay=document.createElement('div');overlay.className='kpi-detail-overlay';overlay.setAttribute('role','presentation');const panel=document.createElement('section');panel.className='kpi-detail-panel';panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','true');panel.setAttribute('aria-label',titles[id]+' 산출 근거');const h=document.createElement('header'),title=document.createElement('h3'),close=document.createElement('button');title.textContent=titles[id]+' 상세';close.textContent='닫기';h.append(title,close);panel.append(h);const value=document.createElement('h2');value.textContent=total;panel.append(value);const context=document.createElement('p');context.className='kpi-detail-note';context.textContent=el('activeFilters')?.textContent||'';panel.append(context);if(id==='mPromoUsage'){
+ const overlay=document.createElement('div');overlay.className='kpi-detail-overlay';overlay.setAttribute('role','presentation');const panel=document.createElement('section');panel.className='kpi-detail-panel';panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','true');panel.setAttribute('aria-label',titles[id]+' 산출 근거');const h=document.createElement('header'),title=document.createElement('h3'),close=document.createElement('button');title.textContent=titles[id]+' 상세';close.textContent='닫기';h.append(title,close);panel.append(h);const value=document.createElement('h2');value.textContent=total;panel.append(value);const context=document.createElement('p');context.className='kpi-detail-note';context.textContent=el('activeFilters')?.textContent||'';panel.append(context);if(id==='mGoalSeats'||id==='mAchievedSeats'){
+ const fixed=restrictedBranch(),branches=fixed?[fixed]:(multiValues.branch.size?[...multiValues.branch].filter(b=>monthlyBranches.includes(b)):monthlyBranches);
+ const divisions=multiValues.division.size?[...multiValues.division].filter(d=>monthlyDivisions.includes(d)):['all'];
+ const possibleYears=[...new Set([...monthlyTargets.map(t=>Number(t.goal_year)),...monthlyDivisionTargets.map(t=>Number(t.goal_year)),...monthlyHistoricalSeats.map(t=>Number(t.goal_year)),...allViewerEvents.flatMap(e=>timedSignupRows(e).map(r=>Number(r.signupDate.slice(0,4))))].filter(y=>Number.isInteger(y)&&y>=2020&&y<=2100))];
+ const years=multiValues.year.size?[...multiValues.year].map(Number):possibleYears;
+ const months=multiValues.month.size?[...multiValues.month].map(Number):Array.from({length:12},(_,i)=>i+1);
+ const groups=[];let groupedTotal=0;
+ for(const branch of branches){for(const division of divisions){let amount=0;
+ for(const year of years)for(const month of months){if(id==='mGoalSeats'){const target=monthlyTarget(branch,year,month,division);if(target!==null)amount+=target;}else if(!multiValues.type.size){amount+=monthlyActual(branch,year,month,division)}else{amount+=signupSeatsForPeriod(allViewerEvents.filter(e=>multiMatch('type',e.type)),{years:[year],months:[month],branches:[branch],divisions:division==='all'?null:[division],normalizeDivision})}}
+ if(amount!==0){groups.push({branch,division,amount});groupedTotal+=amount;}
+ }}
+ groups.sort((a,b)=>b.amount-a.amount||a.branch.localeCompare(b.branch));
+ const root=document.createElement('div');root.className='revenue-breakdown';const summary=document.createElement('div');summary.className='revenue-summary';
+ for(const [label,value] of [['조회 구좌',total],['지사·본부 집계',fmt(groupedTotal)+'구좌']]){const card=document.createElement('div'),small=document.createElement('small'),strong=document.createElement('strong');small.textContent=label;strong.textContent=value;card.append(small,strong);summary.append(card)}root.append(summary);
+ const section=document.createElement('section');section.className='revenue-section';const heading=document.createElement('h4');heading.textContent=id==='mGoalSeats'?'지사·본부별 배정 목표':'지사·본부별 달성 실적';section.append(heading);
+ for(const g of groups){const line=document.createElement('div');line.className='kpi-detail-line';const label=document.createElement('span'),amount=document.createElement('strong');label.textContent=g.branch+(g.division==='all'?'':' · '+g.division);amount.textContent=fmt(g.amount)+'구좌';line.append(label,amount);section.append(line)}
+ if(!groups.length){const empty=document.createElement('p');empty.className='revenue-note';empty.textContent='선택 조건에 해당하는 실적이 없습니다.';section.append(empty)}root.append(section);
+ if(id==='mAchievedSeats'){
+ const note=document.createElement('p');note.className='revenue-note';note.textContent='달성구좌는 가입일 기준 실적과 과거 직접입력 실적을 반영합니다. 가입건별 담당 매니저 정보는 상품별 가입 실적 카드를 눌러 확인할 수 있습니다.';root.append(note);
+ }else{const note=document.createElement('p');note.className='revenue-note';note.textContent='회사 배정 월별 목표를 현재 선택된 연도·월·지사·본부 조건으로 합산한 값입니다.';root.append(note)}
+ const shown=Number(String(total).replace(/[^0-9]/g,''));if(shown!==groupedTotal){const note=document.createElement('p');note.className='revenue-note';note.textContent='표시 구좌와 세부 집계 차이: '+fmt(shown-groupedTotal)+'구좌 · 필터 또는 과거 직접입력 확인 필요';root.append(note)}panel.append(root);
+ }else if(id==='mPromoUsage'){
  const root=document.createElement('div');root.className='revenue-breakdown';
  const records=rows.filter(r=>Number(r.promoPoints)>0).map(r=>({date:String(r.date||'').slice(0,10),branch:r.branch||'지사 미지정',division:r.division||'본부 미지정',name:r.title||r.name||'행사',amount:Number(r.promoPoints)}));
  const grouped=new Map();for(const r of records){const key=r.branch+' / '+r.division;grouped.set(key,(grouped.get(key)||0)+r.amount)}
