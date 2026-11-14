@@ -1317,6 +1317,7 @@ let viewerExtras={refresh:()=>{},refreshOrganization:async()=>{},setHistoricalSe
 try{
  const {installViewerExtras}=await import('./viewer_extra.js?v=unified-payment-20261114');
  viewerExtras=installViewerExtras({
+ viewerDb:secureViewerDb,
  assignedBranch,
  getAllEvents:()=>allViewerEvents,
  getYears:()=>monthlyYearList(),

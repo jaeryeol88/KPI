@@ -64,7 +64,7 @@ function projectAdminOrgChart(original){
  return nodes;
 }
 /* Read-only supplemental KPI views, shared by all public viewers. */
-export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTarget,countSeats,normalizeDivision,loadOrganization,loadStaffStatuses}) {
+export function installViewerExtras({viewerDb,assignedBranch,getAllEvents,getYears,getTarget,countSeats,normalizeDivision,loadOrganization,loadStaffStatuses}) {
  const el=id=>document.getElementById(id);
  const safe=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const fmt=x=>Number(x||0).toLocaleString('ko-KR');
@@ -551,8 +551,7 @@ el('v-months').addEventListener('change',e=>{
    try{
     const cfg=window.PLK_CONFIG||{};
     if(!cfg.supabaseUrl||!cfg.supabaseAnonKey)throw new Error('Supabase 공개 조회 연결 정보가 없습니다.');
-    const db=createClient(cfg.supabaseUrl,cfg.supabaseAnonKey,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});
-    const {data,error}=await db.rpc('kpi_public_branch_staff_phones',{p_branch:assignedBranch});
+    const {data,error}=await viewerDb.rpc('kpi_viewer_branch_staff_phones',{p_branch:assignedBranch});
     if(error)throw error;
     staffPhoneCache.clear();
     for(const row of data||[])staffPhoneCache.set(String(row.node_id),String(row.phone||''));
