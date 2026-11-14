@@ -53,17 +53,32 @@ export function undatedSignupStats(events){
 /* Revenue is recognized by scheduled installment month, not all on signup day.
    Month 1 = signup month; following installments = subsequent calendar months.
    Withdrawn contracts contribute neither seats nor future installment revenue. */
+/* One source of truth for installment schedules across admin and all viewers.
+   Never treat an installment contract as fully paid if its schedule is missing. */
+export function signupPaymentAmounts(row){
+ if(!row||row.withdrawn)return [];
+ const total=Number(row.revenue);
+ if(row.paymentType!=='installment')return Number.isSafeInteger(total)&&total>=0?[total]:[];
+ const months=Number(row.installmentMonths);
+ if(Array.isArray(row.installmentAmounts)&&row.installmentAmounts.length){
+  const amounts=row.installmentAmounts.map(Number);
+  if(amounts.every(v=>Number.isSafeInteger(v)&&v>=0))return amounts;
+  return [];
+ }
+ // Restore only a provably even installment; unusual schedules require the original entry.
+ if(Number.isSafeInteger(months)&&months>1&&months<=360&&Number.isSafeInteger(total)&&total>=0&&total%months===0)
+  return Array(months).fill(total/months);
+ return [];
+}
 export function installmentRevenueForMonth(row,year,month){
  if(!row||row.withdrawn)return 0;
  const date=validSignupDate(row.signupDate);
  if(!date)return 0;
  const offset=(Number(year)-Number(date.slice(0,4)))*12+Number(month)-Number(date.slice(5,7));
  if(offset<0)return 0;
- if(row.paymentType==='installment'&&Array.isArray(row.installmentAmounts)&&row.installmentAmounts.length){
-  const amount=row.installmentAmounts[offset];
-  return Number.isSafeInteger(amount)&&amount>=0?amount:0;
- }
- return offset===0?(Number.isSafeInteger(row.revenue)&&row.revenue>=0?row.revenue:0):0;
+ const amounts=signupPaymentAmounts(row);
+ const amount=amounts[offset];
+ return Number.isSafeInteger(amount)&&amount>=0?amount:0;
 }
 export function monthlyRecognizedRevenue(events,{year,month,branches=null,divisions=null,normalizeDivision=v=>String(v||'').trim()}={}){
  let total=0;
