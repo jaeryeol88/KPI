@@ -206,7 +206,21 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
  @media(max-width:650px){.v-headcount-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.v-hc:last-child{grid-column:1/-1}}
  `;
  const stylesheet=document.createElement('style');stylesheet.textContent=css;document.head.appendChild(stylesheet);
- const monthlyStyle=document.createElement('style');monthlyStyle.textContent="\n.v-signup-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:18px 0}.v-signup-summary>div{border:1px solid #e2e8f0;border-radius:10px;padding:15px;background:#fff;display:flex;flex-direction:column;gap:7px}.v-signup-summary span{font-size:12px;color:#718098}.v-signup-summary strong{font-size:20px;color:#172840}.v-signup-table{min-width:1220px;width:100%;border-collapse:collapse;font-size:12px}.v-signup-table th{background:#eaf2ff;color:#24466e;padding:13px 11px;text-align:left;white-space:nowrap}.v-signup-table td{padding:12px 11px;border-bottom:1px solid #edf1f6;white-space:nowrap}.v-signup-table tbody tr:nth-child(even){background:#f8fbff}.v-signup-table th:nth-child(6),.v-signup-table td:nth-child(6){text-align:center!important;width:76px}.v-signup-table th:nth-child(7),.v-signup-table th:nth-child(8),.v-signup-table th:nth-child(9),.v-signup-table td:nth-child(7),.v-signup-table td:nth-child(8),.v-signup-table td:nth-child(9){text-align:right!important}.v-signup-table td:nth-child(9){font-weight:800}.v-payment-label{display:block;margin-top:4px;color:#2563eb;font-size:11px}.v-signup-prior{display:flex;align-items:center;justify-content:space-between;margin:30px 0 12px;gap:12px}.v-signup-prior h3{margin:0;font-size:17px}.v-signup-prior strong{color:#145dc5;font-size:16px}@media(max-width:750px){.v-signup-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}\n";document.head.appendChild(monthlyStyle);
+ const monthlyStyle=document.createElement('style');monthlyStyle.textContent="\n.v-signup-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:18px 0}.v-signup-summary>div{border:1px solid #e2e8f0;border-radius:10px;padding:15px;background:#fff;display:flex;flex-direction:column;gap:7px}.v-signup-summary span{font-size:12px;color:#718098}.v-signup-summary strong{font-size:20px;color:#172840}.v-signup-table{min-width:1510px;width:100%;table-layout:fixed;border-collapse:collapse;font-size:12px}.v-signup-table th{background:#eaf2ff;color:#24466e;padding:13px 11px;text-align:left;white-space:nowrap}.v-signup-table td{padding:12px 11px;border-bottom:1px solid #edf1f6;white-space:nowrap}.v-signup-table tbody tr:nth-child(even){background:#f8fbff}.v-signup-table th:nth-child(6),.v-signup-table td:nth-child(6){text-align:center!important;width:76px}.v-signup-table th:nth-child(7),.v-signup-table th:nth-child(8),.v-signup-table th:nth-child(9),.v-signup-table td:nth-child(7),.v-signup-table td:nth-child(8),.v-signup-table td:nth-child(9){text-align:right!important}.v-signup-table td:nth-child(9){font-weight:800}
+/* Match admin monthly report: fixed shared widths for header/data and both tables. */
+.v-signup-table th,.v-signup-table td{box-sizing:border-box;vertical-align:middle}
+.v-signup-table th:nth-child(1),.v-signup-table td:nth-child(1){width:118px}
+.v-signup-table th:nth-child(2),.v-signup-table td:nth-child(2){width:115px}
+.v-signup-table th:nth-child(3),.v-signup-table td:nth-child(3){width:105px}
+.v-signup-table th:nth-child(4),.v-signup-table td:nth-child(4){width:145px}
+.v-signup-table th:nth-child(5),.v-signup-table td:nth-child(5){width:164px}
+.v-signup-table th:nth-child(6),.v-signup-table td:nth-child(6){width:65px;text-align:center!important}
+.v-signup-table th:nth-child(7),.v-signup-table td:nth-child(7){width:155px;text-align:right!important}
+.v-signup-table th:nth-child(8),.v-signup-table td:nth-child(8){width:130px;text-align:right!important}
+.v-signup-table th:nth-child(9),.v-signup-table td:nth-child(9){width:155px;text-align:right!important}
+.v-signup-table th:nth-child(10),.v-signup-table td:nth-child(10){width:120px;text-align:left!important}
+.v-signup-table th:nth-child(11),.v-signup-table td:nth-child(11){width:238px;text-align:left!important}
+.v-signup-table td.v-signup-note{white-space:normal;overflow-wrap:anywhere;line-height:1.5}.v-payment-label{display:block;margin-top:4px;color:#2563eb;font-size:11px}.v-signup-prior{display:flex;align-items:center;justify-content:space-between;margin:30px 0 12px;gap:12px}.v-signup-prior h3{margin:0;font-size:17px}.v-signup-prior strong{color:#145dc5;font-size:16px}@media(max-width:750px){.v-signup-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}\n";document.head.appendChild(monthlyStyle);
  const main=document.querySelector('main.main'),side=document.querySelector('.sidebar');
  const nav=document.createElement('nav');nav.className='v-nav';nav.setAttribute('aria-label','실적 조회 메뉴');
  nav.innerHTML='<button type="button" data-vpage="dashboard" class="active">▦ &nbsp; 실적관리</button><div class="v-parent">▤ &nbsp; 실적현황</div><button type="button" data-vpage="yearboard" class="v-child">지사별 / 본부별 실적현황</button><button type="button" data-vpage="personal" class="v-child">개인별 실적현황</button><button type="button" data-vpage="monthlysignups" class="v-child">월별 입회 현황</button><div class="v-parent">♧ &nbsp; 조직관리</div><button type="button" data-vpage="org" class="v-child">조직도</button><button type="button" data-vpage="orgstaff" class="v-child">조직원 정보</button>';
@@ -228,9 +242,9 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
  <section id="v-monthlysignups" class="v-extra" hidden>
  <div class="v-extra-head"><div><h2>월별 입회 현황 <span class="v-linked">가입 건별 등록 연동</span></h2><p>실제 가입일 기준 신규 입회만 표시하며, 이전 가입자의 해당 월 분납금은 아래 별도 표에 표시합니다.</p></div><div class="v-filters"><span class="v-signup-filter">조회 연도 <span id="v-syear" class="v-multi-slot"></span></span><span class="v-signup-filter">조회 월 <span id="v-smonth" class="v-multi-slot"></span></span><span class="v-signup-filter">소속지사 <span id="v-sbranch" class="v-multi-slot"></span></span><span class="v-signup-filter">소속본부 <span id="v-sdivision" class="v-multi-slot"></span></span></div></div>
  <div id="v-ssummary" class="v-signup-summary"></div>
- <div class="v-table-scroll"><table class="v-table v-signup-table"><thead><tr><th>가입 일자</th><th>소속지사</th><th>소속본부</th><th>가입 담당 매니저</th><th>가입상품</th><th>구좌</th><th>입회금</th><th>연회비</th><th>총 매출</th><th>입회자 성함</th></tr></thead><tbody id="v-snew"></tbody></table></div><p class="v-note" id="v-snewnote"></p>
+ <div class="v-table-scroll"><table class="v-table v-signup-table"><thead><tr><th>가입 일자</th><th>소속지사</th><th>소속본부</th><th>가입 담당 매니저</th><th>가입상품</th><th>구좌</th><th>입회금</th><th>연회비</th><th>총 매출</th><th>입회자 성함</th><th>비고</th></tr></thead><tbody id="v-snew"></tbody></table></div><p class="v-note" id="v-snewnote"></p>
  <div class="v-signup-prior"><h3>전월 이전 가입자 분납금</h3><strong id="v-spriortotal"></strong></div>
- <div class="v-table-scroll"><table class="v-table v-signup-table"><thead><tr><th>가입 일자</th><th>소속지사</th><th>소속본부</th><th>가입 담당 매니저</th><th>가입상품</th><th>구좌</th><th>입회금</th><th>연회비</th><th>총 매출</th><th>입회자 성함</th></tr></thead><tbody id="v-sprior"></tbody></table></div><p class="v-note" id="v-spriornote"></p>
+ <div class="v-table-scroll"><table class="v-table v-signup-table"><thead><tr><th>가입 일자</th><th>소속지사</th><th>소속본부</th><th>가입 담당 매니저</th><th>가입상품</th><th>구좌</th><th>입회금</th><th>연회비</th><th>총 매출</th><th>입회자 성함</th><th>비고</th></tr></thead><tbody id="v-sprior"></tbody></table></div><p class="v-note" id="v-spriornote"></p>
  </section>
  <section id="v-org" class="v-extra" hidden>
   <div class="v-extra-head"><div><h2>조직도 <span style="font-size:12px;color:#7b8ca4">조회 전용</span></h2><p>부산권역 조직도와 직책별 인원 현황입니다.</p></div></div>
@@ -307,7 +321,7 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
     const y=Number(date.slice(0,4)),m=Number(date.slice(5,7));
     if(m<1||m>12)continue;
     const amounts=row.paymentType==='installment'&&Array.isArray(row.installmentAmounts)&&row.installmentAmounts.length?row.installmentAmounts:[Number(row.revenue)||0];
-    const base={date,branch,division,manager:row.manager||'',product:row.product||'',member:row.memberName||'',installment:row.paymentType==='installment',months:Number(row.installmentMonths)||amounts.length};
+    const base={date,branch,division,manager:row.manager||'',product:row.product||'',member:row.memberName||'',note:row.note||'',installment:row.paymentType==='installment',months:Number(row.installmentMonths)||amounts.length};
     all.push({...base,y,m,seats:Number(row.seats)||0,fee:Number(row.annualFee)||0,revenue:Number(amounts[0])||0,sequence:1});
     if(row.paymentType==='installment')amounts.slice(1).forEach((amount,i)=>{const offset=i+1;prior.push({...base,y:y+Math.floor((m-1+offset)/12),m:(m-1+offset)%12+1,seats:0,fee:0,revenue:Number(amount)||0,sequence:offset+1});});
    }
@@ -325,9 +339,9 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
   const prev=prior.filter(matching).sort((a,b)=>b.date.localeCompare(a.date));
   const sum=(arr,key)=>arr.reduce((n,x)=>n+x[key],0);
   el('v-ssummary').innerHTML=[['해당 월 구좌',fmt(sum(news,'seats'))+'구좌'],['입회금',won(sum(news,'revenue'))],['연회비',won(sum(news,'fee'))],['총 매출',won(sum(news,'revenue')+sum(news,'fee'))]].map(([label,value])=>'<div><span>'+label+'</span><strong>'+value+'</strong></div>').join('');
-  const rowHtml=(x,isPrior)=>'<tr><td>'+safe(x.date)+'</td><td>'+safe(x.branch||'—')+'</td><td>'+safe(x.division||'—')+'</td><td>'+safe(x.manager||'—')+'</td><td>'+safe(x.product||'—')+'<small class="v-payment-label">'+(isPrior?x.sequence+'회차 분납':x.installment?fmt(x.months)+'개월 분납':'완납')+'</small></td><td>'+fmt(x.seats)+'</td><td>'+won(x.revenue)+'</td><td>'+won(x.fee)+'</td><td>'+won(x.revenue+x.fee)+'</td><td>'+safe(x.member||'—')+'</td></tr>';
-  el('v-snew').innerHTML=news.map(x=>rowHtml(x,false)).join('')||'<tr><td colspan="10">선택한 월의 신규 입회 내역이 없습니다.</td></tr>';
-  el('v-sprior').innerHTML=prev.map(x=>rowHtml(x,true)).join('')||'<tr><td colspan="10">해당 월의 이전 가입자 분납금이 없습니다.</td></tr>';
+  const rowHtml=(x,isPrior)=>'<tr><td>'+safe(x.date)+'</td><td>'+safe(x.branch||'—')+'</td><td>'+safe(x.division||'—')+'</td><td>'+safe(x.manager||'—')+'</td><td>'+safe(x.product||'—')+'<small class="v-payment-label">'+(isPrior?x.sequence+'회차 분납':x.installment?fmt(x.months)+'개월 분납':'완납')+'</small></td><td>'+fmt(x.seats)+'</td><td>'+won(x.revenue)+'</td><td>'+won(x.fee)+'</td><td>'+won(x.revenue+x.fee)+'</td><td>'+safe(x.member||'—')+'</td><td class="v-signup-note">'+safe(x.note||'—')+'</td></tr>';
+  el('v-snew').innerHTML=news.map(x=>rowHtml(x,false)).join('')||'<tr><td colspan="11">선택한 월의 신규 입회 내역이 없습니다.</td></tr>';
+  el('v-sprior').innerHTML=prev.map(x=>rowHtml(x,true)).join('')||'<tr><td colspan="11">해당 월의 이전 가입자 분납금이 없습니다.</td></tr>';
   el('v-spriortotal').textContent='분납금 합계 '+won(sum(prev,'revenue'));
   el('v-snewnote').textContent='총 '+fmt(news.length)+'건 · 해당 월 실제 가입일 기준';
   el('v-spriornote').textContent='총 '+fmt(prev.length)+'건 · 신규 구좌 및 연회비와 중복 집계하지 않습니다.';
