@@ -1,0 +1,38 @@
+name: KPI live database consistency audit
+
+on:
+  schedule:
+    - cron: '30 18 * * *' # 03:30 Asia/Seoul
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: kpi-live-data-audit
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    name: Compare admin and viewer signup records
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify database connection secret
+        run: |
+          if [ -z "$SUPABASE_DB_URL" ]; then
+            echo "::error::SUPABASE_DB_URL must be configured in Actions secrets."
+            exit 1
+          fi
+      - name: Verify original and public signup data (read-only)
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            -e PGCONNECT_TIMEOUT=12 \
+            -e DATABASE_URL="$SUPABASE_DB_URL" \
+            -v "$PWD/audits:/audits:ro" \
+            postgres:17 \
+            sh -c 'psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 -f /audits/viewer-consistency.sql'
