@@ -218,8 +218,8 @@ export function installViewerExtras({assignedBranch,getAllEvents,getYears,getTar
 .v-signup-table th:nth-child(7),.v-signup-table td:nth-child(7){width:155px;text-align:right!important}
 .v-signup-table th:nth-child(8),.v-signup-table td:nth-child(8){width:130px;text-align:right!important}
 .v-signup-table th:nth-child(9),.v-signup-table td:nth-child(9){width:155px;text-align:right!important}
-.v-signup-table th:nth-child(10),.v-signup-table td:nth-child(10){width:120px;text-align:left!important}
-.v-signup-table th:nth-child(11),.v-signup-table td:nth-child(11){width:238px;text-align:left!important}
+.v-signup-table th:nth-child(10),.v-signup-table td:nth-child(10){width:135px;text-align:center!important;padding-left:14px;padding-right:14px}
+.v-signup-table th:nth-child(11),.v-signup-table td:nth-child(11){width:223px;text-align:left!important;padding-left:14px;padding-right:14px}
 .v-signup-table td.v-signup-note{white-space:normal;overflow-wrap:anywhere;line-height:1.5}.v-payment-label{display:block;margin-top:4px;color:#2563eb;font-size:11px}.v-signup-prior{display:flex;align-items:center;justify-content:space-between;margin:30px 0 12px;gap:12px}.v-signup-prior h3{margin:0;font-size:17px}.v-signup-prior strong{color:#145dc5;font-size:16px}@media(max-width:750px){.v-signup-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}\n";document.head.appendChild(monthlyStyle);
  const main=document.querySelector('main.main'),side=document.querySelector('.sidebar');
  const nav=document.createElement('nav');nav.className='v-nav';nav.setAttribute('aria-label','실적 조회 메뉴');
