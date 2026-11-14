@@ -964,7 +964,7 @@ function installKpiDetailPopups(){
  const entries=[];let itemized=0;
  for(const event of rows){const signups=scopedSignupRows(event);if(!signups)continue;
   for(const r of signups){const amount=Number(r.annualFee)||0;if(amount<=0)continue;
-   itemized+=amount;entries.push({amount,date:validSignupDate(r.signupDate)||event.date||'날짜 미입력',branch:r.branch||event.branch||'지사 미지정',division:r.division||event.division||'본부 미지정',manager:r.manager||'담당 미지정',product:r.product||'상품 미지정',member:r.memberName||''});
+   itemized+=amount;entries.push({amount,date:(/^\d{4}-\d{2}-\d{2}$/.test(String(r.signupDate||''))?r.signupDate:event.date)||'날짜 미입력',branch:r.branch||event.branch||'지사 미지정',division:r.division||event.division||'본부 미지정',manager:r.manager||'담당 미지정',product:r.product||'상품 미지정',member:r.memberName||''});
   }
  }
  entries.sort((a,b)=>b.date.localeCompare(a.date));
