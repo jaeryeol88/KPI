@@ -889,9 +889,39 @@ function installKpiDetailPopups(){
  ids.forEach(id=>{const node=el(id);if(!node||node.dataset.kpiDetailReady)return;node.dataset.kpiDetailReady='1';node.classList.add('kpi-detail-click');node.setAttribute('role','button');node.setAttribute('tabindex','0');node.setAttribute('title','클릭하여 산출 근거 확인');const open=()=>{
  const rows=filtered(),total=node.textContent,detail=[];
  if(id==='mRevenue'){
-  detail.push(['법인 입회매출',el('mRevenueSub')?.textContent||'']);
-  detail.push(['집계 기준','완납: 가입월 전액 / 분납: 조회월 해당 회차']);
-  detail.push(['대상 행사',rows.length+'건']);
+  const years=multiValues.year.size?[...multiValues.year].map(Number):null;
+  const months=multiValues.month.size?[...multiValues.month].map(Number):null;
+  const fixed=restrictedBranch(),branches=fixed?[fixed]:(multiValues.branch.size?[...multiValues.branch]:null);
+  const divisions=multiValues.division.size?[...multiValues.division].map(normalizeDivision):null;
+  const entries=[];let current=0,carry=0,unknown=0;
+  for(const event of items){
+   if(multiValues.type.size&&!multiMatch('type',event.type))continue;
+   for(const r of Array.isArray(event.signupEntries)?event.signupEntries:[]){
+    if(!r||r.withdrawn||!['corporate','individual'].includes(r.group))continue;
+    if(branches&&!branches.includes(r.branch||event.branch))continue;
+    if(divisions&&!divisions.includes(normalizeDivision(r.division||event.division)))continue;
+    const date=validSignupDate(r.signupDate);if(!date){unknown++;continue;}
+    const y=Number(date.slice(0,4)),m=Number(date.slice(5,7));
+    const amounts=r.paymentType==='installment'&&Array.isArray(r.installmentAmounts)&&r.installmentAmounts.length?r.installmentAmounts:[r.revenue];
+    for(let k=0;k<amounts.length;k++){
+     const yy=y+Math.floor((m-1+k)/12),mm=(m-1+k)%12+1;
+     if(years&&!years.includes(yy))continue;if(months&&!months.includes(mm))continue;
+     const amount=Number(amounts[k]);if(!Number.isSafeInteger(amount)||amount<0)continue;
+     const carried=k>0;if(carried)carry+=amount;else current+=amount;
+     entries.push({date,period:yy+'-'+String(mm).padStart(2,'0'),branch:r.branch||event.branch||'미지정',manager:r.manager||'미지정',product:r.product||'상품 미지정',amount,carried,installment:r.paymentType==='installment',round:k+1});
+    }
+   }
+  }
+  detail.push(['당월 신규 가입 매출',won(current)]);
+  detail.push(['이전 가입 분납 유입',won(carry)]);
+  detail.push(['분류된 매출 합계',won(current+carry)]);
+  detail.push(['법인·개인 구분',el('mRevenueSub')?.textContent||'']);
+  const displayed=Number(String(total).replace(/[^0-9]/g,''));
+  if(Number.isFinite(displayed)&&displayed!==current+carry)detail.push(['기타·과거 직접입력 등 차액',won(displayed-current-carry)+' · 개별 가입건 확인 필요']);
+  if(unknown)detail.push(['가입일 미확인',unknown+'건 · 월별 반영 제외']);
+  entries.sort((a,b)=>a.carried-b.carried||b.period.localeCompare(a.period)||b.date.localeCompare(a.date));
+  for(const e of entries)detail.push([(e.carried?'이전 가입 분납':'당월 가입')+' · '+e.period+' 반영',e.date+' 가입 / '+e.branch+' / '+e.manager+' / '+e.product+' / '+(e.installment?e.round+'회차 · ':'완납 · ')+won(e.amount)]);
+  if(!entries.length)detail.push(['가입건별 내역','조회 조건에 해당하는 회차별 기록이 없습니다']);
  }else if(id==='mProfit'){
   detail.push(['계산식','입회매출 + 연회비 + 행사 수입 − 행사비용']);
   detail.push(['입회매출',el('mRevenue')?.textContent||'—']);
