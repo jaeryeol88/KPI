@@ -38,7 +38,7 @@ BEGIN
     RETURN jsonb_build_object('error','로그인 시도 제한: 15분 후 다시 시도하세요');
   END IF;
 
-  IF NOT FOUND OR v_user.password_hash IS DISTINCT FROM extensions.crypt(p_password,v_user.password_hash) THEN
+  IF v_user.id IS NULL OR v_user.password_hash IS DISTINCT FROM extensions.crypt(p_password,v_user.password_hash) THEN
     IF NOT v_is_manager THEN
       UPDATE public.kpi_viewer_login_attempts
       SET failed_count=CASE WHEN failed_count>=4 THEN 0 ELSE failed_count+1 END,
