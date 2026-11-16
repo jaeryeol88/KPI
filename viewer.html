@@ -388,15 +388,26 @@ function productCardSummary(rows){
   }).join('');
   blocks.push('<div><div class="product-group-title">'+groupTitle+'</div>'+statRows+(missingCount||missingSeats?'<div class="product-stat"><span>미분류·미배분</span><strong>'+fmt(missingCount)+'건 · '+fmt(missingSeats)+'구좌</strong></div>':'')+'</div>');
  }
- return blocks.join('')+'<div class="product-note">상품별 가입 건수와 구좌 합계 · * 미배분 포함</div>';
+ return blocks.join('')+'<div class="product-note">가입일 기준 상품별 가입 건수와 구좌 · 가입일 미입력 건 제외 · * 미배분 포함</div>';
+}
+function productSignupPeriodEvents(){
+ const q=el('search').value.trim().toLowerCase();
+ return items.filter(event=>multiMatch('type',event.type)&&(!q||(String(event.name||'')+' '+String(event.place||'')).toLowerCase().includes(q))).map(event=>{
+  const rows=scopedSignupRows(event);
+  if(!rows)return null;
+  const dated=rows.filter(row=>{
+   const date=validSignupDate(row.signupDate);
+   return date&&multiMatch('year',date.slice(0,4))&&multiMatch('month',date.slice(5,7));
+  });
+  return dated.length?{...event,signupEntries:dated}:null;
+ }).filter(Boolean);
 }
 function showProductSignupDetails(group,product){
  const entries=[];
- for(const event of filtered()){
-  const rows=scopedSignupRows(event);
-  if(!rows)continue;
+ for(const event of productSignupPeriodEvents()){
+  const rows=event.signupEntries;
   for(const r of rows){if(r.group!==group||r.product!==product)continue;
-   entries.push({date:validSignupDate(r.signupDate)||event.date||'미입력',branch:r.branch||event.branch||'미지정',division:r.division||event.division||'미지정',manager:r.manager||'담당 미지정',seats:Number(r.seats)||0,fee:Number(r.annualFee)||0,product:r.product});
+   entries.push({date:validSignupDate(r.signupDate)||'미입력',branch:r.branch||event.branch||'미지정',division:r.division||event.division||'미지정',manager:r.manager||'담당 미지정',seats:Number(r.seats)||0,fee:Number(r.annualFee)||0,product:r.product});
   }
  }
  entries.sort((a,b)=>b.date.localeCompare(a.date));
@@ -1100,7 +1111,7 @@ el('sFundingNote').textContent=unallocated?'※ 집행재원 미분류 행사비
 el('sVenue').textContent=won(venue);el('sFood').textContent=won(food);el('sPrize').textContent=won(prize);el('sOther').textContent=won(other);
 el('sCorporateRevenue').textContent=won(corpRevenue);el('sIndividualRevenue').textContent=won(indRevenue);/* 월 목표 달성률은 renderMonthlyGoals()에서 회사 배정 목표로 계산 */
 el('mProductSub').textContent='법인 '+fmt(corporate)+' · 개인 '+fmt(individual)+(unclassifiedDone?' · 미분류 '+fmt(unclassifiedDone):'')+'구좌';
-el('mAchievedSeats').textContent=fmt(done)+'구좌';el('mAchievedSeatsSub').textContent='법인 '+fmt(corporate)+'구좌 · 개인 '+fmt(individual)+'구좌'+(unclassifiedDone?' · 미분류 '+fmt(unclassifiedDone)+'구좌':'');el('mProductStats').innerHTML=productCardSummary(a.map(scopedProducts));
+el('mAchievedSeats').textContent=fmt(done)+'구좌';el('mAchievedSeatsSub').textContent='법인 '+fmt(corporate)+'구좌 · 개인 '+fmt(individual)+'구좌'+(unclassifiedDone?' · 미분류 '+fmt(unclassifiedDone)+'구좌':'');el('mProductStats').innerHTML=productCardSummary(productSignupPeriodEvents());
 el('sDone').textContent=fmt(done)+'구좌';el('sCorporate').textContent=fmt(corporate)+'구좌';el('sIndividual').textContent=fmt(individual)+'구좌';el('sCorporateProducts').innerHTML=productBreakdown(a.map(scopedProducts),'corporate');el('sIndividualProducts').innerHTML=productBreakdown(a.map(scopedProducts),'individual');
 el('sCpa').textContent=done?won(cost/done):'—';el('sPerson').textContent=people?won(cost/people):'—';el('count').textContent=fmt(count)+'건';
 el('rows').innerHTML=a.length?a.map(x=>`<tr data-record-id="${esc(x.id)}" tabindex="0" aria-label="${esc(x.name)} 상세보기"><td><button type="button" class="event-link" data-view="${esc(x.id)}" title="해당 행사 KPI 보기">${esc(x.name)}</button><small>${esc(x.place||'장소 미입력')}${x.memo?' · '+esc(x.memo):''}</small></td><td>${esc(eventAssignedBranches(x).join(' / ')||'미지정')}<small>${esc(eventAssignedDivisions(x).join(' / ')||'본부 미지정')}</small></td><td>${esc(x.date)}</td><td>${esc(x.type)}</td><td class="event-attendance-only" hidden><strong>${fmt(x.attendees)}명</strong><small>${classified(x.members,x.nonMembers)?'회원 '+fmt(x.members)+' / 비회원 '+fmt(x.nonMembers):'회원/비회원 미분류'}</small></td><td><strong>${won(x.cost)}</strong><small>${complete(x,costFields)?'대관 '+won(x.venueCost)+' / 식음 '+won(x.foodCost):'상세 미분류'}</small>${complete(x,costFields)?'<small>시상품 '+won(x.prizeCost)+' / 기타 '+won(x.otherCost)+'</small>':''}</td><td><strong>${known(x.eventIncome)?won(x.eventIncome):'미입력'}</strong></td><td><strong>${won(eventPeriodRevenue(x,'corporate')+eventPeriodRevenue(x,'individual'))}</strong><small>법인 ${won(eventPeriodRevenue(x,'corporate'))} / 개인 ${won(eventPeriodRevenue(x,'individual'))}</small><small style="color:#285e9b;font-weight:600;white-space:normal;max-width:250px">${[...(Array.isArray(x.corporateProducts)?x.corporateProducts:[]),...(Array.isArray(x.individualProducts)?x.individualProducts:[])].length?esc([...(Array.isArray(x.corporateProducts)?x.corporateProducts:[]),...(Array.isArray(x.individualProducts)?x.individualProducts:[])].join(' / ')):'상품 미선택'} · 연회비 ${known(x.annualFee)?won(x.annualFee):'미입력'}</small></td><td><strong>${known(x.annualFee)?won(x.annualFee):'미입력'}</strong></td><td>${complete(x,revenueFields)?profitText(x.corporateRevenue+x.individualRevenue+(known(x.eventIncome)?x.eventIncome:0)+(known(x.annualFee)?x.annualFee:0)-x.cost):'—'}</td><td class="event-goal-only" hidden>${fmt(x.goal)}</td><td><strong>${fmt(scopedSignupMetric(x,'corporate')+scopedSignupMetric(x,'individual'))}구좌</strong><small>${classified(x.corporate,x.individual)?'법인 '+fmt(x.corporate)+' / 개인 '+fmt(x.individual):'법인/개인 미분류'}</small></td><td class="event-goal-only" hidden><span class="pill ${x.goal>0&&(x.done/x.goal>=1)?'good':x.goal>0&&x.done/x.goal<.5?'low':''}">${rate(x.goal,x.done)}</span></td><td class="event-attendance-only" hidden><strong>${signupRate(x)}</strong><small>${signupCount(x)===null?'법인/개인 구분 미입력':fmt(signupCount(x))+'건 / '+fmt(x.attendees)+'명'}</small></td></tr>`).join(''):'<tr><td colspan="${10+(showAttendanceMetrics()?4:0)}" class="empty">공개된 행사 데이터가 없습니다.</td></tr>';
