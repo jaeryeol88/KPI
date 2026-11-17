@@ -1344,7 +1344,9 @@ function orgSelect(id){
  el('orgRole').disabled=!can||editingBranch;
  el('orgJoinDate').disabled=!can||!canJoinDate;
  el('orgAddChild').hidden=node.type==='person';
- el('orgAddBranchHead').hidden=!editingBranch;
+ const selectedBranch=editingBranch?node:(node.type==='person'&&orgEffectiveRole(node)==='branch'?orgNodes.find(x=>x.id===node.parent&&x.type==='group'):null);
+ el('orgAddBranchHead').hidden=!selectedBranch;
+ el('orgAddBranchHead').textContent=editingBranch?'+ 지사장 등록 / 편집':'지사장 편집';
  el('orgAddDirectPerson').hidden=!editingBranch&&node.type!=='root';
  el('orgAddDirectPerson').textContent=node.type==='root'?'+ 권역대표 / 직속 구성원':'+ 지사 소속 구성원';
  el('orgAddSibling').hidden=node.type==='root';
@@ -1429,8 +1431,9 @@ el('orgEditForm').addEventListener('submit',event=>{
  orgMarkDirty();orgSelect(node.id);
 });
 el('orgAddBranchHead').addEventListener('click',()=>{
- const n=orgNodes.find(x=>x.id===orgSelectedId);
- if(!n||n.type!=='group'||!orgCanEdit())return;
+ const selected=orgNodes.find(x=>x.id===orgSelectedId);
+ const n=selected?.type==='group'?selected:orgNodes.find(x=>x.id===selected?.parent&&x.type==='group'&&orgEffectiveRole(selected)==='branch');
+ if(!n||!orgCanEdit())return;
  const existing=orgChildren(n.id).find(x=>x.type==='person'&&orgEffectiveRole(x)==='branch');
  if(existing){orgSelect(existing.id);return;}
  orgAdd(n.id,'person');
