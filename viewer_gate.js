@@ -29,7 +29,7 @@ function adapter(){
  }
  return {from:builder,rpc:(name,args={})=>{
   if(name==='kpi_manager_performance_signups')return builder(name);
-  if(name==='kpi_viewer_branch_staff_phones')return api.rpc(name,{...args,p_token:token});
+  if(name==='kpi_viewer_branch_staff_phones'||name==='kpi_viewer_manager_staff_phone')return api.rpc(name,{...args,p_token:token});
   return api.rpc(name,args);
  }};
 }
