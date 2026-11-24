@@ -253,7 +253,7 @@ function drawStaff(){
   (!query||[r.name,r.role,r.branch,r.division].join(' ').toLocaleLowerCase('ko').includes(query)));
  el('staffCount').textContent='총 '+fmt(all.length)+'명';
  el('staffMessage').textContent=phoneAuthenticated?
-  '매니저 뷰어 로그인 권한이 확인되었습니다. 연락처를 더블클릭하면 표시됩니다.':
+  '매니저 뷰어 로그인 권한이 확인되었습니다. 연락처를 클릭하거나 더블클릭하면 표시됩니다.':
   '연락처는 매니저 뷰어 로그인 후 더블클릭하여 조회할 수 있습니다.';
  el('staffBody').innerHTML=filtered.length?filtered.map((r,i)=>{
   const st=r.status==='휴직'?' leave':r.status==='퇴사'?' left':'';
@@ -288,19 +288,26 @@ async function requestPhone(nodeId){
  const span=[...el('staffBody').querySelectorAll('[data-phone-id]')].find(n=>n.dataset.phoneId===nodeId);
  if(span)span.focus({preventScroll:true});
 }
-el('staffBody').addEventListener('dblclick',async e=>{
- const span=e.target.closest('[data-phone-id]');if(!span)return;
- try{await requestPhone(span.dataset.phoneId);}catch(error){
-  el('staffMessage').textContent='연락처 조회 실패: '+(error.message||'조회 권한 확인 필요');
- }
-});
-el('staffBody').addEventListener('mouseup',async e=>{
- const span=e.target.closest('[data-phone-id]');if(!span)return;
- if(!window.getSelection()?.toString().trim())return;
- try{await requestPhone(span.dataset.phoneId);}catch(error){
-  el('staffMessage').textContent='연락처 조회 실패: '+(error.message||'조회 권한 확인 필요');
- }
-});
+// Both click and double-click open a contact; the RPC validates the PIN session server-side.
+let staffPhonePending=false;
+async function revealStaffPhoneFromEvent(e){
+ const span=e.target.closest('[data-phone-id]');
+ if(!span||staffPhonePending)return;
+ staffPhonePending=true;
+ const nodeId=span.dataset.phoneId;
+ el('staffMessage').textContent='연락처 확인 중…';
+ try{
+  await requestPhone(nodeId);
+  el('staffMessage').textContent='연락처가 표시되었습니다. 다른 직원의 연락처도 눌러 확인할 수 있습니다.';
+ }catch(error){
+  const message=String(error?.message||'알 수 없는 오류');
+  console.warn('Manager phone lookup failed',error);
+  el('staffMessage').textContent='연락처 조회 실패: '+message+
+   ' · 계속 실패하면 이 문구를 관리자에게 전달해 주세요.';
+ }finally{staffPhonePending=false;}
+}
+el('staffBody').addEventListener('click',revealStaffPhoneFromEvent);
+el('staffBody').addEventListener('dblclick',revealStaffPhoneFromEvent);
 // The manager viewer shares the saved Supabase organization with admin.
  // Polling works without requiring a Realtime publication for the organization table.
 async function syncOrganization(force=false){
