@@ -277,7 +277,11 @@ async function refreshPhoneAccess(){
 async function requestPhone(nodeId){
  if(!viewerDb)throw Error('매니저 뷰어 로그인이 필요합니다.');
  if(!phoneCache.has(nodeId)){
-  const {data,error}=await viewerDb.rpc('kpi_viewer_manager_staff_phone',{p_node_id:nodeId});
+  // Projected staff cards (viewer-group-person-*, viewer-root-person-*) use a virtual ID.
+  // The secure RPC resolves only real organization node IDs; map them back first.
+  const originalNode=orgNodes.find(n=>String(n.id)===String(nodeId));
+  const lookupId=String(originalNode?.staffContactId||nodeId);
+  const {data,error}=await viewerDb.rpc('kpi_viewer_manager_staff_phone',{p_node_id:lookupId});
   if(error)throw error;
   const number=typeof data==='string'?data:'';
   if(!number.trim())throw Error('등록된 연락처가 없습니다.');
