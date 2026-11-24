@@ -1,5 +1,5 @@
 import {createClient} from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
-import {startViewerGate,installViewerLogout} from './viewer_gate.js?v=pin-login-20261114';
+import {startViewerGate,installViewerLogout} from './viewer_gate.js?v=manager-phone-20261124';
 import {renderPerformanceMatrix} from './performance_matrix.js?v=year-to-date-totals-20261113';
 import {historicalActualSeats,historicValue} from './historical_seats.js?v=auto-person-rollup-20261113';
 import {timedSignupRows} from './signup_date_utils.js';
