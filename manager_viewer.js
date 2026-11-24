@@ -253,8 +253,8 @@ function drawStaff(){
   (!query||[r.name,r.role,r.branch,r.division].join(' ').toLocaleLowerCase('ko').includes(query)));
  el('staffCount').textContent='총 '+fmt(all.length)+'명';
  el('staffMessage').textContent=phoneAuthenticated?
-  '기존 관리자 로그인 권한이 확인되었습니다. 연락처를 더블클릭하거나 드래그하면 바로 표시됩니다.':
-  '연락처는 비공개입니다. 관리자 홈페이지에 로그인된 권한이 있는 사용자만 번호를 더블클릭하여 조회할 수 있습니다.';
+  '매니저 뷰어 로그인 권한이 확인되었습니다. 연락처를 더블클릭하면 표시됩니다.':
+  '연락처는 매니저 뷰어 로그인 후 더블클릭하여 조회할 수 있습니다.';
  el('staffBody').innerHTML=filtered.length?filtered.map((r,i)=>{
   const st=r.status==='휴직'?' leave':r.status==='퇴사'?' left':'';
   const number=phoneCache.get(r.id)||'';
@@ -268,31 +268,20 @@ function drawStaff(){
    '<td><span class="staff-status'+st+'">'+safe(r.status)+'</span></td><td>—</td></tr>';
  }).join(''):'<tr><td colspan="9">조회 가능한 조직원이 없습니다.</td></tr>';
 }
+// Manager PIN login is authenticated by startViewerGate and checked again by the phone RPC.
 async function refreshPhoneAccess(){
- if(!phoneDb){phoneAuthenticated=false;return false;}
- try{
-  const {data:{session},error:sessionError}=await phoneDb.auth.getSession();
-  if(sessionError||!session?.access_token){phoneAuthenticated=false;phoneCache.clear();revealedPhones.clear();return false;}
-  // Check role on the server: session alone never grants contact access.
-  const {data,error}=await phoneDb.rpc('kpi_my_access');
-  const allowed=!error&&['owner','shared','branch'].includes(data?.role);
-  if(!allowed){phoneCache.clear();revealedPhones.clear();}
-  phoneAuthenticated=allowed;
-  return allowed;
- }catch{
-  phoneAuthenticated=false;phoneCache.clear();revealedPhones.clear();return false;
- }
+ phoneAuthenticated=Boolean(viewerDb);
+ if(!phoneAuthenticated){phoneCache.clear();revealedPhones.clear();}
+ return phoneAuthenticated;
 }
 async function requestPhone(nodeId){
- if(!await refreshPhoneAccess()){
-  drawStaff();
-  el('staffMessage').textContent='연락처 열람 권한이 확인되지 않았습니다. 관리자 홈페이지에서 로그인하면 여기에서도 별도 로그인창 없이 확인할 수 있습니다.';
-  return;
- }
+ if(!viewerDb)throw Error('매니저 뷰어 로그인이 필요합니다.');
  if(!phoneCache.has(nodeId)){
-  const {data,error}=await phoneDb.rpc('kpi_manager_staff_phone',{p_node_id:nodeId});
+  const {data,error}=await viewerDb.rpc('kpi_viewer_manager_staff_phone',{p_node_id:nodeId});
   if(error)throw error;
-  phoneCache.set(nodeId,typeof data==='string'?data:'');
+  const number=typeof data==='string'?data:'';
+  if(!number.trim())throw Error('등록된 연락처가 없습니다.');
+  phoneCache.set(nodeId,number);
  }
  revealedPhones.add(nodeId);
  drawStaff();
@@ -398,15 +387,7 @@ async function main(){
   const db=await startViewerGate('manager');
   installViewerLogout();
   viewerDb=db;
-  phoneDb=createClient(cfg.supabaseUrl,cfg.supabaseAnonKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
   await refreshPhoneAccess();
-  phoneDb.auth.onAuthStateChange((event)=>{
-   if(event==='SIGNED_OUT'){phoneAuthenticated=false;phoneCache.clear();revealedPhones.clear();if(!el('orgstaff').classList.contains('hidden'))drawStaff();}
-   if(event==='SIGNED_IN'||event==='TOKEN_REFRESHED'){
-    // Avoid calling auth/database methods directly inside the auth event callback.
-    queueMicrotask(()=>refreshPhoneAccess().then(()=>{if(!el('orgstaff').classList.contains('hidden'))drawStaff();}));
-   }
-  });
   const [signups,historic,targets,divisionGoals,organization]=await Promise.all([
    readPages((from,to)=>db.rpc('kpi_manager_performance_signups').range(from,to)),
    readPages((from,to)=>db.from('kpi_historical_seats').select('branch,division,manager,goal_year,goal_month,target_seats,actual_seats,employment_status').range(from,to)),
